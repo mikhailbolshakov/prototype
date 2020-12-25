@@ -1,0 +1,8 @@
+.PHONY: build proto
+
+proto:
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative ./proto/users/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative ./proto/tasks/*.proto
+
+build: proto
+	go build -o bin/ cmd/main.go

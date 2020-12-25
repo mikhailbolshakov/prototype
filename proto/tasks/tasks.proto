@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package tasks;
+option go_package = "proto/tasks";
+
+message Type {
+  string Type = 1;
+  string Subtype = 2;
+}
+
+message Status {
+  string Status = 1;
+  string Substatus = 2;
+}
+
+message Assignee {
+  string Group = 1;
+  string User = 2;
+  google.protobuf.Timestamp At = 3;
+}
+
+message Task {
+  string Id = 1;
+  string Num = 2;
+  Type Type = 3;
+  Status Status = 4;
+  string ReportedBy = 5;
+  google.protobuf.Timestamp DueDate = 6;
+  google.protobuf.Timestamp ReportedAt = 7;
+  Assignee Assignee = 8;
+  string Description = 9;
+  string Title = 10;
+  string Details = 11;
+}
+
+message NewTaskRequest {
+  Type Type = 1;
+  string ReportedBy = 2;
+  google.protobuf.Timestamp ReportedAt = 3;
+  string Description = 4;
+  string Title = 5;
+  google.protobuf.Timestamp DueDate = 6;
+  Assignee Assignee = 7;
+}
+
+message MakeTransitionRequest {
+  string TaskId = 1;
+  string TransitionId = 2;
+}
+
+message NextTransitionsRequest {}
+
+message NextTransitionsResponse {}
+
+service Tasks {
+  rpc New(NewTaskRequest) returns (Task) {}
+  rpc NextTransitions(NextTransitionsRequest) returns (NextTransitionsResponse) {}
+  rpc MakeTransition(MakeTransitionRequest) returns (Task) {}
+}
