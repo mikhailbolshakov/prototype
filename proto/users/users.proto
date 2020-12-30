@@ -21,13 +21,49 @@ message User {
   string Phone = 6;
   string Email = 7;
   string MMId = 8;
+  string MMChannelId = 9;
 }
 
 message GetByUsernameRequest {
   string Username = 1;
 }
 
+message GetByMMIdRequest {
+  string MMId = 1;
+}
+
+message PagingRequest {
+  int32 Size = 1;
+  int32 Index = 2;
+}
+
+message PagingResponse {
+  int32 Total = 1;
+  int32 Index = 2;
+}
+
+message SearchRequest {
+  PagingRequest Paging = 1;
+  string UserType = 2;
+  string Username = 3;
+  string Email = 4;
+  string Phone = 5;
+  string MMId = 6;
+  string MMChannelId = 7;
+  repeated string OnlineStatuses = 8;
+}
+
+message SearchResponse {
+  PagingResponse Paging = 1;
+  repeated User Users = 2;
+}
+
 service Users {
   rpc Create(CreateUserRequest) returns (User) {}
   rpc GetByUsername(GetByUsernameRequest) returns (User) {}
+  rpc GetByMMId(GetByMMIdRequest) returns (User) {}
+  rpc Search(SearchRequest) returns (SearchResponse) {}
 }
+
+
+

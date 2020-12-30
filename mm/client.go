@@ -101,7 +101,7 @@ func (c *Client) CreateUser(rq *CreateUserRequest) (*CreateUserResponse, error) 
 	if err := handleResponse(rs); err != nil {
 		return nil, err
 	}
-	log.Printf("User created. Id: %s, email: %s", user.Id, user.Email)
+	log.Printf("By created. Id: %s, email: %s", user.Id, user.Email)
 
 	// add to team
 	team, rs := c.RestApi.GetTeamByName(rq.TeamName, "")
@@ -121,3 +121,27 @@ func (c *Client) CreateUser(rq *CreateUserRequest) (*CreateUserResponse, error) 
 	return response, nil
 }
 
+func (c *Client) CreateClientChannel(rq *CreateClientChannelRequest) (*CreateClientChannelResponse, error) {
+
+	team, rs := c.RestApi.GetTeamByName(rq.TeamName, "")
+	if err := handleResponse(rs); err != nil {
+		return nil, err
+	}
+
+	ch, rs := c.RestApi.CreateChannel(&model.Channel{
+		TeamId:      team.Id,
+		Type:        "P",
+		DisplayName: "Клиент-консультант",
+		Name:        "client-consultant-" + rq.ClientUserId,
+	})
+	if err := handleResponse(rs); err != nil {
+		return nil, err
+	}
+
+	_, rs = c.RestApi.AddChannelMember(ch.Id, rq.ClientUserId)
+	if err := handleResponse(rs); err != nil {
+		return nil, err
+	}
+
+	return &CreateClientChannelResponse {ChannelId: ch.Id}, nil
+}

@@ -1,38 +1,39 @@
 package domain
 
 import (
-	"errors"
 	"fmt"
 )
 
-type TaskConfigService interface {
+type ConfigService interface {
 	// get whole configuration
 	Get(t *Type) (*Config, error)
 	// retrieves a list of available statuses which might be set for the task
 	NextTransitions(t *Type, currentStatus *Status) ([]*Transition, error)
 	// get initial transition
 	InitialTransition(t *Type) (*Transition, error)
+	// get transition by source/target statuses
+	FindTransition(t *Type, current, target *Status) (*Transition, error)
 }
 
-func NewTaskConfigService() TaskConfigService {
-	return &TaskConfigServiceImpl{}
+func NewTaskConfigService() ConfigService {
+	return &taskConfigServiceImpl{}
 }
 
-type TaskConfigServiceImpl struct{}
+type taskConfigServiceImpl struct{}
 
-func (c *TaskConfigServiceImpl) Get(t *Type) (*Config, error) {
+func (c *taskConfigServiceImpl) Get(t *Type) (*Config, error) {
 
 	for _, c := range mockConfigs {
-		if c.Type.Type == t.Type && c.Type.SubType == t.SubType {
+		if c.Type.equals(t) {
 			return c, nil
 		}
 	}
 
 	// load configuration from repository
-	return nil, errors.New(fmt.Sprintf("config not found for %v", t))
+	return nil, fmt.Errorf("config not found for %v", t)
 }
 
-func (c *TaskConfigServiceImpl) NextTransitions(t *Type, currentStatus *Status) ([]*Transition, error) {
+func (c *taskConfigServiceImpl) NextTransitions(t *Type, currentStatus *Status) ([]*Transition, error) {
 
 	cfg, err := c.Get(t)
 	if err != nil {
@@ -41,7 +42,7 @@ func (c *TaskConfigServiceImpl) NextTransitions(t *Type, currentStatus *Status) 
 
 	var tr []*Transition
 	for _, c := range cfg.StatusModel.Transitions {
-		if c.From.Status == currentStatus.Status && c.From.SubStatus == currentStatus.SubStatus {
+		if c.From.equals(currentStatus) {
 			tr = append(tr, c)
 		}
 	}
@@ -49,7 +50,24 @@ func (c *TaskConfigServiceImpl) NextTransitions(t *Type, currentStatus *Status) 
 	return tr, nil
 }
 
-func (c *TaskConfigServiceImpl) InitialTransition(t *Type) (*Transition, error) {
+func (c *taskConfigServiceImpl) FindTransition(t *Type, current, target *Status) (*Transition, error) {
+
+	cfg, err := c.Get(t)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, c := range cfg.StatusModel.Transitions {
+		if c.From.equals(current) && c.To.equals(target) {
+			return c, nil
+		}
+	}
+
+	return nil, fmt.Errorf("transition not found current %v, target %v", current, target)
+
+}
+
+func (c *taskConfigServiceImpl) InitialTransition(t *Type) (*Transition, error) {
 
 	cfg, err := c.Get(t)
 	if err != nil {
@@ -62,7 +80,7 @@ func (c *TaskConfigServiceImpl) InitialTransition(t *Type) (*Transition, error) 
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("cfg-error.initial transition not found for type %v", t))
+	return nil, fmt.Errorf("cfg-error.initial transition not found for type %v", t)
 
 }
 

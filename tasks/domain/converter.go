@@ -1,22 +1,26 @@
 package domain
 
 import (
-	"gitlab.medzdrav.ru/prototype/kit/storage"
-	"gitlab.medzdrav.ru/prototype/tasks/repository"
+	kit "gitlab.medzdrav.ru/prototype/kit/storage"
+	"gitlab.medzdrav.ru/prototype/tasks/repository/storage"
 )
 
-func (u *TaskServiceImpl) toDto(domain *Task) (*repository.Task, error) {
+func toDto(domain *Task) *storage.Task {
 
-	return &repository.Task{
-		BaseDto:       storage.BaseDto{},
+	if domain == nil {
+		return nil
+	}
+
+	return &storage.Task{
+		BaseDto:       kit.BaseDto{},
 		Id:            domain.Id,
 		Num:           domain.Num,
 		Type:          domain.Type.Type,
 		SubType:       domain.Type.SubType,
 		Status:        domain.Status.Status,
 		SubStatus:     domain.Status.SubStatus,
-		ReportedBy:    domain.ReportedBy,
-		ReportedAt:    *domain.ReportedAt,
+		ReportedBy:    domain.Reported.By,
+		ReportedAt:    *domain.Reported.At,
 		DueDate:       domain.DueDate,
 		AssigneeGroup: domain.Assignee.Group,
 		AssigneeUser:  domain.Assignee.User,
@@ -24,10 +28,15 @@ func (u *TaskServiceImpl) toDto(domain *Task) (*repository.Task, error) {
 		Description:   domain.Description,
 		Title:         domain.Title,
 		Details:       domain.Details,
-	}, nil
+		ChannelId:     domain.ChannelId,
+	}
 }
 
-func (u *TaskServiceImpl) fromDto(dto *repository.Task) (*Task, error) {
+func fromDto(dto *storage.Task) *Task {
+
+	if dto == nil {
+		return nil
+	}
 
 	return &Task{
 		Id:  dto.Id,
@@ -40,8 +49,10 @@ func (u *TaskServiceImpl) fromDto(dto *repository.Task) (*Task, error) {
 			Status:    dto.Status,
 			SubStatus: dto.SubStatus,
 		},
-		ReportedBy: dto.ReportedBy,
-		ReportedAt: &dto.ReportedAt,
+		Reported: &Reported{
+			By: dto.ReportedBy,
+			At: &dto.ReportedAt,
+		},
 		DueDate:    dto.DueDate,
 		Assignee: &Assignee{
 			Group: dto.AssigneeGroup,
@@ -51,5 +62,60 @@ func (u *TaskServiceImpl) fromDto(dto *repository.Task) (*Task, error) {
 		Description: dto.Description,
 		Title:       dto.Title,
 		Details:     dto.Details,
-	}, nil
+		ChannelId:   dto.ChannelId,
+	}
+}
+
+func histToDto(h *History) *storage.History {
+
+	if h == nil {
+		return nil
+	}
+
+	return &storage.History{
+		Id:            h.Id,
+		TaskId:        h.TaskId,
+		Status:        h.Status.Status,
+		SubStatus:     h.Status.SubStatus,
+		AssigneeGroup: h.Assignee.Group,
+		AssigneeUser:  h.Assignee.User,
+		AssigneeAt:    h.Assignee.At,
+		ChangedBy:     h.ChangedBy,
+		ChangedAt:     h.ChangedAt,
+	}
+}
+
+func criteriaToDto(c *SearchCriteria) *storage.SearchCriteria {
+	if c == nil {
+		return nil
+	}
+
+	return &storage.SearchCriteria{
+		PagingRequest: c.PagingRequest,
+		Num:           c.Num,
+		Status:        c.Status.Status,
+		SubStatus:     c.Status.SubStatus,
+		AssigneeGroup: c.Assignee.Group,
+		AssigneeUser:  c.Assignee.User,
+		Type:          c.Type.Type,
+		SubType:       c.Type.SubType,
+	}
+}
+
+func searchRsFromDto(rs *storage.SearchResponse) *SearchResponse {
+	if rs == nil {
+		return nil
+	}
+
+	r := &SearchResponse{
+		PagingResponse: rs.PagingResponse,
+		Tasks: []*Task{},
+	}
+
+	for _, t := range rs.Tasks {
+		r.Tasks = append(r.Tasks, fromDto(t))
+	}
+
+	return r
+
 }

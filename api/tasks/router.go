@@ -24,4 +24,16 @@ func (u *Router) Set(r *mux.Router) {
 		c.MakeTransition(writer, request)
 	}).Methods("POST")
 
+	r.HandleFunc("/api/tasks/{id}", func(writer http.ResponseWriter, request *http.Request) {
+		c.GetById(writer, request)
+	}).Methods("GET")
+
+	r.HandleFunc("/api/tasks/{id}/assignee", func(writer http.ResponseWriter, request *http.Request) {
+		c.SetAssignee(writer, request)
+	}).Methods("POST")
+
+	r.HandleFunc("/api/tasks", func(writer http.ResponseWriter, request *http.Request) {
+		c.Search(writer, request)
+	}).Methods("GET")
+
 }

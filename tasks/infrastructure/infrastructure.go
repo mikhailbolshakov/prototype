@@ -1,20 +1,26 @@
-package repository
+package infrastructure
 
 import (
 	kitCache "gitlab.medzdrav.ru/prototype/kit/cache"
 	kitStorage "gitlab.medzdrav.ru/prototype/kit/storage"
 )
 
-// TODO: I don't like it
-var storage *kitStorage.Storage
-var cache *kitCache.Redis
+type Container struct {
+	Db    *kitStorage.Storage
+	Cache *kitCache.Redis
+}
 
-func InitInfrastructure() error {
+func New() *Container {
+	c := &Container{}
+	return c
+}
+
+func (c *Container) Init() error {
 
 	var err error
 
 	// storage
-	storage, err = kitStorage.Open(&kitStorage.Params{
+	c.Db, err = kitStorage.Open(&kitStorage.Params{
 		UserName: "tasks",
 		Password: "tasks",
 		DBName:   "mattermost",
@@ -26,7 +32,7 @@ func InitInfrastructure() error {
 	}
 
 	// Redis
-	cache, err = kitCache.Open(&kitCache.Params{
+	c.Cache, err = kitCache.Open(&kitCache.Params{
 		Host:     "localhost",
 		Port:     "6379",
 		Password: "",
@@ -39,6 +45,4 @@ func InitInfrastructure() error {
 	return nil
 }
 
-func CloseInfrastructure() {
-
-}
+func Close() {}

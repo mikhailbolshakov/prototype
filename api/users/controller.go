@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gorilla/mux"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
-	"gitlab.medzdrav.ru/prototype/proto/users"
+	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 type controller struct {
@@ -39,20 +42,10 @@ func (c *controller) Create(writer http.ResponseWriter, request *http.Request) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	pb, err := c.toPb(rq)
-	if err != nil {
-		c.RespondError(writer,  http.StatusBadRequest, errors.New("invalid request"))
-		return
-	}
-
-	if rsPb, err := c.grpc.users.Create(ctx, pb); err != nil {
+	if rsPb, err := c.grpc.users.Create(ctx, c.toPb(rq)); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
-		rs, err := c.fromPb(rsPb)
-		if err != nil {
-			c.RespondError(writer, http.StatusInternalServerError, err)
-		}
-		c.RespondOK(writer, rs)
+		c.RespondOK(writer, c.fromPb(rsPb))
 	}
 
 }
@@ -64,7 +57,7 @@ func (c *controller) GetByUsername(writer http.ResponseWriter, request *http.Req
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if rsPb, err := c.grpc.users.GetByUsername(ctx, &users.GetByUsernameRequest{Username: username}); err != nil {
+	if rsPb, err := c.grpc.users.GetByUsername(ctx, &pb.GetByUsernameRequest{Username: username}); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 
@@ -72,11 +65,56 @@ func (c *controller) GetByUsername(writer http.ResponseWriter, request *http.Req
 			c.RespondError(writer, http.StatusNotFound, errors.New("user not found"))
 		}
 
-		rs, err := c.fromPb(rsPb)
-		if err != nil {
-			c.RespondError(writer, http.StatusInternalServerError, err)
+		c.RespondOK(writer, c.fromPb(rsPb))
+	}
+
+}
+
+func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
+
+	rq := &pb.SearchRequest{
+		Paging:         &pb.PagingRequest{
+			Size:  0,
+			Index: 0,
+		},
+		UserType:       request.FormValue("type"),
+		Username:       request.FormValue("username"),
+		Email:          request.FormValue("email"),
+		Phone:          request.FormValue("phone"),
+		MMId:           request.FormValue("mmId"),
+		MMChannelId:    request.FormValue("channel"),
+		OnlineStatuses: []string{},
+	}
+
+	if onlineStatusesTxt := request.FormValue("statuses"); onlineStatusesTxt != "" {
+		rq.OnlineStatuses = strings.Split(onlineStatusesTxt, ",")
+	}
+
+	if sizeTxt := request.FormValue("limit"); sizeTxt != "" {
+		size, e := strconv.Atoi(sizeTxt)
+		if e != nil {
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("limit: " + e.Error()))
+			return
 		}
-		c.RespondOK(writer, rs)
+		rq.Paging.Size = int32(size)
+	}
+
+	if indexTxt := request.FormValue("offset"); indexTxt != "" {
+		index, e := strconv.Atoi(indexTxt)
+		if e != nil {
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("offset: " + e.Error()))
+			return
+		}
+		rq.Paging.Index = int32(index)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if rsPb, err := c.grpc.users.Search(ctx, rq); err != nil {
+		c.RespondError(writer, http.StatusInternalServerError, err)
+	} else {
+		c.RespondOK(writer, c.searchRsFromPb(rsPb))
 	}
 
 }

@@ -19,6 +19,8 @@ const _ = grpc.SupportPackageIsVersion7
 type UsersClient interface {
 	Create(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*User, error)
 	GetByUsername(ctx context.Context, in *GetByUsernameRequest, opts ...grpc.CallOption) (*User, error)
+	GetByMMId(ctx context.Context, in *GetByMMIdRequest, opts ...grpc.CallOption) (*User, error)
+	Search(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchResponse, error)
 }
 
 type usersClient struct {
@@ -47,12 +49,32 @@ func (c *usersClient) GetByUsername(ctx context.Context, in *GetByUsernameReques
 	return out, nil
 }
 
+func (c *usersClient) GetByMMId(ctx context.Context, in *GetByMMIdRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, "/users.Users/GetByMMId", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) Search(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchResponse, error) {
+	out := new(SearchResponse)
+	err := c.cc.Invoke(ctx, "/users.Users/Search", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UsersServer is the server API for Users service.
 // All implementations must embed UnimplementedUsersServer
 // for forward compatibility
 type UsersServer interface {
 	Create(context.Context, *CreateUserRequest) (*User, error)
 	GetByUsername(context.Context, *GetByUsernameRequest) (*User, error)
+	GetByMMId(context.Context, *GetByMMIdRequest) (*User, error)
+	Search(context.Context, *SearchRequest) (*SearchResponse, error)
 	mustEmbedUnimplementedUsersServer()
 }
 
@@ -65,6 +87,12 @@ func (UnimplementedUsersServer) Create(context.Context, *CreateUserRequest) (*Us
 }
 func (UnimplementedUsersServer) GetByUsername(context.Context, *GetByUsernameRequest) (*User, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetByUsername not implemented")
+}
+func (UnimplementedUsersServer) GetByMMId(context.Context, *GetByMMIdRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetByMMId not implemented")
+}
+func (UnimplementedUsersServer) Search(context.Context, *SearchRequest) (*SearchResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Search not implemented")
 }
 func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
 
@@ -115,6 +143,42 @@ func _Users_GetByUsername_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Users_GetByMMId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetByMMIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).GetByMMId(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/users.Users/GetByMMId",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).GetByMMId(ctx, req.(*GetByMMIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_Search_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).Search(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/users.Users/Search",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).Search(ctx, req.(*SearchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Users_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "users.Users",
 	HandlerType: (*UsersServer)(nil),
@@ -126,6 +190,14 @@ var _Users_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetByUsername",
 			Handler:    _Users_GetByUsername_Handler,
+		},
+		{
+			MethodName: "GetByMMId",
+			Handler:    _Users_GetByMMId_Handler,
+		},
+		{
+			MethodName: "Search",
+			Handler:    _Users_Search_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -1,10 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"gitlab.medzdrav.ru/prototype/api"
+	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/tasks"
 	"gitlab.medzdrav.ru/prototype/users"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,25 +13,27 @@ import (
 
 func main() {
 
-	var (
-		usersService = users.NewService()
-		tasksService = tasks.NewService()
-		apiService   = api.NewService()
-	)
-
-	err := usersService.Start()
-	if err != nil {
-		log.Fatal(err)
+	services := []service.Service{
+		users.New(),
+		tasks.New(),
+		api.New(),
 	}
 
-	err = tasksService.Start()
-	if err != nil {
-		log.Fatal(err)
+	// init service
+	for _, s := range services {
+		err := s.Init()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
 	}
 
-	err = apiService.Start()
-	if err != nil {
-		log.Fatal(err)
+	// run listeners
+	for _, s := range services {
+		if err := s.ListenAsync(); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
 	}
 
 	quit := make(chan os.Signal)

@@ -1,11 +1,12 @@
 package grpc
 
 import (
+	"gitlab.medzdrav.ru/prototype/kit/common"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"gitlab.medzdrav.ru/prototype/users/domain"
 )
 
-func (s *Service) fromPb(request *pb.CreateUserRequest) (*domain.User, error) {
+func (s *Server) fromPb(request *pb.CreateUserRequest) *domain.User {
 	return &domain.User{
 		Type:      request.Type,
 		Username:  request.Username,
@@ -13,13 +14,13 @@ func (s *Service) fromPb(request *pb.CreateUserRequest) (*domain.User, error) {
 		LastName:  request.LastName,
 		Phone:     request.Phone,
 		Email:     request.Email,
-	}, nil
+	}
 }
 
-func (s *Service) fromDomain(user *domain.User) (*pb.User, error) {
+func (s *Server) fromDomain(user *domain.User) *pb.User {
 
 	if user == nil {
-		return nil, nil
+		return nil
 	}
 
 	return &pb.User{
@@ -31,6 +32,45 @@ func (s *Service) fromDomain(user *domain.User) (*pb.User, error) {
 			Phone:     user.Phone,
 			Email:     user.Email,
 			MMId:      user.MMUserId,
+			MMChannelId: user.MMChannelId,
+		}
+}
+
+func (s *Server) searchRqFromPb(pb *pb.SearchRequest) *domain.SearchCriteria {
+
+	if pb == nil {
+		return nil
+	}
+
+	return &domain.SearchCriteria{
+		PagingRequest: &common.PagingRequest{
+			Size:  int(pb.Paging.Size),
+			Index: int(pb.Paging.Index),
 		},
-		nil
+		UserType:       pb.UserType,
+		Username:       pb.Username,
+		Email:          pb.Email,
+		Phone:          pb.Phone,
+		MMId:           pb.MMId,
+		MMChannelId:    pb.MMChannelId,
+		OnlineStatuses: pb.OnlineStatuses,
+	}
+
+}
+
+func (s *Server) searchRsFromDomain(d *domain.SearchResponse) *pb.SearchResponse {
+
+	rs := &pb.SearchResponse{
+		Paging: &pb.PagingResponse{
+			Total: int32(d.PagingResponse.Total),
+			Index: int32(d.PagingResponse.Index),
+		},
+		Users: []*pb.User{},
+	}
+
+	for _, t := range d.Users {
+		rs.Users = append(rs.Users, s.fromDomain(t))
+	}
+
+	return rs
 }

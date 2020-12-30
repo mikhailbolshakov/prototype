@@ -7,6 +7,8 @@ require (
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/golang/protobuf v1.4.3
 	github.com/gorilla/mux v1.8.0
+	github.com/nats-io/nats-streaming-server v0.19.0 // indirect
+	github.com/nats-io/stan.go v0.7.0
 	github.com/onsi/ginkgo v1.14.2 // indirect
 	github.com/onsi/gomega v1.10.4 // indirect
 	github.com/satori/go.uuid v1.2.0

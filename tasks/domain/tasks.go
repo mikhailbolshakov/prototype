@@ -1,10 +1,14 @@
 package domain
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit"
-	"gitlab.medzdrav.ru/prototype/tasks/repository"
+	"gitlab.medzdrav.ru/prototype/kit/queue"
+	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/users"
+	"gitlab.medzdrav.ru/prototype/tasks/repository/storage"
+	"log"
 	"math/rand"
 	"time"
 )
@@ -18,27 +22,49 @@ type TaskService interface {
 	SetAssignee(taskId string, target *Assignee) (*Task, error)
 	// get by Id
 	Get(taskId string) *Task
+	// get tasks by channel
+	GetByChannel(channelId string) []*Task
+	// update task
+	Update(task *Task) (*Task, error)
 }
 
-type TaskSearchService interface {
-	Search(cr *SearchCriteria) (*SearchResponse, error)
+type serviceImpl struct {
+	storage      storage.TaskStorage
+	config       ConfigService
+	usersService users.Service
+	queue        queue.Queue
 }
 
-type TaskServiceImpl struct {
-	storage      repository.TaskStorage
-	config       TaskConfigService
-	usersAdapter repository.UsersServiceAdapter
-}
-
-func NewTaskService() TaskService {
-	return &TaskServiceImpl{
-		storage:      repository.NewStorage(),
-		config:       NewTaskConfigService(),
-		usersAdapter: repository.NewUsersServiceAdapter(),
+func NewTaskService(storage storage.TaskStorage,
+	config ConfigService,
+	usersAdapter users.Service,
+	queue queue.Queue,
+) TaskService {
+	return &serviceImpl{
+		storage:      storage,
+		config:       config,
+		usersService: usersAdapter,
+		queue:        queue,
 	}
 }
 
-func (t *TaskServiceImpl) New(task *Task) (*Task, error) {
+func (t *Type) equals(another *Type) bool {
+	if another == nil {
+		return false
+	}
+
+	return t.Type == another.Type && t.SubType == another.SubType
+}
+
+func (s *Status) equals(another *Status) bool {
+	if another == nil {
+		return false
+	}
+
+	return s.Status == another.Status && s.SubStatus == another.SubStatus
+}
+
+func (t *serviceImpl) New(task *Task) (*Task, error) {
 
 	// check configuration by the task type
 	cfg, err := t.config.Get(task.Type)
@@ -58,27 +84,27 @@ func (t *TaskServiceImpl) New(task *Task) (*Task, error) {
 	task.Num, _ = t.newNum(cfg)
 	task.Status = tr.To
 
-	// if reported at isn't specified setup current
-	if task.ReportedAt == nil {
-		task.ReportedAt = &tm
+	// if reported isn't specified setup current
+	if task.Reported.At == nil {
+		task.Reported.At = &tm
 	}
 
-	reportedByUser := t.usersAdapter.GetByUserName(task.ReportedBy)
+	reportedByUser := t.usersService.GetByUserName(task.Reported.By)
 	if reportedByUser == nil || reportedByUser.Id == "" {
-		return nil, errors.New(fmt.Sprintf("cannot find reporter username %s", task.ReportedBy))
+		return nil, fmt.Errorf("cannot find reporter username %s", task.Reported.By)
 	}
 
 	if task.Assignee.User != "" {
-		assigneeUser := t.usersAdapter.GetByUserName(task.Assignee.User)
+		assigneeUser := t.usersService.GetByUserName(task.Assignee.User)
 		if assigneeUser == nil || assigneeUser.Id == "" {
-			return nil, errors.New(fmt.Sprintf("cannot find asignee username %s", task.Assignee.User))
+			return nil, fmt.Errorf("cannot find asignee username %s", task.Assignee.User)
 		}
 		task.Assignee.Group = assigneeUser.Type
 	} else {
 		// if assignee user isn't passed, then check groups
 		// if group passed check if it's allowed in transition
 		if task.Assignee.Group != "" && !tr.checkGroup(task.Assignee.Group) {
-			return nil, errors.New(fmt.Sprintf("task cannot be assigned on the group %s", task.Assignee.Group))
+			return nil, fmt.Errorf("task cannot be assigned on the group %s", task.Assignee.Group)
 		} else {
 			// otherwise take auto group if specified in transition
 			task.Assignee = &Assignee{Group: tr.AutoAssignGroup}
@@ -93,25 +119,48 @@ func (t *TaskServiceImpl) New(task *Task) (*Task, error) {
 	task.Details = "{}"
 
 	// save to storage
-	dto, err := t.toDto(task)
+	dto, err := t.storage.Create(toDto(task))
 	if err != nil {
 		return nil, err
 	}
 
-	dto, err = t.storage.Create(dto)
-	if err != nil {
-		return nil, err
+	task = fromDto(dto)
+
+	t.putHistory(task)
+
+	if tr.QueueTopic != "" {
+		t.publish(task, tr.QueueTopic)
 	}
 
-	return t.fromDto(dto)
+	return task, nil
 
 }
 
-func (t *TaskServiceImpl) newNum(cfg *Config) (string, error) {
+func (t *serviceImpl) putHistory(task *Task) {
+
+	go func() {
+		dto := histToDto(&History{
+			Id:       kit.NewId(),
+			TaskId:   task.Id,
+			Status:   task.Status,
+			Assignee: task.Assignee,
+			// TODO: current user from session
+			ChangedBy: "user",
+			ChangedAt: time.Now(),
+		})
+
+		if _, err := t.storage.CreateHistory(dto); err != nil {
+			log.Fatal(err)
+		}
+
+	}()
+}
+
+func (t *serviceImpl) newNum(cfg *Config) (string, error) {
 	return fmt.Sprintf("%s%d", cfg.NumGenRule.Prefix, rand.Intn(99999)), nil
 }
 
-func (t *TaskServiceImpl) MakeTransition(taskId, transitionId string) (*Task, error) {
+func (t *serviceImpl) MakeTransition(taskId, transitionId string) (*Task, error) {
 
 	tm := time.Now()
 
@@ -120,10 +169,7 @@ func (t *TaskServiceImpl) MakeTransition(taskId, transitionId string) (*Task, er
 	if dto == nil {
 		return nil, errors.New(fmt.Sprintf("task not found by id %s", taskId))
 	}
-	task, err := t.fromDto(dto)
-	if err != nil {
-		return nil, err
-	}
+	task := fromDto(dto)
 
 	trs, err := t.config.NextTransitions(task.Type, task.Status)
 	if err != nil {
@@ -155,24 +201,121 @@ func (t *TaskServiceImpl) MakeTransition(taskId, transitionId string) (*Task, er
 	}
 
 	// save to storage
-	dto, err = t.toDto(task)
+	dto, err = t.storage.Update(toDto(task))
 	if err != nil {
 		return nil, err
 	}
 
-	dto, err = t.storage.Update(dto)
-	if err != nil {
-		return nil, err
+	task = fromDto(dto)
+
+	t.putHistory(task)
+
+	if targetTr.QueueTopic != "" {
+		t.publish(task, targetTr.QueueTopic)
 	}
 
-	return t.fromDto(dto)
+	return task, nil
 
 }
 
-func (t *TaskServiceImpl) SetAssignee(taskId string, target *Assignee) (*Task, error) {
-	return nil, nil
+func (t *serviceImpl) publish(task *Task, topic string) {
+	go func(){
+		j, err := json.Marshal(task)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		err = t.queue.Publish(topic, j)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+	}()
 }
 
-func (t *TaskServiceImpl) Get(taskId string) *Task {
+func (t *serviceImpl) setAssignee(task *Task, assignee *Assignee) error {
+
+	if assignee.User != "" {
+		assigneeUser := t.usersService.GetByUserName(assignee.User)
+		if assigneeUser == nil || assigneeUser.Id == "" {
+			return fmt.Errorf("cannot find asignee username %s", assignee.User)
+		}
+		task.Assignee.Group = assigneeUser.Type
+		task.Assignee.User = assigneeUser.Username
+	} else {
+		// if assignee user isn't passed, then check groups
+		// if group passed check if it's allowed in transition
+		if assignee.Group != "" {
+			task.Assignee.Group = assignee.Group
+			task.Assignee.User = ""
+		}
+	}
+	tm := time.Now()
+	task.Assignee.At = &tm
 	return nil
+
 }
+
+func (t *serviceImpl) SetAssignee(taskId string, assignee *Assignee) (*Task, error) {
+
+	task := t.Get(taskId)
+	if task == nil {
+		return nil, fmt.Errorf("task not found id = %s", taskId)
+	}
+
+	if err := t.setAssignee(task, assignee); err != nil {
+		return nil, err
+	}
+
+	task, err := t.update(task)
+	if err != nil {
+		return nil, err
+	}
+
+	t.putHistory(task)
+
+	return task, nil
+}
+
+func (t *serviceImpl) Get(taskId string) *Task {
+	return fromDto(t.storage.Get(taskId))
+}
+
+func (t *serviceImpl) update(task *Task) (*Task, error) {
+
+	dto, err := t.storage.Update(toDto(task))
+	if err != nil {
+		return nil, err
+	}
+
+	task = fromDto(dto)
+
+	return task, nil
+}
+
+func (t *serviceImpl) Update(task *Task) (*Task, error) {
+
+	task, err := t.update(task)
+	if err != nil {
+		return nil, err
+	}
+
+	t.putHistory(task)
+
+	return task, nil
+}
+
+func (t *serviceImpl) GetByChannel(channelId string) []*Task {
+
+	dtos := t.storage.GetByChannel(channelId)
+	var res []*Task
+
+	for _, d := range dtos {
+		res = append(res, fromDto(d))
+	}
+
+	return res
+
+}
+
+

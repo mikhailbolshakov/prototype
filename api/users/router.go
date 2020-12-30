@@ -24,4 +24,8 @@ func (u *Router) Set(r *mux.Router) {
 		c.GetByUsername(writer, request)
 	}).Methods("GET")
 
+	r.HandleFunc("/api/users", func(writer http.ResponseWriter, request *http.Request) {
+		c.Search(writer, request)
+	}).Methods("GET")
+
 }

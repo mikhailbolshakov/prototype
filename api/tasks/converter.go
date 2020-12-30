@@ -5,15 +5,15 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 )
 
-func (c *controller) toPb(request *NewTaskRequest) (*pb.NewTaskRequest, error) {
+func (c *controller) toPb(request *NewTaskRequest) *pb.NewTaskRequest {
 
 	return &pb.NewTaskRequest{
 		Type:        &pb.Type{
 			Type:    request.Type.Type,
 			Subtype: request.Type.SubType,
 		},
-		ReportedBy:  request.ReportedBy,
-		ReportedAt:  grpc.TimeToPbTS(request.ReportedAt),
+		ReportedBy:  request.Reported.By,
+		ReportedAt:  grpc.TimeToPbTS(request.Reported.At),
 		Description: request.Description,
 		Title:       request.Title,
 		DueDate:     grpc.TimeToPbTS(request.DueDate),
@@ -22,10 +22,10 @@ func (c *controller) toPb(request *NewTaskRequest) (*pb.NewTaskRequest, error) {
 			User:  request.Assignee.User,
 			At:    grpc.TimeToPbTS(request.Assignee.At),
 		},
-	}, nil
+	}
 }
 
-func (s *controller) fromPb(response *pb.Task) (*Task, error) {
+func (s *controller) fromPb(response *pb.Task) *Task {
 
 	return &Task{
 			Id:          response.Id,
@@ -38,8 +38,10 @@ func (s *controller) fromPb(response *pb.Task) (*Task, error) {
 				Status:    response.Status.Status,
 				SubStatus: response.Status.Substatus,
 			},
-			ReportedBy:  response.ReportedBy,
-			ReportedAt:  grpc.PbTSToTime(response.ReportedAt),
+			Reported: &Reported{
+				By: response.ReportedBy,
+				At: grpc.PbTSToTime(response.ReportedAt),
+			},
 			DueDate:     grpc.PbTSToTime(response.DueDate),
 			Assignee:    &Assignee{
 				Group: response.Assignee.Group,
@@ -49,6 +51,19 @@ func (s *controller) fromPb(response *pb.Task) (*Task, error) {
 			Description: response.Description,
 			Title:       response.Title,
 			Details:     response.Details,
-		},
-		nil
+		}
+}
+
+func (s *controller) searchRsFromPb(rs *pb.SearchResponse) *SearchResponse {
+	r := &SearchResponse{
+		Index: int(rs.Paging.Index),
+		Total: int(rs.Paging.Total),
+		Tasks: []*Task{},
+	}
+
+	for _, t := range rs.Tasks {
+		r.Tasks = append(r.Tasks, s.fromPb(t))
+	}
+
+	return r
 }

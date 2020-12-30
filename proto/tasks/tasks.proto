@@ -33,6 +33,7 @@ message Task {
   string Description = 9;
   string Title = 10;
   string Details = 11;
+  string ChannelId = 12;
 }
 
 message NewTaskRequest {
@@ -43,6 +44,7 @@ message NewTaskRequest {
   string Title = 5;
   google.protobuf.Timestamp DueDate = 6;
   Assignee Assignee = 7;
+  string ChannelId = 8;
 }
 
 message MakeTransitionRequest {
@@ -54,8 +56,52 @@ message NextTransitionsRequest {}
 
 message NextTransitionsResponse {}
 
+message GetByChannelRequest {
+  string ChannelId = 1;
+}
+
+message GetByChannelResponse {
+  repeated Task Tasks = 1;
+}
+
+message GetByIdRequest {
+  string Id = 1;
+}
+
+message SetAssigneeRequest {
+  string TaskId = 1;
+  Assignee Assignee = 2;
+}
+
+message PagingRequest {
+  int32 Size = 1;
+  int32 Index = 2;
+}
+
+message PagingResponse {
+  int32 Total = 1;
+  int32 Index = 2;
+}
+
+message SearchRequest {
+  PagingRequest Paging = 1;
+  Status Status = 2;
+  Assignee Assignee = 3;
+  Type Type = 4;
+  string Num = 5;
+}
+
+message SearchResponse {
+  PagingResponse Paging = 1;
+  repeated Task Tasks = 2;
+}
+
 service Tasks {
   rpc New(NewTaskRequest) returns (Task) {}
   rpc NextTransitions(NextTransitionsRequest) returns (NextTransitionsResponse) {}
   rpc MakeTransition(MakeTransitionRequest) returns (Task) {}
+  rpc GetByChannel(GetByChannelRequest) returns (GetByChannelResponse) {}
+  rpc SetAssignee(SetAssigneeRequest) returns (Task) {}
+  rpc GetById(GetByIdRequest) returns (Task) {}
+  rpc Search(SearchRequest) returns (SearchResponse) {}
 }

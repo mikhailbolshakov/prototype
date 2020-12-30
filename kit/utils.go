@@ -3,6 +3,7 @@ package kit
 import (
 	"encoding/json"
 	uuid "github.com/satori/go.uuid"
+	"time"
 )
 
 func NewId() string {
@@ -18,4 +19,12 @@ func ToJson(v interface{}) (string, error) {
 		return string(b), nil
 	}
 	return "", nil
+}
+
+func MillisFromTime(t time.Time) int64 {
+	return t.UnixNano() / int64(time.Millisecond)
+}
+
+func TimeFromMillis(millis int64) time.Time {
+	return time.Unix(0, millis*int64(time.Millisecond))
 }
