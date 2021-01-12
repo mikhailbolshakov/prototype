@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/api"
 	"gitlab.medzdrav.ru/prototype/kit/service"
+	"gitlab.medzdrav.ru/prototype/mm"
 	"gitlab.medzdrav.ru/prototype/tasks"
 	"gitlab.medzdrav.ru/prototype/users"
 	"os"
@@ -16,6 +17,7 @@ func main() {
 	services := []service.Service{
 		users.New(),
 		tasks.New(),
+		mm.New(),
 		api.New(),
 	}
 

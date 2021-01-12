@@ -103,3 +103,12 @@ func (s *Server) Search(ctx context.Context, rq *pb.SearchRequest) (*pb.SearchRe
 
 	return s.searchRsFromDomain(dRs), nil
 }
+
+func (s *Server) GetAssignmentLog(ctx context.Context, rq *pb.AssignmentLogRequest) (*pb.AssignmentLogResponse, error) {
+	dRs, err := s.domain.GetAssignmentLog(s.assLogRqFromPb(rq))
+	if err != nil {
+		return nil, err
+	}
+
+	return s.assLogRsFromDomain(dRs), nil
+}

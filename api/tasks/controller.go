@@ -11,6 +11,7 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type controller struct {
@@ -155,6 +156,59 @@ func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.searchRsFromPb(rsPb))
+	}
+
+}
+
+func (c *controller) AssignmentLog(writer http.ResponseWriter, request *http.Request) {
+
+	rq := &pb.AssignmentLogRequest{
+		Paging:   &pb.PagingRequest{},
+	}
+
+	if startBeforeTxt := request.FormValue("startBefore"); startBeforeTxt != "" {
+		startBefore, e := time.Parse(time.RFC3339, startBeforeTxt)
+		if e != nil {
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("startBefore: " + e.Error()))
+			return
+		}
+		rq.StartTimeBefore = grpc.TimeToPbTS(&startBefore)
+	}
+
+	if startAfterTxt := request.FormValue("startAfter"); startAfterTxt != "" {
+		startAfter, e := time.Parse(time.RFC3339, startAfterTxt)
+		if e != nil {
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("startAfter: " + e.Error()))
+			return
+		}
+		rq.StartTimeAfter = grpc.TimeToPbTS(&startAfter)
+	}
+
+	if sizeTxt := request.FormValue("limit"); sizeTxt != "" {
+		size, e := strconv.Atoi(sizeTxt)
+		if e != nil {
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("limit: " + e.Error()))
+			return
+		}
+		rq.Paging.Size = int32(size)
+	}
+
+	if indexTxt := request.FormValue("offset"); indexTxt != "" {
+		index, e := strconv.Atoi(indexTxt)
+		if e != nil {
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("offset: " + e.Error()))
+			return
+		}
+		rq.Paging.Index = int32(index)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if rsPb, err := c.grpc.tasks.GetAssignmentLog(ctx, rq); err != nil {
+		c.RespondError(writer, http.StatusInternalServerError, err)
+	} else {
+		c.RespondOK(writer, c.assLogRsFromPb(rsPb))
 	}
 
 }

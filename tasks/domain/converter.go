@@ -2,6 +2,7 @@ package domain
 
 import (
 	kit "gitlab.medzdrav.ru/prototype/kit/storage"
+	"gitlab.medzdrav.ru/prototype/queue_model"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/storage"
 )
 
@@ -53,7 +54,7 @@ func fromDto(dto *storage.Task) *Task {
 			By: dto.ReportedBy,
 			At: &dto.ReportedAt,
 		},
-		DueDate:    dto.DueDate,
+		DueDate: dto.DueDate,
 		Assignee: &Assignee{
 			Group: dto.AssigneeGroup,
 			User:  dto.AssigneeUser,
@@ -109,11 +110,91 @@ func searchRsFromDto(rs *storage.SearchResponse) *SearchResponse {
 
 	r := &SearchResponse{
 		PagingResponse: rs.PagingResponse,
-		Tasks: []*Task{},
+		Tasks:          []*Task{},
 	}
 
 	for _, t := range rs.Tasks {
 		r.Tasks = append(r.Tasks, fromDto(t))
+	}
+
+	return r
+
+}
+
+func (ts *serviceImpl) taskToQueue(t *Task) *queue_model.Task {
+
+	res := &queue_model.Task{
+		Id:  t.Id,
+		Num: t.Num,
+		Type: &queue_model.Type{
+			Type:    t.Type.Type,
+			SubType: t.Type.SubType,
+		},
+		Status: &queue_model.Status{
+			Status:    t.Status.Status,
+			SubStatus: t.Status.SubStatus,
+		},
+		Reported: &queue_model.Reported{
+			By: t.Reported.By,
+			At: t.Reported.At,
+		},
+		DueDate: t.DueDate,
+		Assignee: &queue_model.Assignee{
+			Group: t.Assignee.Group,
+			User:  t.Assignee.User,
+			At:    t.Assignee.At,
+		},
+		Description: t.Description,
+		Title:       t.Title,
+		Details:     t.Details,
+		ChannelId:   t.ChannelId,
+	}
+
+	return res
+}
+
+func assignmentLogToDto(s *AssignmentLog) *storage.AssignmentLog {
+	return &storage.AssignmentLog{
+		Id:              s.Id,
+		StartTime:       s.StartTime,
+		FinishTime:      s.FinishTime,
+		Status:          s.Status,
+		RuleCode:        s.RuleCode,
+		RuleDescription: s.RuleDescription,
+		UsersInPool:     s.UsersInPool,
+		TasksToAssign:   s.TasksToAssign,
+		Assigned:        s.Assigned,
+		Error:           s.Error,
+	}
+}
+
+func assignmentLogFromDto(s *storage.AssignmentLog) *AssignmentLog {
+	return &AssignmentLog{
+		Id:              s.Id,
+		StartTime:       s.StartTime,
+		FinishTime:      s.FinishTime,
+		Status:          s.Status,
+		RuleCode:        s.RuleCode,
+		RuleDescription: s.RuleDescription,
+		UsersInPool:     s.UsersInPool,
+		TasksToAssign:   s.TasksToAssign,
+		Assigned:        s.Assigned,
+		Error:           s.Error,
+	}
+}
+
+func assLogRsFromDto(rs *storage.AssignmentLogResponse) *AssignmentLogResponse {
+	if rs == nil {
+		return nil
+	}
+
+	r := &AssignmentLogResponse{
+		PagingResponse: rs.PagingResponse,
+		Logs:          []*AssignmentLog{},
+	}
+
+	for _, t := range rs.Logs {
+		r.Logs = append(r.Logs, assignmentLogFromDto(t))
 	}
 
 	return r

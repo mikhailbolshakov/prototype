@@ -24,6 +24,7 @@ type TasksClient interface {
 	SetAssignee(ctx context.Context, in *SetAssigneeRequest, opts ...grpc.CallOption) (*Task, error)
 	GetById(ctx context.Context, in *GetByIdRequest, opts ...grpc.CallOption) (*Task, error)
 	Search(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchResponse, error)
+	GetAssignmentLog(ctx context.Context, in *AssignmentLogRequest, opts ...grpc.CallOption) (*AssignmentLogResponse, error)
 }
 
 type tasksClient struct {
@@ -97,6 +98,15 @@ func (c *tasksClient) Search(ctx context.Context, in *SearchRequest, opts ...grp
 	return out, nil
 }
 
+func (c *tasksClient) GetAssignmentLog(ctx context.Context, in *AssignmentLogRequest, opts ...grpc.CallOption) (*AssignmentLogResponse, error) {
+	out := new(AssignmentLogResponse)
+	err := c.cc.Invoke(ctx, "/tasks.Tasks/GetAssignmentLog", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TasksServer is the server API for Tasks service.
 // All implementations must embed UnimplementedTasksServer
 // for forward compatibility
@@ -108,6 +118,7 @@ type TasksServer interface {
 	SetAssignee(context.Context, *SetAssigneeRequest) (*Task, error)
 	GetById(context.Context, *GetByIdRequest) (*Task, error)
 	Search(context.Context, *SearchRequest) (*SearchResponse, error)
+	GetAssignmentLog(context.Context, *AssignmentLogRequest) (*AssignmentLogResponse, error)
 	mustEmbedUnimplementedTasksServer()
 }
 
@@ -135,6 +146,9 @@ func (UnimplementedTasksServer) GetById(context.Context, *GetByIdRequest) (*Task
 }
 func (UnimplementedTasksServer) Search(context.Context, *SearchRequest) (*SearchResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Search not implemented")
+}
+func (UnimplementedTasksServer) GetAssignmentLog(context.Context, *AssignmentLogRequest) (*AssignmentLogResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAssignmentLog not implemented")
 }
 func (UnimplementedTasksServer) mustEmbedUnimplementedTasksServer() {}
 
@@ -275,6 +289,24 @@ func _Tasks_Search_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Tasks_GetAssignmentLog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AssignmentLogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TasksServer).GetAssignmentLog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tasks.Tasks/GetAssignmentLog",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TasksServer).GetAssignmentLog(ctx, req.(*AssignmentLogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Tasks_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "tasks.Tasks",
 	HandlerType: (*TasksServer)(nil),
@@ -306,6 +338,10 @@ var _Tasks_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Search",
 			Handler:    _Tasks_Search_Handler,
+		},
+		{
+			MethodName: "GetAssignmentLog",
+			Handler:    _Tasks_GetAssignmentLog_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

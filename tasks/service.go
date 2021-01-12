@@ -43,7 +43,8 @@ func New() service.Service {
 	s.assignTasksDaemon = domain.NewAssignmentDaemon(s.domainConfigService,
 													 s.domainTaskService,
 													 s.domainTaskSearchService,
-													  userService)
+													 userService,
+													 s.storage)
 
 	s.grpc = grpc.New(s.domainTaskService, s.domainTaskSearchService)
 

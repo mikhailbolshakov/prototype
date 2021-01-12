@@ -98,6 +98,8 @@ type UserPool struct {
 }
 
 type AssignmentRule struct {
+	Code                  string
+	Description           string
 	DistributionAlgorithm string
 	UserPool              *UserPool
 	Source                *AssignmentSource
@@ -147,4 +149,28 @@ type SearchCriteria struct {
 type SearchResponse struct {
 	*common.PagingResponse
 	Tasks []*Task
+}
+
+type AssignmentLog struct {
+	Id              string
+	StartTime       time.Time
+	FinishTime      *time.Time
+	Status          string
+	RuleCode        string
+	RuleDescription string
+	UsersInPool     int
+	TasksToAssign   int
+	Assigned        int
+	Error           string
+}
+
+type AssignmentLogCriteria struct {
+	*common.PagingRequest
+	StartTimeAfter  *time.Time
+	StartTimeBefore *time.Time
+}
+
+type AssignmentLogResponse struct {
+	*common.PagingResponse
+	Logs []*AssignmentLog
 }

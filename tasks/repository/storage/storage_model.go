@@ -40,16 +40,40 @@ type History struct {
 
 type SearchCriteria struct {
 	*common.PagingRequest
-	Num           string     `gorm:"column:num"`
-	Status        string     `gorm:"column:status"`
-	SubStatus     string     `gorm:"column:substatus"`
-	AssigneeGroup string     `gorm:"column:assignee_group"`
-	AssigneeUser  string     `gorm:"column:assignee_user"`
-	Type          string     `gorm:"column:type"`
-	SubType       string     `gorm:"column:subtype"`
+	Num           string `gorm:"column:num"`
+	Status        string `gorm:"column:status"`
+	SubStatus     string `gorm:"column:substatus"`
+	AssigneeGroup string `gorm:"column:assignee_group"`
+	AssigneeUser  string `gorm:"column:assignee_user"`
+	Type          string `gorm:"column:type"`
+	SubType       string `gorm:"column:subtype"`
 }
 
 type SearchResponse struct {
 	*common.PagingResponse
 	Tasks []*Task
+}
+
+type AssignmentLog struct {
+	Id              string     `gorm:"column:id"`
+	StartTime       time.Time  `gorm:"column:start_time"`
+	FinishTime      *time.Time `gorm:"column:finish_time"`
+	Status          string     `gorm:"column:status"`
+	RuleCode        string     `gorm:"column:rule_code"`
+	RuleDescription string     `gorm:"column:rule_description"`
+	UsersInPool     int        `gorm:"column:users_in_pool"`
+	TasksToAssign   int        `gorm:"column:tasks_to_assign"`
+	Assigned        int        `gorm:"column:assigned"`
+	Error           string     `gorm:"column:error"`
+}
+
+type AssignmentLogCriteria struct {
+	*common.PagingRequest
+	StartTimeAfter  *time.Time
+	StartTimeBefore *time.Time
+}
+
+type AssignmentLogResponse struct {
+	*common.PagingResponse
+	Logs []*AssignmentLog
 }

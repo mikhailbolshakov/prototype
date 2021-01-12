@@ -6,6 +6,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/users"
+	"gitlab.medzdrav.ru/prototype/tasks/repository/storage"
 	"log"
 	"time"
 )
@@ -25,13 +26,15 @@ type assignmentTask struct {
 func NewAssignmentDaemon(cfgService ConfigService,
 	taskService TaskService,
 	searchService TaskSearchService,
-	userSearchService users.Service) AssignmentDaemon {
+	userSearchService users.Service,
+	storage storage.TaskStorage) AssignmentDaemon {
 	d := &daemonImpl{
 		taskTypes:     []*assignmentTask{},
 		cfgService:    cfgService,
 		taskService:   taskService,
 		searchService: searchService,
 		userService:   userSearchService,
+		storage:       storage,
 	}
 	return d
 }
@@ -42,11 +45,37 @@ type daemonImpl struct {
 	taskService   TaskService
 	searchService TaskSearchService
 	userService   users.Service
+	storage       storage.TaskStorage
 }
 
 func (d *daemonImpl) assign(tt *assignmentTask) error {
 
+	logSuccess := func(log *storage.AssignmentLog) {
+		log.Status = "success"
+		t := time.Now()
+		log.FinishTime = &t
+		_, _ = d.storage.SaveAssignmentLog(log)
+	}
+
+	logFail := func(log *storage.AssignmentLog, err error) {
+		log.Status = "fail"
+		log.Error = err.Error()
+		t := time.Now()
+		log.FinishTime = &t
+		_, _ = d.storage.SaveAssignmentLog(log)
+	}
+
 	for _, rule := range tt.cfg.AssignmentRules {
+
+		l, _ := d.storage.SaveAssignmentLog(&storage.AssignmentLog{
+			StartTime:       time.Now(),
+			Status:          "in-progress",
+			RuleCode:        rule.Code,
+			RuleDescription: rule.Description,
+			UsersInPool:     0,
+			TasksToAssign:   0,
+			Assigned:        0,
+		})
 
 		log.Printf("assignment rule is fired %v", rule)
 
@@ -60,9 +89,12 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 			OnlineStatuses: rule.UserPool.Statuses,
 		})
 		if err != nil {
+			logSuccess(l)
 			log.Fatal(err)
 			return err
 		}
+
+		l.UsersInPool = len(usersRs.Users)
 
 		// search task to be assigned by the rule
 		cr := &SearchCriteria{
@@ -76,13 +108,17 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 		}
 		rs, err := d.searchService.Search(cr)
 		if err != nil {
+			logFail(l, err)
 			log.Fatal(err)
 			return err
 		}
 
+		l.TasksToAssign = len(rs.Tasks)
+
 		if len(rs.Tasks) == 0 {
+			logSuccess(l)
 			log.Printf("no task to assign found")
-			return nil
+			break
 		}
 
 		usersPool := map[string]*pb.User{}
@@ -114,6 +150,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 				User: userToAssign.Username,
 			})
 			if err != nil {
+				logFail(l, err)
 				log.Fatal(err)
 				return err
 			}
@@ -124,19 +161,23 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 
 				tr, err := d.cfgService.FindTransition(t.Type, t.Status, rule.Target.Status)
 				if err != nil {
+					logFail(l, err)
 					log.Fatal(err)
 					return err
 				}
 				t, err = d.taskService.MakeTransition(t.Id, tr.Id)
 				if err != nil {
+					logFail(l, err)
 					log.Fatal(err)
 					return err
 				}
 
 			}
+			l.Assigned++
 
 		}
 
+		logSuccess(l)
 	}
 
 	return nil
@@ -155,7 +196,7 @@ func (d *daemonImpl) Run() {
 			for {
 
 				select {
-				case <-time.Tick(time.Second * 10):
+				case <-time.Tick(time.Second * 30):
 					if err := d.assign(tt); err != nil {
 						return
 					}

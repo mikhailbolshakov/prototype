@@ -44,6 +44,23 @@ create table histories
 
 create index idx_histories_task on histories(task_id);
 
+create table assignment_logs (
+    id uuid primary key,
+    start_time timestamp not null,
+    finish_time timestamp,
+    status varchar not null,
+    rule_code varchar not null,
+    rule_description varchar not null,
+    users_in_pool integer not null,
+    tasks_to_assign integer not null,
+    assigned integer not null,
+    error varchar
+);
+
+create index idx_ass_log_start_time on assignment_logs(start_time);
+create index idx_ass_log_fin_time on assignment_logs(finish_time);
+
 -- +goose Down
 drop table tasks;
 drop table histories;
+drop table assignment_logs;

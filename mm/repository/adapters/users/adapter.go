@@ -1,8 +1,8 @@
-package mattermost
+package users
 
 import (
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
-	pb "gitlab.medzdrav.ru/prototype/proto/mm"
+	pb "gitlab.medzdrav.ru/prototype/proto/users"
 )
 
 type Adapter interface {
@@ -11,29 +11,27 @@ type Adapter interface {
 }
 
 type adapterImpl struct {
-	mmServiceImpl *serviceImpl
+	userServiceImpl *serviceImpl
 	initialized bool
 }
 
 func NewAdapter() Adapter {
 	a := &adapterImpl{
-		mmServiceImpl: newImpl(),
-		initialized:   false,
+		userServiceImpl: newImpl(),
+		initialized: false,
 	}
 	return a
 }
 
 func (a *adapterImpl) Init() error {
-
-	cl, err := kitGrpc.NewClient("localhost", "50053")
+	cl, err := kitGrpc.NewClient("localhost", "50051")
 	if err != nil {
 		return err
 	}
-	a.mmServiceImpl.UsersClient = pb.NewUsersClient(cl.Conn)
-	a.mmServiceImpl.ChannelsClient = pb.NewChannelsClient(cl.Conn)
+	a.userServiceImpl.UsersClient = pb.NewUsersClient(cl.Conn)
 	return nil
 }
 
 func (a *adapterImpl) GetService() Service {
-	return a.mmServiceImpl
+	return a.userServiceImpl
 }

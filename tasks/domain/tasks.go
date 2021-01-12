@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit"
+	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/storage"
@@ -26,6 +27,8 @@ type TaskService interface {
 	GetByChannel(channelId string) []*Task
 	// update task
 	Update(task *Task) (*Task, error)
+	// get assignment tasks execution log
+	GetAssignmentLog(cr *AssignmentLogCriteria) (*AssignmentLogResponse, error)
 }
 
 type serviceImpl struct {
@@ -220,7 +223,8 @@ func (t *serviceImpl) MakeTransition(taskId, transitionId string) (*Task, error)
 
 func (t *serviceImpl) publish(task *Task, topic string) {
 	go func(){
-		j, err := json.Marshal(task)
+
+		j, err := json.Marshal(t.taskToQueue(task))
 		if err != nil {
 			log.Fatal(err)
 			return
@@ -316,6 +320,32 @@ func (t *serviceImpl) GetByChannel(channelId string) []*Task {
 
 	return res
 
+}
+
+func (t *serviceImpl) GetAssignmentLog(cr *AssignmentLogCriteria) (*AssignmentLogResponse, error) {
+
+	if cr.PagingRequest == nil {
+		cr.PagingRequest = &common.PagingRequest{}
+	}
+
+	if cr.Size == 0 {
+		cr.Size = 100
+	}
+
+	if cr.Index == 0 {
+		cr.Index = 1
+	}
+
+	r, err := t.storage.GetAssignmentLog(&storage.AssignmentLogCriteria{
+		PagingRequest:   cr.PagingRequest,
+		StartTimeAfter:  cr.StartTimeAfter,
+		StartTimeBefore: cr.StartTimeBefore,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return assLogRsFromDto(r), nil
 }
 
 

@@ -96,6 +96,30 @@ message SearchResponse {
   repeated Task Tasks = 2;
 }
 
+message AssignmentLog {
+  string Id = 1;
+  google.protobuf.Timestamp StartTime = 2;
+  google.protobuf.Timestamp FinishTime = 3;
+  string Status = 4;
+  string RuleCode = 5;
+  string RuleDescription = 6;
+  int32 UsersInPool = 7;
+  int32 TasksToAssign = 8;
+  int32 Assigned = 9;
+  string Error = 10;
+}
+
+message AssignmentLogRequest {
+  PagingRequest Paging = 1;
+  google.protobuf.Timestamp StartTimeBefore = 2;
+  google.protobuf.Timestamp StartTimeAfter = 3;
+}
+
+message AssignmentLogResponse {
+  PagingResponse Paging = 1;
+  repeated AssignmentLog Logs = 2;
+}
+
 service Tasks {
   rpc New(NewTaskRequest) returns (Task) {}
   rpc NextTransitions(NextTransitionsRequest) returns (NextTransitionsResponse) {}
@@ -104,4 +128,5 @@ service Tasks {
   rpc SetAssignee(SetAssigneeRequest) returns (Task) {}
   rpc GetById(GetByIdRequest) returns (Task) {}
   rpc Search(SearchRequest) returns (SearchResponse) {}
+  rpc GetAssignmentLog(AssignmentLogRequest) returns (AssignmentLogResponse) {}
 }

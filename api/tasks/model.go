@@ -1,6 +1,8 @@
 package tasks
 
-import "time"
+import (
+	"time"
+)
 
 type Status struct {
 	Status    string `json:"status"`
@@ -49,4 +51,23 @@ type SearchResponse struct {
 	Index int     `json:"index"`
 	Total int     `json:"total"`
 	Tasks []*Task `json:"tasks"`
+}
+
+type AssignmentLog struct {
+	Id              string     `json:"id"`
+	StartTime       *time.Time  `json:"startTime"`
+	FinishTime      *time.Time `json:"finishTime"`
+	Status          string     `json:"status"`
+	RuleCode        string     `json:"ruleCode"`
+	RuleDescription string     `json:"ruleDescription"`
+	UsersInPool     int        `json:"usersInPool"`
+	TasksToAssign   int        `json:"tasksToAssign"`
+	Assigned        int        `json:"assigned"`
+	Error           string     `json:"error"`
+}
+
+type AssignmentLogResponse struct {
+	Index int              `json:"index"`
+	Total int              `json:"total"`
+	Logs  []*AssignmentLog `json:"logs"`
 }

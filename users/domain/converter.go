@@ -2,7 +2,6 @@ package domain
 
 import (
 	kit "gitlab.medzdrav.ru/prototype/kit/storage"
-	"gitlab.medzdrav.ru/prototype/users/repository/adapters/mattermost"
 	"gitlab.medzdrav.ru/prototype/users/repository/storage"
 )
 
@@ -37,13 +36,6 @@ func fromDto(dto *storage.User) *User {
 		Email:       dto.Email,
 		MMUserId:    dto.MMUserId,
 		MMChannelId: dto.MMChannelId,
-	}
-}
-
-func toMM(domain *User) *mattermost.MMCreateUserRequest {
-	return &mattermost.MMCreateUserRequest{
-		Username: domain.Username,
-		Email:    domain.Email,
 	}
 }
 

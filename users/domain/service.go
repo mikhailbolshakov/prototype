@@ -1,11 +1,11 @@
 package domain
 
 import (
-	"github.com/golang/protobuf/ptypes"
+	"encoding/json"
 	"gitlab.medzdrav.ru/prototype/kit"
-	tasks2 "gitlab.medzdrav.ru/prototype/proto/tasks"
+	"gitlab.medzdrav.ru/prototype/kit/queue"
+	"gitlab.medzdrav.ru/prototype/proto/mm"
 	"gitlab.medzdrav.ru/prototype/users/repository/adapters/mattermost"
-	"gitlab.medzdrav.ru/prototype/users/repository/adapters/tasks"
 	"gitlab.medzdrav.ru/prototype/users/repository/storage"
 	"log"
 )
@@ -17,90 +17,47 @@ type UserService interface {
 }
 
 type userServiceImpl struct {
-	storage      storage.UserStorage
-	muttermost   mattermost.Service
-	tasksService tasks.Service
+	storage    storage.UserStorage
+	mattermost mattermost.Service
+	queue      queue.Queue
 }
 
-func NewUserService(storage storage.UserStorage, mmService mattermost.Service, tasksService tasks.Service) UserService {
+func NewUserService(storage storage.UserStorage, mmService mattermost.Service, queue queue.Queue) UserService {
 	s := &userServiceImpl{
 		storage:    storage,
-		muttermost: mmService,
-		tasksService: tasksService,
+		mattermost: mmService,
+		queue:      queue,
 	}
-
-	s.muttermost.SetNewPostMessageHandler(s.postHandler)
 
 	return s
 }
 
-// TODO: this shouldn't be here
-func (u *userServiceImpl) postHandler(post *mattermost.MMPost) {
-
-	// get user by MM user id
-	user := u.storage.GetByMMId(post.UserId)
-
-	if user != nil && user.MMChannelId == post.ChannelId {
-
-		// retrieves tasks by channel
-		ts := u.tasksService.GetByChannelId(user.MMChannelId)
-
-		// check if there is open task
-		newTask := true
-		if len(ts) > 0 {
-
-			for _, t := range ts {
-				// TODO: it's simplification
-				// the correct check should verifies there are no tasks with close time > post time
-				// otherwise this post relates to the closed task
-				if t.Status.Status == "open" {
-					newTask = false
-					break
-				}
-			}
-
+func (u *userServiceImpl) publish(user *User, topic string) {
+	go func() {
+		j, err := json.Marshal(user)
+		if err != nil {
+			log.Fatal(err)
+			return
 		}
-
-		if newTask {
-
-			postTime := kit.TimeFromMillis(post.CreateAt)
-			ts, _ := ptypes.TimestampProto(postTime)
-
-			// create a new task
-			createdTask, err := u.tasksService.CreateTask(&tasks2.NewTaskRequest{
-				Type:        &tasks2.Type{
-					Type:    "client",
-					Subtype: "medical-request",
-				},
-				ReportedBy:  user.Username,
-				ReportedAt:  ts,
-				Description: "Обращение клиента",
-				Title:       "Обращение клиента",
-				DueDate:     nil,
-				Assignee:    &tasks2.Assignee{
-					Group: "consultant",
-				},
-				ChannelId:   user.MMChannelId,
-			})
-			if err != nil {
-				log.Print(err)
-				return
-			}
-
-			log.Printf("task created: %s", createdTask.Id)
-
-		} else {
-			log.Println("task found")
+		err = u.queue.Publish(topic, j)
+		if err != nil {
+			log.Fatal(err)
+			return
 		}
-
-	}
-
+	}()
 }
 
 func (u *userServiceImpl) Create(user *User) (*User, error) {
 
+	// TODO: this shouldn't be here
+	// send message to Queue, consumer in BP-service should create MM user and channel
+	// user-service update mm_id and mm_channel_id on receiving an answer
+
 	// create a new user in MM
-	mmRs, err := u.muttermost.CreateUser(toMM(user))
+	mmRs, err := u.mattermost.CreateUser(&mm.CreateUserRequest{
+		Username: user.Username,
+		Email:    user.Email,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -108,10 +65,9 @@ func (u *userServiceImpl) Create(user *User) (*User, error) {
 	user.MMUserId = mmRs.Id
 	user.Id = kit.NewId()
 
-	// TODO: this shouldn't be here
 	// create a private channel client-consultant for the client
 	if user.Type == USER_TYPE_CLIENT {
-		chRs, err := u.muttermost.CreateClientChannel(&mattermost.MMCreateClientChannelRequest{ClientUserId: user.MMUserId})
+		chRs, err := u.mattermost.CreateClientChannel(&mm.CreateClientChannelRequest{ClientUserId: user.MMUserId})
 		if err != nil {
 			return nil, err
 		}

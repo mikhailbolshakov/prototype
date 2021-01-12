@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package mm;
+option go_package = "proto/mm";
+
+message CreateUserRequest {
+  string Username = 1;
+  string Email = 2;
+}
+message CreateUserResponse {
+  string Id = 1;
+}
+
+service Users {
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+}
+
+message CreateClientChannelRequest {
+  string ClientUserId = 1;
+}
+message CreateClientChannelResponse {
+  string ChannelId = 2;
+}
+
+service Channels {
+  rpc CreateClientChannel(CreateClientChannelRequest) returns (CreateClientChannelResponse) {}
+}
+
+service Posts {
+}

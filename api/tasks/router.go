@@ -36,4 +36,8 @@ func (u *Router) Set(r *mux.Router) {
 		c.Search(writer, request)
 	}).Methods("GET")
 
+	r.HandleFunc("/api/tasks/assignment/log", func(writer http.ResponseWriter, request *http.Request) {
+		c.AssignmentLog(writer, request)
+	}).Methods("GET")
+
 }

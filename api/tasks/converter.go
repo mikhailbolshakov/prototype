@@ -67,3 +67,28 @@ func (s *controller) searchRsFromPb(rs *pb.SearchResponse) *SearchResponse {
 
 	return r
 }
+
+func (s *controller) assLogRsFromPb(rs *pb.AssignmentLogResponse) *AssignmentLogResponse {
+	r := &AssignmentLogResponse{
+		Index: int(rs.Paging.Index),
+		Total: int(rs.Paging.Total),
+		Logs: []*AssignmentLog{},
+	}
+
+	for _, t := range rs.Logs {
+		r.Logs = append(r.Logs, &AssignmentLog{
+			Id:              t.Id,
+			StartTime:       grpc.PbTSToTime(t.StartTime),
+			FinishTime:      grpc.PbTSToTime(t.FinishTime),
+			Status:          t.Status,
+			RuleCode:        t.RuleCode,
+			RuleDescription: t.RuleDescription,
+			UsersInPool:     int(t.UsersInPool),
+			TasksToAssign:   int(t.TasksToAssign),
+			Assigned:        int(t.Assigned),
+			Error:           t.Error,
+		})
+	}
+
+	return r
+}

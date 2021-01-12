@@ -1,4 +1,4 @@
-package mm
+package mattermost
 
 import (
 	"encoding/json"
@@ -10,19 +10,19 @@ import (
 )
 
 type Params struct {
-	Url string
-	WsUrl string
+	Url     string
+	WsUrl   string
 	Account string
-	Pwd string
+	Pwd     string
 }
 
 type Client struct {
 	RestApi *model.Client4
-	WsApi *model.WebSocketClient
-	Token string
-	User *model.User
-	Quit chan interface{}
-	Params *Params
+	WsApi   *model.WebSocketClient
+	Token   string
+	User    *model.User
+	Quit    chan interface{}
+	Params  *Params
 }
 
 func handleResponse(rs *model.Response) error {
@@ -39,7 +39,7 @@ func handleResponse(rs *model.Response) error {
 	return nil
 }
 
-func Login(p *Params) (*Client, error) {
+func login(p *Params) (*Client, error) {
 
 	cl := &Client{
 		Quit: make(chan interface{}),
@@ -83,7 +83,7 @@ func Login(p *Params) (*Client, error) {
 	return cl, nil
 }
 
-func (c *Client) Logout() error {
+func (c *Client) logout() error {
 	_, rs := c.RestApi.Logout()
 	if err := handleResponse(rs); err != nil {
 		return err
@@ -91,7 +91,7 @@ func (c *Client) Logout() error {
 	return nil
 }
 
-func (c *Client) CreateUser(rq *CreateUserRequest) (*CreateUserResponse, error) {
+func (c *Client) createUser(rq *CreateUserRequest) (*CreateUserResponse, error) {
 
 	user, rs := c.RestApi.CreateUser(&model.User{
 		Username: rq.Username,
@@ -121,7 +121,7 @@ func (c *Client) CreateUser(rq *CreateUserRequest) (*CreateUserResponse, error) 
 	return response, nil
 }
 
-func (c *Client) CreateClientChannel(rq *CreateClientChannelRequest) (*CreateClientChannelResponse, error) {
+func (c *Client) createClientChannel(rq *CreateClientChannelRequest) (*CreateClientChannelResponse, error) {
 
 	team, rs := c.RestApi.GetTeamByName(rq.TeamName, "")
 	if err := handleResponse(rs); err != nil {
@@ -143,5 +143,102 @@ func (c *Client) CreateClientChannel(rq *CreateClientChannelRequest) (*CreateCli
 		return nil, err
 	}
 
-	return &CreateClientChannelResponse {ChannelId: ch.Id}, nil
+	return &CreateClientChannelResponse{ChannelId: ch.Id}, nil
 }
+
+func (c *Client) subscribeUser(channelId string, userId string) error {
+	_, rs := c.RestApi.AddChannelMember(channelId, userId)
+	if err := handleResponse(rs); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) convertAttachments(attachments []*PostAttachment) []*model.SlackAttachment {
+
+	var slackAttachments []*model.SlackAttachment
+
+	for _, a := range attachments {
+
+		sa := &model.SlackAttachment{
+			Fallback:   a.Fallback,
+			Color:      a.Color,
+			Pretext:    a.Pretext,
+			AuthorName: a.AuthorName,
+			AuthorLink: a.AuthorLink,
+			AuthorIcon: a.AuthorIcon,
+			Title:      a.Title,
+			TitleLink:  a.TitleLink,
+			Text:       a.Text,
+			ImageURL:   a.ImageURL,
+			ThumbURL:   a.ThumbURL,
+			Footer:     a.Footer,
+			FooterIcon: a.FooterIcon,
+		}
+
+		if a.Fields != nil && len(a.Fields) > 0 {
+			sa.Fields = []*model.SlackAttachmentField{}
+
+			for _, f := range a.Fields {
+				sa.Fields = append(sa.Fields, &model.SlackAttachmentField{
+					Title: f.Title,
+					Value: f.Value,
+					Short: model.SlackCompatibleBool(f.Short),
+				})
+
+			}
+		}
+
+		slackAttachments = append(slackAttachments, sa)
+
+	}
+
+	return slackAttachments
+}
+
+func (c *Client) createEphemeralPost(channelId string, recipientUserId string, message string, attachments []*PostAttachment) error {
+
+	props := model.StringInterface{}
+	if attachments != nil && len(attachments) > 0 {
+		props["attachments"] = c.convertAttachments(attachments)
+	}
+
+	ep := &model.PostEphemeral{
+		UserID: recipientUserId,
+		Post: &model.Post{
+			ChannelId: channelId,
+			Message:   message,
+			Props:     props,
+		},
+	}
+	_, rs := c.RestApi.CreatePostEphemeral(ep)
+	if err := handleResponse(rs); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func (c *Client) createPost(channelId string, message string, attachments []*PostAttachment) error {
+
+	props := model.StringInterface{}
+	if attachments != nil && len(attachments) > 0 {
+		props["attachments"] = c.convertAttachments(attachments)
+	}
+
+	p := &model.Post{
+		ChannelId: channelId,
+		Message:   message,
+		Props:     props,
+	}
+
+	_, rs := c.RestApi.CreatePost(p)
+	if err := handleResponse(rs); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+

@@ -111,3 +111,48 @@ func (s *Server) searchRsFromDomain(d *domain.SearchResponse) *pb.SearchResponse
 
 	return rs
 }
+
+func (s *Server) assLogRqFromPb(pb *pb.AssignmentLogRequest) *domain.AssignmentLogCriteria {
+
+	if pb == nil {
+		return nil
+	}
+
+	return &domain.AssignmentLogCriteria{
+		PagingRequest: &common.PagingRequest{
+			Size:  int(pb.Paging.Size),
+			Index: int(pb.Paging.Index),
+		},
+		StartTimeAfter:  grpc.PbTSToTime(pb.StartTimeAfter),
+		StartTimeBefore: grpc.PbTSToTime(pb.StartTimeBefore),
+	}
+
+}
+
+func (s *Server) assLogRsFromDomain(d *domain.AssignmentLogResponse) *pb.AssignmentLogResponse {
+
+	rs := &pb.AssignmentLogResponse{
+		Paging: &pb.PagingResponse{
+			Total: int32(d.PagingResponse.Total),
+			Index: int32(d.PagingResponse.Index),
+		},
+		Logs: []*pb.AssignmentLog{},
+	}
+
+	for _, l := range d.Logs {
+		rs.Logs = append(rs.Logs, &pb.AssignmentLog{
+			Id:              l.Id,
+			StartTime:       grpc.TimeToPbTS(&l.StartTime),
+			FinishTime:      grpc.TimeToPbTS(l.FinishTime),
+			Status:          l.Status,
+			RuleCode:        l.RuleCode,
+			RuleDescription: l.RuleDescription,
+			UsersInPool:     int32(l.UsersInPool),
+			TasksToAssign:   int32(l.TasksToAssign),
+			Assigned:        int32(l.Assigned),
+			Error:           l.Error,
+		})
+	}
+
+	return rs
+}

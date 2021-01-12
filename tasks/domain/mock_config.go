@@ -49,6 +49,7 @@ func getMockConfig() []*Config {
 					AllowAssignGroups: []string{GROUP_CONSULTANT},
 					AutoAssignGroup:   GROUP_CONSULTANT,
 					Initial:           false,
+					QueueTopic:        "tasks.assigned",
 				},
 				{
 					Id:                "5",
@@ -110,6 +111,8 @@ func getMockConfig() []*Config {
 		},
 		AssignmentRules: []*AssignmentRule{
 			{
+				Code: "client-med-request-assignment",
+				Description: "Подбор Медконсультанта для обращения клиента",
 				DistributionAlgorithm: "first-available",
 				UserPool: &UserPool{
 					Group:    GROUP_CONSULTANT,

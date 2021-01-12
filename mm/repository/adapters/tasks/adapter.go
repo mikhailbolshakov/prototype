@@ -2,12 +2,14 @@ package tasks
 
 import (
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
+	"gitlab.medzdrav.ru/prototype/kit/queue"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 )
 
 type Adapter interface {
 	Init() error
 	GetService() Service
+	ListenAsync() error
 }
 
 type adapterImpl struct {
@@ -15,9 +17,9 @@ type adapterImpl struct {
 	initialized bool
 }
 
-func NewAdapter() Adapter {
+func NewAdapter(queue queue.Queue) Adapter {
 	a := &adapterImpl{
-		taskServiceImpl: newImpl(),
+		taskServiceImpl: newImpl(queue),
 		initialized: false,
 	}
 	return a
@@ -34,4 +36,8 @@ func (a *adapterImpl) Init() error {
 
 func (a *adapterImpl) GetService() Service {
 	return a.taskServiceImpl
+}
+
+func (a *adapterImpl) ListenAsync() error {
+	return a.taskServiceImpl.listenTaskAssigned()
 }
