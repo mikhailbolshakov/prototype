@@ -13,14 +13,14 @@ type Service interface {
 	GetByChannelId(channelId string) []*pb.Task
 	CreateTask(rq *pb.NewTaskRequest) (*pb.Task, error)
 	SetTaskAssignedHandler(h TaskHandler)
-	SetNewExpertConsultationTaskHandler(h TaskHandler)
+	SetTaskRemindHandler(h TaskHandler)
 	MakeTransition(rq *pb.MakeTransitionRequest) error
 }
 
 type serviceImpl struct {
 	queue               queue.Queue
 	taskAssignedHandler TaskHandler
-	newExpertConsultationTaskHandler TaskHandler
+	taskRemindHandler   TaskHandler
 	pb.TasksClient
 }
 
@@ -33,12 +33,12 @@ func newImpl(queue queue.Queue) *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) SetNewExpertConsultationTaskHandler(h TaskHandler) {
-	u.newExpertConsultationTaskHandler = h
-}
-
 func (u *serviceImpl) SetTaskAssignedHandler(h TaskHandler) {
 	u.taskAssignedHandler = h
+}
+
+func (u *serviceImpl) SetTaskRemindHandler(h TaskHandler) {
+	u.taskRemindHandler = h
 }
 
 func (u *serviceImpl) GetByChannelId(channelId string) []*pb.Task {
@@ -69,10 +69,16 @@ func (u *serviceImpl) CreateTask(rq *pb.NewTaskRequest) (*pb.Task, error) {
 	return u.New(ctx, rq)
 }
 
-func (u *serviceImpl) listenTaskAssigned() error {
+func (u *serviceImpl) listenTaskQueue() error {
 
-	receiver := make(chan []byte)
-	err := u.queue.Subscribe("tasks.assigned", receiver)
+	taskAssignedChan := make(chan []byte)
+	err := u.queue.Subscribe("tasks.assigned", taskAssignedChan)
+	if err != nil {
+		return err
+	}
+
+	taskRemindChan := make(chan []byte)
+	err = u.queue.Subscribe("tasks.remind", taskRemindChan)
 	if err != nil {
 		return err
 	}
@@ -81,7 +87,7 @@ func (u *serviceImpl) listenTaskAssigned() error {
 
 		for {
 			select {
-			case msg := <-receiver:
+			case msg := <-taskAssignedChan:
 
 				task := &queue_model.Task{}
 				_ = json.Unmarshal(msg, task)
@@ -91,35 +97,16 @@ func (u *serviceImpl) listenTaskAssigned() error {
 				if u.taskAssignedHandler != nil {
 					u.taskAssignedHandler(task)
 				}
-			}
-		}
 
-	}()
-
-	return nil
-}
-
-func (u *serviceImpl) listenNewExpertConsultationTask() error {
-
-	receiver := make(chan []byte)
-	err := u.queue.Subscribe("tasks.new-expert-consultation", receiver)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-
-		for {
-			select {
-			case msg := <-receiver:
+			case msg := <-taskRemindChan:
 
 				task := &queue_model.Task{}
 				_ = json.Unmarshal(msg, task)
 
-				log.Printf("expert consultation task event received %v", task)
+				log.Printf("remind task event received %v", task)
 
-				if u.newExpertConsultationTaskHandler != nil {
-					u.newExpertConsultationTaskHandler(task)
+				if u.taskRemindHandler != nil {
+					u.taskRemindHandler(task)
 				}
 			}
 		}

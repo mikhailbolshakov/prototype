@@ -15,6 +15,7 @@ type UserService interface {
 	Create(user *User) (*User, error)
 	GetByUsername(username string) *User
 	GetByMMId(mmId string) *User
+	Get(id string) *User
 }
 
 type userServiceImpl struct {
@@ -97,4 +98,8 @@ func (u *userServiceImpl) GetByUsername(username string) *User {
 
 func (u *userServiceImpl) GetByMMId(mmId string) *User {
 	return fromDto(u.storage.GetByMMId(mmId))
+}
+
+func (u *userServiceImpl) Get(id string) *User {
+	return fromDto(u.storage.Get(id))
 }

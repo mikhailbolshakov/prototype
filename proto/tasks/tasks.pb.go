@@ -199,6 +199,163 @@ func (x *Assignee) GetAt() *timestamp.Timestamp {
 	return nil
 }
 
+type BeforeDueDate struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Unit  string `protobuf:"bytes,1,opt,name=Unit,proto3" json:"Unit,omitempty"`
+	Value uint32 `protobuf:"varint,2,opt,name=Value,proto3" json:"Value,omitempty"`
+}
+
+func (x *BeforeDueDate) Reset() {
+	*x = BeforeDueDate{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_tasks_tasks_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *BeforeDueDate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeforeDueDate) ProtoMessage() {}
+
+func (x *BeforeDueDate) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_tasks_tasks_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeforeDueDate.ProtoReflect.Descriptor instead.
+func (*BeforeDueDate) Descriptor() ([]byte, []int) {
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *BeforeDueDate) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *BeforeDueDate) GetValue() uint32 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+type SpecificTime struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	At *timestamp.Timestamp `protobuf:"bytes,1,opt,name=At,proto3" json:"At,omitempty"`
+}
+
+func (x *SpecificTime) Reset() {
+	*x = SpecificTime{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_tasks_tasks_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SpecificTime) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SpecificTime) ProtoMessage() {}
+
+func (x *SpecificTime) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_tasks_tasks_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SpecificTime.ProtoReflect.Descriptor instead.
+func (*SpecificTime) Descriptor() ([]byte, []int) {
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *SpecificTime) GetAt() *timestamp.Timestamp {
+	if x != nil {
+		return x.At
+	}
+	return nil
+}
+
+type Reminder struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	BeforeDueDate *BeforeDueDate `protobuf:"bytes,1,opt,name=BeforeDueDate,proto3" json:"BeforeDueDate,omitempty"`
+	SpecificTime  *SpecificTime  `protobuf:"bytes,2,opt,name=SpecificTime,proto3" json:"SpecificTime,omitempty"`
+}
+
+func (x *Reminder) Reset() {
+	*x = Reminder{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_tasks_tasks_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Reminder) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Reminder) ProtoMessage() {}
+
+func (x *Reminder) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_tasks_tasks_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Reminder.ProtoReflect.Descriptor instead.
+func (*Reminder) Descriptor() ([]byte, []int) {
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Reminder) GetBeforeDueDate() *BeforeDueDate {
+	if x != nil {
+		return x.BeforeDueDate
+	}
+	return nil
+}
+
+func (x *Reminder) GetSpecificTime() *SpecificTime {
+	if x != nil {
+		return x.SpecificTime
+	}
+	return nil
+}
+
 type Task struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -214,14 +371,15 @@ type Task struct {
 	Assignee    *Assignee            `protobuf:"bytes,8,opt,name=Assignee,proto3" json:"Assignee,omitempty"`
 	Description string               `protobuf:"bytes,9,opt,name=Description,proto3" json:"Description,omitempty"`
 	Title       string               `protobuf:"bytes,10,opt,name=Title,proto3" json:"Title,omitempty"`
-	Details     string               `protobuf:"bytes,11,opt,name=Details,proto3" json:"Details,omitempty"`
+	Details     []byte               `protobuf:"bytes,11,opt,name=Details,proto3" json:"Details,omitempty"`
 	ChannelId   string               `protobuf:"bytes,12,opt,name=ChannelId,proto3" json:"ChannelId,omitempty"`
+	Reminders   []*Reminder          `protobuf:"bytes,13,rep,name=Reminders,proto3" json:"Reminders,omitempty"`
 }
 
 func (x *Task) Reset() {
 	*x = Task{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[3]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -234,7 +392,7 @@ func (x *Task) String() string {
 func (*Task) ProtoMessage() {}
 
 func (x *Task) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[3]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -247,7 +405,7 @@ func (x *Task) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Task.ProtoReflect.Descriptor instead.
 func (*Task) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{3}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Task) GetId() string {
@@ -320,11 +478,11 @@ func (x *Task) GetTitle() string {
 	return ""
 }
 
-func (x *Task) GetDetails() string {
+func (x *Task) GetDetails() []byte {
 	if x != nil {
 		return x.Details
 	}
-	return ""
+	return nil
 }
 
 func (x *Task) GetChannelId() string {
@@ -332,6 +490,13 @@ func (x *Task) GetChannelId() string {
 		return x.ChannelId
 	}
 	return ""
+}
+
+func (x *Task) GetReminders() []*Reminder {
+	if x != nil {
+		return x.Reminders
+	}
+	return nil
 }
 
 type NewTaskRequest struct {
@@ -347,12 +512,14 @@ type NewTaskRequest struct {
 	DueDate     *timestamp.Timestamp `protobuf:"bytes,6,opt,name=DueDate,proto3" json:"DueDate,omitempty"`
 	Assignee    *Assignee            `protobuf:"bytes,7,opt,name=Assignee,proto3" json:"Assignee,omitempty"`
 	ChannelId   string               `protobuf:"bytes,8,opt,name=ChannelId,proto3" json:"ChannelId,omitempty"`
+	Details     []byte               `protobuf:"bytes,9,opt,name=Details,proto3" json:"Details,omitempty"`
+	Reminders   []*Reminder          `protobuf:"bytes,10,rep,name=Reminders,proto3" json:"Reminders,omitempty"`
 }
 
 func (x *NewTaskRequest) Reset() {
 	*x = NewTaskRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[4]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -365,7 +532,7 @@ func (x *NewTaskRequest) String() string {
 func (*NewTaskRequest) ProtoMessage() {}
 
 func (x *NewTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[4]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -378,7 +545,7 @@ func (x *NewTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NewTaskRequest.ProtoReflect.Descriptor instead.
 func (*NewTaskRequest) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{4}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *NewTaskRequest) GetType() *Type {
@@ -437,6 +604,20 @@ func (x *NewTaskRequest) GetChannelId() string {
 	return ""
 }
 
+func (x *NewTaskRequest) GetDetails() []byte {
+	if x != nil {
+		return x.Details
+	}
+	return nil
+}
+
+func (x *NewTaskRequest) GetReminders() []*Reminder {
+	if x != nil {
+		return x.Reminders
+	}
+	return nil
+}
+
 type MakeTransitionRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -449,7 +630,7 @@ type MakeTransitionRequest struct {
 func (x *MakeTransitionRequest) Reset() {
 	*x = MakeTransitionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[5]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -462,7 +643,7 @@ func (x *MakeTransitionRequest) String() string {
 func (*MakeTransitionRequest) ProtoMessage() {}
 
 func (x *MakeTransitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[5]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -475,7 +656,7 @@ func (x *MakeTransitionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MakeTransitionRequest.ProtoReflect.Descriptor instead.
 func (*MakeTransitionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{5}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *MakeTransitionRequest) GetTaskId() string {
@@ -501,7 +682,7 @@ type NextTransitionsRequest struct {
 func (x *NextTransitionsRequest) Reset() {
 	*x = NextTransitionsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[6]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -514,7 +695,7 @@ func (x *NextTransitionsRequest) String() string {
 func (*NextTransitionsRequest) ProtoMessage() {}
 
 func (x *NextTransitionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[6]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -527,7 +708,7 @@ func (x *NextTransitionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NextTransitionsRequest.ProtoReflect.Descriptor instead.
 func (*NextTransitionsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{6}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{9}
 }
 
 type NextTransitionsResponse struct {
@@ -539,7 +720,7 @@ type NextTransitionsResponse struct {
 func (x *NextTransitionsResponse) Reset() {
 	*x = NextTransitionsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[7]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -552,7 +733,7 @@ func (x *NextTransitionsResponse) String() string {
 func (*NextTransitionsResponse) ProtoMessage() {}
 
 func (x *NextTransitionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[7]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -565,7 +746,7 @@ func (x *NextTransitionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NextTransitionsResponse.ProtoReflect.Descriptor instead.
 func (*NextTransitionsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{7}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{10}
 }
 
 type GetByChannelRequest struct {
@@ -579,7 +760,7 @@ type GetByChannelRequest struct {
 func (x *GetByChannelRequest) Reset() {
 	*x = GetByChannelRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[8]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -592,7 +773,7 @@ func (x *GetByChannelRequest) String() string {
 func (*GetByChannelRequest) ProtoMessage() {}
 
 func (x *GetByChannelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[8]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -605,7 +786,7 @@ func (x *GetByChannelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetByChannelRequest.ProtoReflect.Descriptor instead.
 func (*GetByChannelRequest) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{8}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetByChannelRequest) GetChannelId() string {
@@ -626,7 +807,7 @@ type GetByChannelResponse struct {
 func (x *GetByChannelResponse) Reset() {
 	*x = GetByChannelResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[9]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -639,7 +820,7 @@ func (x *GetByChannelResponse) String() string {
 func (*GetByChannelResponse) ProtoMessage() {}
 
 func (x *GetByChannelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[9]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -652,7 +833,7 @@ func (x *GetByChannelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetByChannelResponse.ProtoReflect.Descriptor instead.
 func (*GetByChannelResponse) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{9}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetByChannelResponse) GetTasks() []*Task {
@@ -673,7 +854,7 @@ type GetByIdRequest struct {
 func (x *GetByIdRequest) Reset() {
 	*x = GetByIdRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[10]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -686,7 +867,7 @@ func (x *GetByIdRequest) String() string {
 func (*GetByIdRequest) ProtoMessage() {}
 
 func (x *GetByIdRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[10]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -699,7 +880,7 @@ func (x *GetByIdRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetByIdRequest.ProtoReflect.Descriptor instead.
 func (*GetByIdRequest) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{10}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetByIdRequest) GetId() string {
@@ -721,7 +902,7 @@ type SetAssigneeRequest struct {
 func (x *SetAssigneeRequest) Reset() {
 	*x = SetAssigneeRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[11]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -734,7 +915,7 @@ func (x *SetAssigneeRequest) String() string {
 func (*SetAssigneeRequest) ProtoMessage() {}
 
 func (x *SetAssigneeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[11]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -747,7 +928,7 @@ func (x *SetAssigneeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAssigneeRequest.ProtoReflect.Descriptor instead.
 func (*SetAssigneeRequest) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{11}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *SetAssigneeRequest) GetTaskId() string {
@@ -776,7 +957,7 @@ type PagingRequest struct {
 func (x *PagingRequest) Reset() {
 	*x = PagingRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[12]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -789,7 +970,7 @@ func (x *PagingRequest) String() string {
 func (*PagingRequest) ProtoMessage() {}
 
 func (x *PagingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[12]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -802,7 +983,7 @@ func (x *PagingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PagingRequest.ProtoReflect.Descriptor instead.
 func (*PagingRequest) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{12}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *PagingRequest) GetSize() int32 {
@@ -831,7 +1012,7 @@ type PagingResponse struct {
 func (x *PagingResponse) Reset() {
 	*x = PagingResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[13]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -844,7 +1025,7 @@ func (x *PagingResponse) String() string {
 func (*PagingResponse) ProtoMessage() {}
 
 func (x *PagingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[13]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -857,7 +1038,7 @@ func (x *PagingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PagingResponse.ProtoReflect.Descriptor instead.
 func (*PagingResponse) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{13}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *PagingResponse) GetTotal() int32 {
@@ -889,7 +1070,7 @@ type SearchRequest struct {
 func (x *SearchRequest) Reset() {
 	*x = SearchRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[14]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -902,7 +1083,7 @@ func (x *SearchRequest) String() string {
 func (*SearchRequest) ProtoMessage() {}
 
 func (x *SearchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[14]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -915,7 +1096,7 @@ func (x *SearchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchRequest.ProtoReflect.Descriptor instead.
 func (*SearchRequest) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{14}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *SearchRequest) GetPaging() *PagingRequest {
@@ -965,7 +1146,7 @@ type SearchResponse struct {
 func (x *SearchResponse) Reset() {
 	*x = SearchResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[15]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -978,7 +1159,7 @@ func (x *SearchResponse) String() string {
 func (*SearchResponse) ProtoMessage() {}
 
 func (x *SearchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[15]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -991,7 +1172,7 @@ func (x *SearchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchResponse.ProtoReflect.Descriptor instead.
 func (*SearchResponse) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{15}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *SearchResponse) GetPaging() *PagingResponse {
@@ -1028,7 +1209,7 @@ type AssignmentLog struct {
 func (x *AssignmentLog) Reset() {
 	*x = AssignmentLog{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[16]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1041,7 +1222,7 @@ func (x *AssignmentLog) String() string {
 func (*AssignmentLog) ProtoMessage() {}
 
 func (x *AssignmentLog) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[16]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1054,7 +1235,7 @@ func (x *AssignmentLog) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignmentLog.ProtoReflect.Descriptor instead.
 func (*AssignmentLog) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{16}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *AssignmentLog) GetId() string {
@@ -1140,7 +1321,7 @@ type AssignmentLogRequest struct {
 func (x *AssignmentLogRequest) Reset() {
 	*x = AssignmentLogRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[17]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[20]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1153,7 +1334,7 @@ func (x *AssignmentLogRequest) String() string {
 func (*AssignmentLogRequest) ProtoMessage() {}
 
 func (x *AssignmentLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[17]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[20]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1166,7 +1347,7 @@ func (x *AssignmentLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignmentLogRequest.ProtoReflect.Descriptor instead.
 func (*AssignmentLogRequest) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{17}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *AssignmentLogRequest) GetPaging() *PagingRequest {
@@ -1202,7 +1383,7 @@ type AssignmentLogResponse struct {
 func (x *AssignmentLogResponse) Reset() {
 	*x = AssignmentLogResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_tasks_tasks_proto_msgTypes[18]
+		mi := &file_proto_tasks_tasks_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1215,7 +1396,7 @@ func (x *AssignmentLogResponse) String() string {
 func (*AssignmentLogResponse) ProtoMessage() {}
 
 func (x *AssignmentLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_tasks_tasks_proto_msgTypes[18]
+	mi := &file_proto_tasks_tasks_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1228,7 +1409,7 @@ func (x *AssignmentLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignmentLogResponse.ProtoReflect.Descriptor instead.
 func (*AssignmentLogResponse) Descriptor() ([]byte, []int) {
-	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{18}
+	return file_proto_tasks_tasks_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *AssignmentLogResponse) GetPaging() *PagingResponse {
@@ -1265,54 +1446,77 @@ var file_proto_tasks_tasks_proto_rawDesc = []byte{
 	0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x55, 0x73, 0x65, 0x72, 0x12, 0x2a, 0x0a,
 	0x02, 0x41, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
 	0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65,
-	0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x02, 0x41, 0x74, 0x22, 0x9f, 0x03, 0x0a, 0x04, 0x54, 0x61,
-	0x73, 0x6b, 0x12, 0x0e, 0x0a, 0x02, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02,
-	0x49, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x4e, 0x75, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x03, 0x4e, 0x75, 0x6d, 0x12, 0x1f, 0x0a, 0x04, 0x54, 0x79, 0x70, 0x65, 0x18, 0x03, 0x20, 0x01,
-	0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x2e, 0x54, 0x79, 0x70, 0x65, 0x52,
-	0x04, 0x54, 0x79, 0x70, 0x65, 0x12, 0x25, 0x0a, 0x06, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18,
-	0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0d, 0x2e, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x2e, 0x53, 0x74,
-	0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x1e, 0x0a, 0x0a,
-	0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x42, 0x79, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x42, 0x79, 0x12, 0x34, 0x0a, 0x07,
-	0x44, 0x75, 0x65, 0x44, 0x61, 0x74, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e,
-	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e,
-	0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x07, 0x44, 0x75, 0x65, 0x44, 0x61,
-	0x74, 0x65, 0x12, 0x3a, 0x0a, 0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x41, 0x74,
-	0x18, 0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61,
-	0x6d, 0x70, 0x52, 0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x41, 0x74, 0x12, 0x2b,
-	0x0a, 0x08, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x65, 0x18, 0x08, 0x20, 0x01, 0x28, 0x0b,
-	0x32, 0x0f, 0x2e, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x2e, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x65,
-	0x65, 0x52, 0x08, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x65, 0x12, 0x20, 0x0a, 0x0b, 0x44,
-	0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x09, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x0b, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x14, 0x0a,
-	0x05, 0x54, 0x69, 0x74, 0x6c, 0x65, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x54, 0x69,
-	0x74, 0x6c, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x44, 0x65, 0x74, 0x61, 0x69, 0x6c, 0x73, 0x18, 0x0b,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x44, 0x65, 0x74, 0x61, 0x69, 0x6c, 0x73, 0x12, 0x1c, 0x0a,
-	0x09, 0x43, 0x68, 0x61, 0x6e, 0x6e, 0x65, 0x6c, 0x49, 0x64, 0x18, 0x0c, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x09, 0x43, 0x68, 0x61, 0x6e, 0x6e, 0x65, 0x6c, 0x49, 0x64, 0x22, 0xc6, 0x02, 0x0a, 0x0e,
-	0x4e, 0x65, 0x77, 0x54, 0x61, 0x73, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1f,
-	0x0a, 0x04, 0x54, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x74,
-	0x61, 0x73, 0x6b, 0x73, 0x2e, 0x54, 0x79, 0x70, 0x65, 0x52, 0x04, 0x54, 0x79, 0x70, 0x65, 0x12,
-	0x1e, 0x0a, 0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x42, 0x79, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x42, 0x79, 0x12,
-	0x3a, 0x0a, 0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x41, 0x74, 0x18, 0x03, 0x20,
-	0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52,
-	0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x41, 0x74, 0x12, 0x20, 0x0a, 0x0b, 0x44,
-	0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x0b, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x14, 0x0a,
-	0x05, 0x54, 0x69, 0x74, 0x6c, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x54, 0x69,
-	0x74, 0x6c, 0x65, 0x12, 0x34, 0x0a, 0x07, 0x44, 0x75, 0x65, 0x44, 0x61, 0x74, 0x65, 0x18, 0x06,
-	0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70,
-	0x52, 0x07, 0x44, 0x75, 0x65, 0x44, 0x61, 0x74, 0x65, 0x12, 0x2b, 0x0a, 0x08, 0x41, 0x73, 0x73,
-	0x69, 0x67, 0x6e, 0x65, 0x65, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x74, 0x61,
-	0x73, 0x6b, 0x73, 0x2e, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x65, 0x52, 0x08, 0x41, 0x73,
-	0x73, 0x69, 0x67, 0x6e, 0x65, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x43, 0x68, 0x61, 0x6e, 0x6e, 0x65,
-	0x6c, 0x49, 0x64, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x43, 0x68, 0x61, 0x6e, 0x6e,
-	0x65, 0x6c, 0x49, 0x64, 0x22, 0x53, 0x0a, 0x15, 0x4d, 0x61, 0x6b, 0x65, 0x54, 0x72, 0x61, 0x6e,
+	0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x02, 0x41, 0x74, 0x22, 0x39, 0x0a, 0x0d, 0x42, 0x65, 0x66,
+	0x6f, 0x72, 0x65, 0x44, 0x75, 0x65, 0x44, 0x61, 0x74, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x55, 0x6e,
+	0x69, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x55, 0x6e, 0x69, 0x74, 0x12, 0x14,
+	0x0a, 0x05, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x05, 0x56,
+	0x61, 0x6c, 0x75, 0x65, 0x22, 0x3a, 0x0a, 0x0c, 0x53, 0x70, 0x65, 0x63, 0x69, 0x66, 0x69, 0x63,
+	0x54, 0x69, 0x6d, 0x65, 0x12, 0x2a, 0x0a, 0x02, 0x41, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
+	0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x02, 0x41, 0x74,
+	0x22, 0x7f, 0x0a, 0x08, 0x52, 0x65, 0x6d, 0x69, 0x6e, 0x64, 0x65, 0x72, 0x12, 0x3a, 0x0a, 0x0d,
+	0x42, 0x65, 0x66, 0x6f, 0x72, 0x65, 0x44, 0x75, 0x65, 0x44, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x2e, 0x42, 0x65, 0x66, 0x6f,
+	0x72, 0x65, 0x44, 0x75, 0x65, 0x44, 0x61, 0x74, 0x65, 0x52, 0x0d, 0x42, 0x65, 0x66, 0x6f, 0x72,
+	0x65, 0x44, 0x75, 0x65, 0x44, 0x61, 0x74, 0x65, 0x12, 0x37, 0x0a, 0x0c, 0x53, 0x70, 0x65, 0x63,
+	0x69, 0x66, 0x69, 0x63, 0x54, 0x69, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13,
+	0x2e, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x2e, 0x53, 0x70, 0x65, 0x63, 0x69, 0x66, 0x69, 0x63, 0x54,
+	0x69, 0x6d, 0x65, 0x52, 0x0c, 0x53, 0x70, 0x65, 0x63, 0x69, 0x66, 0x69, 0x63, 0x54, 0x69, 0x6d,
+	0x65, 0x22, 0xce, 0x03, 0x0a, 0x04, 0x54, 0x61, 0x73, 0x6b, 0x12, 0x0e, 0x0a, 0x02, 0x49, 0x64,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x49, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x4e, 0x75,
+	0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x4e, 0x75, 0x6d, 0x12, 0x1f, 0x0a, 0x04,
+	0x54, 0x79, 0x70, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x74, 0x61, 0x73,
+	0x6b, 0x73, 0x2e, 0x54, 0x79, 0x70, 0x65, 0x52, 0x04, 0x54, 0x79, 0x70, 0x65, 0x12, 0x25, 0x0a,
+	0x06, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0d, 0x2e,
+	0x74, 0x61, 0x73, 0x6b, 0x73, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x53, 0x74,
+	0x61, 0x74, 0x75, 0x73, 0x12, 0x1e, 0x0a, 0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64,
+	0x42, 0x79, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74,
+	0x65, 0x64, 0x42, 0x79, 0x12, 0x34, 0x0a, 0x07, 0x44, 0x75, 0x65, 0x44, 0x61, 0x74, 0x65, 0x18,
+	0x06, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d,
+	0x70, 0x52, 0x07, 0x44, 0x75, 0x65, 0x44, 0x61, 0x74, 0x65, 0x12, 0x3a, 0x0a, 0x0a, 0x52, 0x65,
+	0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x41, 0x74, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a,
+	0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66,
+	0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x0a, 0x52, 0x65, 0x70, 0x6f,
+	0x72, 0x74, 0x65, 0x64, 0x41, 0x74, 0x12, 0x2b, 0x0a, 0x08, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e,
+	0x65, 0x65, 0x18, 0x08, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x74, 0x61, 0x73, 0x6b, 0x73,
+	0x2e, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x65, 0x52, 0x08, 0x41, 0x73, 0x73, 0x69, 0x67,
+	0x6e, 0x65, 0x65, 0x12, 0x20, 0x0a, 0x0b, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69,
+	0x6f, 0x6e, 0x18, 0x09, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69,
+	0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x14, 0x0a, 0x05, 0x54, 0x69, 0x74, 0x6c, 0x65, 0x18, 0x0a,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x54, 0x69, 0x74, 0x6c, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x44,
+	0x65, 0x74, 0x61, 0x69, 0x6c, 0x73, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x07, 0x44, 0x65,
+	0x74, 0x61, 0x69, 0x6c, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x43, 0x68, 0x61, 0x6e, 0x6e, 0x65, 0x6c,
+	0x49, 0x64, 0x18, 0x0c, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x43, 0x68, 0x61, 0x6e, 0x6e, 0x65,
+	0x6c, 0x49, 0x64, 0x12, 0x2d, 0x0a, 0x09, 0x52, 0x65, 0x6d, 0x69, 0x6e, 0x64, 0x65, 0x72, 0x73,
+	0x18, 0x0d, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x2e, 0x52,
+	0x65, 0x6d, 0x69, 0x6e, 0x64, 0x65, 0x72, 0x52, 0x09, 0x52, 0x65, 0x6d, 0x69, 0x6e, 0x64, 0x65,
+	0x72, 0x73, 0x22, 0x8f, 0x03, 0x0a, 0x0e, 0x4e, 0x65, 0x77, 0x54, 0x61, 0x73, 0x6b, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1f, 0x0a, 0x04, 0x54, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x2e, 0x54, 0x79, 0x70, 0x65,
+	0x52, 0x04, 0x54, 0x79, 0x70, 0x65, 0x12, 0x1e, 0x0a, 0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74,
+	0x65, 0x64, 0x42, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x52, 0x65, 0x70, 0x6f,
+	0x72, 0x74, 0x65, 0x64, 0x42, 0x79, 0x12, 0x3a, 0x0a, 0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74,
+	0x65, 0x64, 0x41, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f,
+	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d,
+	0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x0a, 0x52, 0x65, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64,
+	0x41, 0x74, 0x12, 0x20, 0x0a, 0x0b, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f,
+	0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70,
+	0x74, 0x69, 0x6f, 0x6e, 0x12, 0x14, 0x0a, 0x05, 0x54, 0x69, 0x74, 0x6c, 0x65, 0x18, 0x05, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x05, 0x54, 0x69, 0x74, 0x6c, 0x65, 0x12, 0x34, 0x0a, 0x07, 0x44, 0x75,
+	0x65, 0x44, 0x61, 0x74, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f,
+	0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69,
+	0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x07, 0x44, 0x75, 0x65, 0x44, 0x61, 0x74, 0x65,
+	0x12, 0x2b, 0x0a, 0x08, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x65, 0x18, 0x07, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x2e, 0x41, 0x73, 0x73, 0x69, 0x67,
+	0x6e, 0x65, 0x65, 0x52, 0x08, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x65, 0x12, 0x1c, 0x0a,
+	0x09, 0x43, 0x68, 0x61, 0x6e, 0x6e, 0x65, 0x6c, 0x49, 0x64, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x09, 0x43, 0x68, 0x61, 0x6e, 0x6e, 0x65, 0x6c, 0x49, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x44,
+	0x65, 0x74, 0x61, 0x69, 0x6c, 0x73, 0x18, 0x09, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x07, 0x44, 0x65,
+	0x74, 0x61, 0x69, 0x6c, 0x73, 0x12, 0x2d, 0x0a, 0x09, 0x52, 0x65, 0x6d, 0x69, 0x6e, 0x64, 0x65,
+	0x72, 0x73, 0x18, 0x0a, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x74, 0x61, 0x73, 0x6b, 0x73,
+	0x2e, 0x52, 0x65, 0x6d, 0x69, 0x6e, 0x64, 0x65, 0x72, 0x52, 0x09, 0x52, 0x65, 0x6d, 0x69, 0x6e,
+	0x64, 0x65, 0x72, 0x73, 0x22, 0x53, 0x0a, 0x15, 0x4d, 0x61, 0x6b, 0x65, 0x54, 0x72, 0x61, 0x6e,
 	0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a,
 	0x06, 0x54, 0x61, 0x73, 0x6b, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x54,
 	0x61, 0x73, 0x6b, 0x49, 0x64, 0x12, 0x22, 0x0a, 0x0c, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74,
@@ -1454,76 +1658,84 @@ func file_proto_tasks_tasks_proto_rawDescGZIP() []byte {
 	return file_proto_tasks_tasks_proto_rawDescData
 }
 
-var file_proto_tasks_tasks_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_proto_tasks_tasks_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_proto_tasks_tasks_proto_goTypes = []interface{}{
 	(*Type)(nil),                    // 0: tasks.Type
 	(*Status)(nil),                  // 1: tasks.Status
 	(*Assignee)(nil),                // 2: tasks.Assignee
-	(*Task)(nil),                    // 3: tasks.Task
-	(*NewTaskRequest)(nil),          // 4: tasks.NewTaskRequest
-	(*MakeTransitionRequest)(nil),   // 5: tasks.MakeTransitionRequest
-	(*NextTransitionsRequest)(nil),  // 6: tasks.NextTransitionsRequest
-	(*NextTransitionsResponse)(nil), // 7: tasks.NextTransitionsResponse
-	(*GetByChannelRequest)(nil),     // 8: tasks.GetByChannelRequest
-	(*GetByChannelResponse)(nil),    // 9: tasks.GetByChannelResponse
-	(*GetByIdRequest)(nil),          // 10: tasks.GetByIdRequest
-	(*SetAssigneeRequest)(nil),      // 11: tasks.SetAssigneeRequest
-	(*PagingRequest)(nil),           // 12: tasks.PagingRequest
-	(*PagingResponse)(nil),          // 13: tasks.PagingResponse
-	(*SearchRequest)(nil),           // 14: tasks.SearchRequest
-	(*SearchResponse)(nil),          // 15: tasks.SearchResponse
-	(*AssignmentLog)(nil),           // 16: tasks.AssignmentLog
-	(*AssignmentLogRequest)(nil),    // 17: tasks.AssignmentLogRequest
-	(*AssignmentLogResponse)(nil),   // 18: tasks.AssignmentLogResponse
-	(*timestamp.Timestamp)(nil),     // 19: google.protobuf.Timestamp
+	(*BeforeDueDate)(nil),           // 3: tasks.BeforeDueDate
+	(*SpecificTime)(nil),            // 4: tasks.SpecificTime
+	(*Reminder)(nil),                // 5: tasks.Reminder
+	(*Task)(nil),                    // 6: tasks.Task
+	(*NewTaskRequest)(nil),          // 7: tasks.NewTaskRequest
+	(*MakeTransitionRequest)(nil),   // 8: tasks.MakeTransitionRequest
+	(*NextTransitionsRequest)(nil),  // 9: tasks.NextTransitionsRequest
+	(*NextTransitionsResponse)(nil), // 10: tasks.NextTransitionsResponse
+	(*GetByChannelRequest)(nil),     // 11: tasks.GetByChannelRequest
+	(*GetByChannelResponse)(nil),    // 12: tasks.GetByChannelResponse
+	(*GetByIdRequest)(nil),          // 13: tasks.GetByIdRequest
+	(*SetAssigneeRequest)(nil),      // 14: tasks.SetAssigneeRequest
+	(*PagingRequest)(nil),           // 15: tasks.PagingRequest
+	(*PagingResponse)(nil),          // 16: tasks.PagingResponse
+	(*SearchRequest)(nil),           // 17: tasks.SearchRequest
+	(*SearchResponse)(nil),          // 18: tasks.SearchResponse
+	(*AssignmentLog)(nil),           // 19: tasks.AssignmentLog
+	(*AssignmentLogRequest)(nil),    // 20: tasks.AssignmentLogRequest
+	(*AssignmentLogResponse)(nil),   // 21: tasks.AssignmentLogResponse
+	(*timestamp.Timestamp)(nil),     // 22: google.protobuf.Timestamp
 }
 var file_proto_tasks_tasks_proto_depIdxs = []int32{
-	19, // 0: tasks.Assignee.At:type_name -> google.protobuf.Timestamp
-	0,  // 1: tasks.Task.Type:type_name -> tasks.Type
-	1,  // 2: tasks.Task.Status:type_name -> tasks.Status
-	19, // 3: tasks.Task.DueDate:type_name -> google.protobuf.Timestamp
-	19, // 4: tasks.Task.ReportedAt:type_name -> google.protobuf.Timestamp
-	2,  // 5: tasks.Task.Assignee:type_name -> tasks.Assignee
-	0,  // 6: tasks.NewTaskRequest.Type:type_name -> tasks.Type
-	19, // 7: tasks.NewTaskRequest.ReportedAt:type_name -> google.protobuf.Timestamp
-	19, // 8: tasks.NewTaskRequest.DueDate:type_name -> google.protobuf.Timestamp
-	2,  // 9: tasks.NewTaskRequest.Assignee:type_name -> tasks.Assignee
-	3,  // 10: tasks.GetByChannelResponse.Tasks:type_name -> tasks.Task
-	2,  // 11: tasks.SetAssigneeRequest.Assignee:type_name -> tasks.Assignee
-	12, // 12: tasks.SearchRequest.Paging:type_name -> tasks.PagingRequest
-	1,  // 13: tasks.SearchRequest.Status:type_name -> tasks.Status
-	2,  // 14: tasks.SearchRequest.Assignee:type_name -> tasks.Assignee
-	0,  // 15: tasks.SearchRequest.Type:type_name -> tasks.Type
-	13, // 16: tasks.SearchResponse.Paging:type_name -> tasks.PagingResponse
-	3,  // 17: tasks.SearchResponse.Tasks:type_name -> tasks.Task
-	19, // 18: tasks.AssignmentLog.StartTime:type_name -> google.protobuf.Timestamp
-	19, // 19: tasks.AssignmentLog.FinishTime:type_name -> google.protobuf.Timestamp
-	12, // 20: tasks.AssignmentLogRequest.Paging:type_name -> tasks.PagingRequest
-	19, // 21: tasks.AssignmentLogRequest.StartTimeBefore:type_name -> google.protobuf.Timestamp
-	19, // 22: tasks.AssignmentLogRequest.StartTimeAfter:type_name -> google.protobuf.Timestamp
-	13, // 23: tasks.AssignmentLogResponse.Paging:type_name -> tasks.PagingResponse
-	16, // 24: tasks.AssignmentLogResponse.Logs:type_name -> tasks.AssignmentLog
-	4,  // 25: tasks.Tasks.New:input_type -> tasks.NewTaskRequest
-	6,  // 26: tasks.Tasks.NextTransitions:input_type -> tasks.NextTransitionsRequest
-	5,  // 27: tasks.Tasks.MakeTransition:input_type -> tasks.MakeTransitionRequest
-	8,  // 28: tasks.Tasks.GetByChannel:input_type -> tasks.GetByChannelRequest
-	11, // 29: tasks.Tasks.SetAssignee:input_type -> tasks.SetAssigneeRequest
-	10, // 30: tasks.Tasks.GetById:input_type -> tasks.GetByIdRequest
-	14, // 31: tasks.Tasks.Search:input_type -> tasks.SearchRequest
-	17, // 32: tasks.Tasks.GetAssignmentLog:input_type -> tasks.AssignmentLogRequest
-	3,  // 33: tasks.Tasks.New:output_type -> tasks.Task
-	7,  // 34: tasks.Tasks.NextTransitions:output_type -> tasks.NextTransitionsResponse
-	3,  // 35: tasks.Tasks.MakeTransition:output_type -> tasks.Task
-	9,  // 36: tasks.Tasks.GetByChannel:output_type -> tasks.GetByChannelResponse
-	3,  // 37: tasks.Tasks.SetAssignee:output_type -> tasks.Task
-	3,  // 38: tasks.Tasks.GetById:output_type -> tasks.Task
-	15, // 39: tasks.Tasks.Search:output_type -> tasks.SearchResponse
-	18, // 40: tasks.Tasks.GetAssignmentLog:output_type -> tasks.AssignmentLogResponse
-	33, // [33:41] is the sub-list for method output_type
-	25, // [25:33] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	22, // 0: tasks.Assignee.At:type_name -> google.protobuf.Timestamp
+	22, // 1: tasks.SpecificTime.At:type_name -> google.protobuf.Timestamp
+	3,  // 2: tasks.Reminder.BeforeDueDate:type_name -> tasks.BeforeDueDate
+	4,  // 3: tasks.Reminder.SpecificTime:type_name -> tasks.SpecificTime
+	0,  // 4: tasks.Task.Type:type_name -> tasks.Type
+	1,  // 5: tasks.Task.Status:type_name -> tasks.Status
+	22, // 6: tasks.Task.DueDate:type_name -> google.protobuf.Timestamp
+	22, // 7: tasks.Task.ReportedAt:type_name -> google.protobuf.Timestamp
+	2,  // 8: tasks.Task.Assignee:type_name -> tasks.Assignee
+	5,  // 9: tasks.Task.Reminders:type_name -> tasks.Reminder
+	0,  // 10: tasks.NewTaskRequest.Type:type_name -> tasks.Type
+	22, // 11: tasks.NewTaskRequest.ReportedAt:type_name -> google.protobuf.Timestamp
+	22, // 12: tasks.NewTaskRequest.DueDate:type_name -> google.protobuf.Timestamp
+	2,  // 13: tasks.NewTaskRequest.Assignee:type_name -> tasks.Assignee
+	5,  // 14: tasks.NewTaskRequest.Reminders:type_name -> tasks.Reminder
+	6,  // 15: tasks.GetByChannelResponse.Tasks:type_name -> tasks.Task
+	2,  // 16: tasks.SetAssigneeRequest.Assignee:type_name -> tasks.Assignee
+	15, // 17: tasks.SearchRequest.Paging:type_name -> tasks.PagingRequest
+	1,  // 18: tasks.SearchRequest.Status:type_name -> tasks.Status
+	2,  // 19: tasks.SearchRequest.Assignee:type_name -> tasks.Assignee
+	0,  // 20: tasks.SearchRequest.Type:type_name -> tasks.Type
+	16, // 21: tasks.SearchResponse.Paging:type_name -> tasks.PagingResponse
+	6,  // 22: tasks.SearchResponse.Tasks:type_name -> tasks.Task
+	22, // 23: tasks.AssignmentLog.StartTime:type_name -> google.protobuf.Timestamp
+	22, // 24: tasks.AssignmentLog.FinishTime:type_name -> google.protobuf.Timestamp
+	15, // 25: tasks.AssignmentLogRequest.Paging:type_name -> tasks.PagingRequest
+	22, // 26: tasks.AssignmentLogRequest.StartTimeBefore:type_name -> google.protobuf.Timestamp
+	22, // 27: tasks.AssignmentLogRequest.StartTimeAfter:type_name -> google.protobuf.Timestamp
+	16, // 28: tasks.AssignmentLogResponse.Paging:type_name -> tasks.PagingResponse
+	19, // 29: tasks.AssignmentLogResponse.Logs:type_name -> tasks.AssignmentLog
+	7,  // 30: tasks.Tasks.New:input_type -> tasks.NewTaskRequest
+	9,  // 31: tasks.Tasks.NextTransitions:input_type -> tasks.NextTransitionsRequest
+	8,  // 32: tasks.Tasks.MakeTransition:input_type -> tasks.MakeTransitionRequest
+	11, // 33: tasks.Tasks.GetByChannel:input_type -> tasks.GetByChannelRequest
+	14, // 34: tasks.Tasks.SetAssignee:input_type -> tasks.SetAssigneeRequest
+	13, // 35: tasks.Tasks.GetById:input_type -> tasks.GetByIdRequest
+	17, // 36: tasks.Tasks.Search:input_type -> tasks.SearchRequest
+	20, // 37: tasks.Tasks.GetAssignmentLog:input_type -> tasks.AssignmentLogRequest
+	6,  // 38: tasks.Tasks.New:output_type -> tasks.Task
+	10, // 39: tasks.Tasks.NextTransitions:output_type -> tasks.NextTransitionsResponse
+	6,  // 40: tasks.Tasks.MakeTransition:output_type -> tasks.Task
+	12, // 41: tasks.Tasks.GetByChannel:output_type -> tasks.GetByChannelResponse
+	6,  // 42: tasks.Tasks.SetAssignee:output_type -> tasks.Task
+	6,  // 43: tasks.Tasks.GetById:output_type -> tasks.Task
+	18, // 44: tasks.Tasks.Search:output_type -> tasks.SearchResponse
+	21, // 45: tasks.Tasks.GetAssignmentLog:output_type -> tasks.AssignmentLogResponse
+	38, // [38:46] is the sub-list for method output_type
+	30, // [30:38] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_proto_tasks_tasks_proto_init() }
@@ -1569,7 +1781,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Task); i {
+			switch v := v.(*BeforeDueDate); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1581,7 +1793,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*NewTaskRequest); i {
+			switch v := v.(*SpecificTime); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1593,7 +1805,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MakeTransitionRequest); i {
+			switch v := v.(*Reminder); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1605,7 +1817,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*NextTransitionsRequest); i {
+			switch v := v.(*Task); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1617,7 +1829,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*NextTransitionsResponse); i {
+			switch v := v.(*NewTaskRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1629,7 +1841,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetByChannelRequest); i {
+			switch v := v.(*MakeTransitionRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1641,7 +1853,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetByChannelResponse); i {
+			switch v := v.(*NextTransitionsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1653,7 +1865,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetByIdRequest); i {
+			switch v := v.(*NextTransitionsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1665,7 +1877,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SetAssigneeRequest); i {
+			switch v := v.(*GetByChannelRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1677,7 +1889,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PagingRequest); i {
+			switch v := v.(*GetByChannelResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1689,7 +1901,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PagingResponse); i {
+			switch v := v.(*GetByIdRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1701,7 +1913,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SearchRequest); i {
+			switch v := v.(*SetAssigneeRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1713,7 +1925,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SearchResponse); i {
+			switch v := v.(*PagingRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1725,7 +1937,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AssignmentLog); i {
+			switch v := v.(*PagingResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1737,7 +1949,7 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AssignmentLogRequest); i {
+			switch v := v.(*SearchRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1749,6 +1961,42 @@ func file_proto_tasks_tasks_proto_init() {
 			}
 		}
 		file_proto_tasks_tasks_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SearchResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_tasks_tasks_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AssignmentLog); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_tasks_tasks_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AssignmentLogRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_tasks_tasks_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*AssignmentLogResponse); i {
 			case 0:
 				return &v.state
@@ -1767,7 +2015,7 @@ func file_proto_tasks_tasks_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_tasks_tasks_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

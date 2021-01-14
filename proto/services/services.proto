@@ -28,10 +28,27 @@ message GetBalanceRequest {
   google.protobuf.Timestamp At = 2;
 }
 
+message DeliveryRequest {
+  string UserId = 1;
+  string ServiceTypeId = 2;
+  bytes Details = 3;
+}
+
+message Delivery {
+  string Id = 1;
+  string UserId = 2;
+  string ServiceTypeId = 3;
+  string Status = 4;
+  google.protobuf.Timestamp StartTime = 5;
+  google.protobuf.Timestamp FinishTime = 6;
+  bytes Details = 7;
+}
+
 service UserServices {
   rpc Add(ChangeServicesRequest) returns (UserBalance) {}
   rpc GetBalance(GetBalanceRequest) returns (UserBalance) {}
   rpc WriteOff(ChangeServicesRequest) returns (UserBalance) {}
   rpc Lock(ChangeServicesRequest) returns (UserBalance) {}
+  rpc DeliveryService(DeliveryRequest) returns (Delivery) {}
 }
 

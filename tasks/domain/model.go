@@ -6,15 +6,15 @@ import (
 )
 
 const (
-	TT_CLIENT       = "client"
-	TST_MED_REQUEST = "medical-request"
+	TT_CLIENT               = "client"
+	TST_MED_REQUEST         = "medical-request"
 	TST_EXPERT_CONSULTATION = "expert-consultation"
 
 	TS_EMPTY  = "#"
 	TS_OPEN   = "open"
 	TS_CLOSED = "closed"
 
-	TSS_EMPTY                    = "#"
+	TSS_EMPTY         = "#"
 	TSS_REPORTED      = "reported"
 	TSS_ON_ASSIGNMENT = "on-assignment"
 	TSS_ASSIGNED      = "assigned"
@@ -115,6 +115,29 @@ type Config struct {
 	AssignmentRules []*AssignmentRule
 }
 
+type TimeUnit string
+
+const (
+	seconds = "seconds"
+	minutes = "minutes"
+	hours   = "hours"
+	days    = "days"
+)
+
+type BeforeDueDate struct {
+	Unit  TimeUnit
+	Value uint
+}
+
+type SpecificTime struct {
+	At *time.Time
+}
+
+type Reminder struct {
+	BeforeDueDate *BeforeDueDate
+	SpecificTime  *SpecificTime
+}
+
 type Task struct {
 	Id          string
 	Num         string
@@ -125,9 +148,9 @@ type Task struct {
 	Assignee    *Assignee
 	Description string
 	Title       string
-	Details     string
+	Details     map[string]interface{}
 	ChannelId   string
-	History     []*History
+	Reminders   []*Reminder
 }
 
 type History struct {

@@ -32,5 +32,9 @@ func (u *Router) Set(r *mux.Router) {
 		c.GetBalance(writer, request)
 	}).Methods("GET")
 
+	r.HandleFunc("/api/{userId}/services/delivery", func(writer http.ResponseWriter, request *http.Request) {
+		c.Delivery(writer, request)
+	}).Methods("POST")
+
 
 }

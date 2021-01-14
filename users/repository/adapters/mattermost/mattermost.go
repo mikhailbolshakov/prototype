@@ -46,6 +46,7 @@ func (u *serviceImpl) CreateClientChannel(rq *pb.CreateClientChannelRequest) (*p
 		ClientUserId: rq.ClientUserId,
 		Name:         rq.Name,
 		DisplayName:  rq.DisplayName,
+		Subscribers:  rq.Subscribers,
 	})
 	if err != nil {
 		log.Printf("error: %v", err)

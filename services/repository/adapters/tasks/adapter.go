@@ -9,7 +9,6 @@ import (
 type Adapter interface {
 	Init() error
 	GetService() Service
-	ListenAsync() error
 }
 
 type adapterImpl struct {
@@ -38,6 +37,3 @@ func (a *adapterImpl) GetService() Service {
 	return a.taskServiceImpl
 }
 
-func (a *adapterImpl) ListenAsync() error {
-	return a.taskServiceImpl.listenTaskQueue()
-}

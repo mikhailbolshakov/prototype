@@ -1,8 +1,11 @@
 package domain
 
-import "gitlab.medzdrav.ru/prototype/services/repository/storage"
+import (
+	"encoding/json"
+	"gitlab.medzdrav.ru/prototype/services/repository/storage"
+)
 
-func (s *serviceImpl) balanceFromDto(userId string, dtos []storage.Balance) *UserBalance {
+func (s *balanceServiceImpl) balanceFromDto(userId string, dtos []storage.Balance) *UserBalance {
 
 	rs := &UserBalance{
 		UserId:  userId,
@@ -24,4 +27,41 @@ func (s *serviceImpl) balanceFromDto(userId string, dtos []storage.Balance) *Use
 
 	return rs
 
+}
+
+func (s *deliveryServiceImpl) deliveryToDto(d *Delivery) *storage.Delivery {
+
+	detailsJson := "{}"
+	if d.Details != nil {
+		bytes, _ := json.Marshal(d.Details)
+		detailsJson = string(bytes)
+	}
+
+	return &storage.Delivery{
+		Id:            d.Id,
+		UserId:        d.UserId,
+		ServiceTypeId: d.ServiceTypeId,
+		Status:        d.Status,
+		StartTime:     d.StartTime,
+		FinishTime:    d.FinishTime,
+		Details:       detailsJson,
+	}
+}
+
+func (s *deliveryServiceImpl) deliveryFromDto(d *storage.Delivery) *Delivery {
+
+	var v map[string]interface{}
+	if d.Details != "" {
+		_ = json.Unmarshal([]byte(d.Details), &v)
+	}
+
+	return &Delivery{
+		Id:            d.Id,
+		UserId:        d.UserId,
+		ServiceTypeId: d.ServiceTypeId,
+		Status:        d.Status,
+		StartTime:     d.StartTime,
+		FinishTime:    d.FinishTime,
+		Details:       v,
+	}
 }

@@ -1,5 +1,11 @@
 package domain
 
+import "time"
+
+const (
+	ST_EXPERT_ONLINE_CONSULTATION = "expert-online-consultation"
+)
+
 type ModifyBalanceRequest struct {
 	UserId        string
 	ServiceTypeId string
@@ -26,4 +32,20 @@ type UserBalance struct {
 
 type GetBalanceRequest struct {
 	UserId string
+}
+
+type DeliveryRequest struct {
+	UserId        string
+	ServiceTypeId string
+	Details map[string]interface{}
+}
+
+type Delivery struct {
+	Id string
+	UserId string
+	ServiceTypeId string
+	Status string
+	StartTime time.Time
+	FinishTime *time.Time
+	Details map[string]interface{}
 }

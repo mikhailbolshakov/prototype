@@ -83,7 +83,12 @@ func (s *serviceImpl) Listen() error {
 func (s *serviceImpl) ListenAsync() error {
 
 	s.grpc.ListenAsync()
-	s.assignTasksDaemon.Run()
+
+	//s.assignTasksDaemon.Run()
+
+	if err := s.domainTaskService.StartReminders(); err != nil {
+		return err
+	}
 
 	return nil
 }

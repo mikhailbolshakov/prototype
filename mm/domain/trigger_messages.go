@@ -11,6 +11,8 @@ const (
 	TP_CLIENT_REQUEST_ASSIGNED = "client.request-assigned"
 	TP_CONSULTANT_REQUEST_ASSIGNED = "consultant.request-assigned"
 	TP_CLIENT_NEW_EXPERT_CONSULTATION = "client.new-expert-consultation"
+	TP_EXPERT_NEW_EXPERT_CONSULTATION = "expert.new-expert-consultation"
+	TP_TASK_REMINDER = "task-reminder"
 )
 
 type triggerPostHandler func(params triggerPostParams) (*mattermost.Post, error)
@@ -21,6 +23,8 @@ var postMap = map[string]triggerPostHandler{
 	TP_CLIENT_REQUEST_ASSIGNED: clientRequestAssigned,
 	TP_CONSULTANT_REQUEST_ASSIGNED: consultantRequestAssigned,
 	TP_CLIENT_NEW_EXPERT_CONSULTATION: clientNewExpertConsultation,
+	TP_EXPERT_NEW_EXPERT_CONSULTATION: expertNewExpertConsultation,
+	TP_TASK_REMINDER: taskReminder,
 }
 
 func (s *serviceImpl) sendTriggerPost(postCode string, userId string, channelId string, params triggerPostParams) error {
@@ -39,6 +43,10 @@ func (s *serviceImpl) sendTriggerPost(postCode string, userId string, channelId 
 		}); err != nil {
 			return err
 		}
+
+		//if err := s.mmService.CreatePost(post); err != nil {
+		//	return err
+		//}
 
 	} else {
 		return errors.New(fmt.Sprintf("trigger post with code %s not supported", postCode))
@@ -157,6 +165,41 @@ func clientNewExpertConsultation(params triggerPostParams) (*mattermost.Post, er
 	}
 
 	post := &mattermost.Post{
+		Attachments: attach,
+	}
+
+	return post, nil
+}
+
+func expertNewExpertConsultation(params triggerPostParams) (*mattermost.Post, error) {
+
+	clientFirstName := params["client.first-name"]
+	clientLastName := params["client.last-name"]
+	clientPhone := params["client.phone"]
+	clientUrl := params["client.url"]
+	clientMedcardUrl := params["client.med-card"]
+	dueDate := params["due-date"]
+
+	attach := []*mattermost.PostAttachment{
+		{
+			Text:    fmt.Sprintf("## Вам назначена консультация %s\n ### Клиент [**%s %s**](%s) \n #### Телефон: %s \n #### [МедКарта](%s)", dueDate, clientFirstName, clientLastName, clientMedcardUrl, clientPhone, clientMedcardUrl),
+			ImageURL:   clientUrl.(string),
+		},
+	}
+
+	post := &mattermost.Post{
+		Attachments: attach,
+	}
+
+	return post, nil
+}
+
+func taskReminder(params triggerPostParams) (*mattermost.Post, error) {
+
+	attach := []*mattermost.PostAttachment{}
+
+	post := &mattermost.Post{
+		Message: "Напоминание о задаче",
 		Attachments: attach,
 	}
 

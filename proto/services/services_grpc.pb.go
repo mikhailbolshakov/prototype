@@ -21,6 +21,7 @@ type UserServicesClient interface {
 	GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*UserBalance, error)
 	WriteOff(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error)
 	Lock(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error)
+	DeliveryService(ctx context.Context, in *DeliveryRequest, opts ...grpc.CallOption) (*Delivery, error)
 }
 
 type userServicesClient struct {
@@ -67,6 +68,15 @@ func (c *userServicesClient) Lock(ctx context.Context, in *ChangeServicesRequest
 	return out, nil
 }
 
+func (c *userServicesClient) DeliveryService(ctx context.Context, in *DeliveryRequest, opts ...grpc.CallOption) (*Delivery, error) {
+	out := new(Delivery)
+	err := c.cc.Invoke(ctx, "/services.UserServices/DeliveryService", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServicesServer is the server API for UserServices service.
 // All implementations must embed UnimplementedUserServicesServer
 // for forward compatibility
@@ -75,6 +85,7 @@ type UserServicesServer interface {
 	GetBalance(context.Context, *GetBalanceRequest) (*UserBalance, error)
 	WriteOff(context.Context, *ChangeServicesRequest) (*UserBalance, error)
 	Lock(context.Context, *ChangeServicesRequest) (*UserBalance, error)
+	DeliveryService(context.Context, *DeliveryRequest) (*Delivery, error)
 	mustEmbedUnimplementedUserServicesServer()
 }
 
@@ -93,6 +104,9 @@ func (UnimplementedUserServicesServer) WriteOff(context.Context, *ChangeServices
 }
 func (UnimplementedUserServicesServer) Lock(context.Context, *ChangeServicesRequest) (*UserBalance, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Lock not implemented")
+}
+func (UnimplementedUserServicesServer) DeliveryService(context.Context, *DeliveryRequest) (*Delivery, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeliveryService not implemented")
 }
 func (UnimplementedUserServicesServer) mustEmbedUnimplementedUserServicesServer() {}
 
@@ -179,6 +193,24 @@ func _UserServices_Lock_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserServices_DeliveryService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeliveryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServicesServer).DeliveryService(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/services.UserServices/DeliveryService",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServicesServer).DeliveryService(ctx, req.(*DeliveryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _UserServices_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "services.UserServices",
 	HandlerType: (*UserServicesServer)(nil),
@@ -198,6 +230,10 @@ var _UserServices_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Lock",
 			Handler:    _UserServices_Lock_Handler,
+		},
+		{
+			MethodName: "DeliveryService",
+			Handler:    _UserServices_DeliveryService_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

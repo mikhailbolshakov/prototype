@@ -18,6 +18,7 @@ create table tasks
   description text,
   title varchar,
   details json,
+  reminders json,
   channel_id varchar,
   created_at timestamp not null,
   updated_at timestamp not null,

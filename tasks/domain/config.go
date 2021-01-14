@@ -7,6 +7,8 @@ import (
 type ConfigService interface {
 	// get whole configuration
 	Get(t *Type) (*Config, error)
+	// if status is final
+	IsFinalStatus(t *Type, s *Status) bool
 	// retrieves a list of available statuses which might be set for the task
 	NextTransitions(t *Type, currentStatus *Status) ([]*Transition, error)
 	// get initial transition
@@ -48,6 +50,11 @@ func (c *taskConfigServiceImpl) NextTransitions(t *Type, currentStatus *Status) 
 	}
 
 	return tr, nil
+}
+
+func (c *taskConfigServiceImpl) IsFinalStatus(t *Type, s *Status) bool {
+	tr, _ := c.NextTransitions(t, s)
+	return len(tr) == 0
 }
 
 func (c *taskConfigServiceImpl) FindTransition(t *Type, current, target *Status) (*Transition, error) {

@@ -11,6 +11,7 @@ type UserStorage interface {
 	CreateUser(u *User) (*User, error)
 	GetByUsername(username string) *User
 	GetByMMId(mmId string) *User
+	Get(id string) *User
 	Search(cr *SearchCriteria) (*SearchResponse, error)
 }
 
@@ -39,20 +40,21 @@ func (s *storageImpl) CreateUser(user *User) (*User, error) {
 	return user, nil
 }
 
+func (s *storageImpl) Get(id string) *User{
+	user := &User{Id: id}
+	s.infr.Db.Instance.First(user)
+	return user
+}
+
 func (s *storageImpl) GetByUsername(username string) *User {
-
 	user := &User{}
-
 	s.infr.Db.Instance.Where("username = ?", username).First(&user)
-
 	return user
 }
 
 func (s *storageImpl) GetByMMId(mmId string) *User {
 	user := &User{}
-
 	s.infr.Db.Instance.Where("mm_id = ?", mmId).First(&user)
-
 	return user
 }
 

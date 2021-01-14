@@ -32,6 +32,10 @@ message GetByMMIdRequest {
   string MMId = 1;
 }
 
+message GetByIdRequest {
+  string Id = 1;
+}
+
 message PagingRequest {
   int32 Size = 1;
   int32 Index = 2;
@@ -62,6 +66,7 @@ service Users {
   rpc Create(CreateUserRequest) returns (User) {}
   rpc GetByUsername(GetByUsernameRequest) returns (User) {}
   rpc GetByMMId(GetByMMIdRequest) returns (User) {}
+  rpc Get(GetByIdRequest) returns (User) {}
   rpc Search(SearchRequest) returns (SearchResponse) {}
 }
 

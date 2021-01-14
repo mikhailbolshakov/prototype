@@ -52,14 +52,17 @@ func (s *Server) Create(ctx context.Context, rq *pb.CreateUserRequest) (*pb.User
 }
 
 func (s *Server) GetByUsername(ctx context.Context, rq *pb.GetByUsernameRequest) (*pb.User, error) {
-
 	user := s.domain.GetByUsername(rq.Username)
 	return s.fromDomain(user), nil
 }
 
 func (s *Server) GetByMMId(ctx context.Context, rq *pb.GetByMMIdRequest) (*pb.User, error) {
-
 	user := s.domain.GetByMMId(rq.MMId)
+	return s.fromDomain(user), nil
+}
+
+func (s *Server) Get(ctx context.Context, rq *pb.GetByIdRequest) (*pb.User, error) {
+	user := s.domain.Get(rq.Id)
 	return s.fromDomain(user), nil
 }
 

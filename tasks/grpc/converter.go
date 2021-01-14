@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"encoding/json"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
@@ -17,7 +18,13 @@ func (s *Server) assigneeFromPb(assignee *pb.Assignee) *domain.Assignee {
 
 func (s *Server) fromPb(request *pb.NewTaskRequest) *domain.Task {
 
-	return &domain.Task{
+	details := map[string]interface{}{}
+
+	if request.Details != nil {
+		_ = json.Unmarshal(request.Details, &details)
+	}
+
+	t := &domain.Task{
 		Type: &domain.Type{
 			Type:    request.Type.Type,
 			SubType: request.Type.Subtype,
@@ -36,12 +43,61 @@ func (s *Server) fromPb(request *pb.NewTaskRequest) *domain.Task {
 		Description: request.Description,
 		Title:       request.Title,
 		ChannelId:   request.ChannelId,
+		Reminders:   []*domain.Reminder{},
+		Details:     details,
 	}
+
+	for _, r := range request.Reminders {
+
+		dr := &domain.Reminder{}
+
+		if r.BeforeDueDate != nil {
+			dr.BeforeDueDate = &domain.BeforeDueDate{
+				Unit:  domain.TimeUnit(r.BeforeDueDate.Unit),
+				Value: uint(r.BeforeDueDate.Value),
+			}
+		}
+
+		if r.SpecificTime != nil {
+			dr.SpecificTime = &domain.SpecificTime{At: grpc.PbTSToTime(r.SpecificTime.At)}
+		}
+
+		t.Reminders = append(t.Reminders, dr)
+	}
+
+	return t
 }
 
 func (s *Server) fromDomain(task *domain.Task) *pb.Task {
 
-	return &pb.Task{
+	var details []byte
+	if task.Details != nil {
+		details, _ = json.Marshal(task.Details)
+	}
+
+	var reminders []*pb.Reminder
+	if task.Reminders != nil {
+		for _, r := range task.Reminders {
+
+			rpb := &pb.Reminder{}
+
+			if r.SpecificTime != nil {
+				rpb.SpecificTime = &pb.SpecificTime{At: grpc.TimeToPbTS(r.SpecificTime.At)}
+			}
+
+			if r.BeforeDueDate != nil {
+				rpb.BeforeDueDate = &pb.BeforeDueDate{
+					Unit:  string(r.BeforeDueDate.Unit),
+					Value: uint32(r.BeforeDueDate.Value),
+				}
+			}
+
+			reminders = append(reminders, rpb)
+
+		}
+	}
+
+	t := &pb.Task{
 		Id:  task.Id,
 		Num: task.Num,
 		Type: &pb.Type{
@@ -62,9 +118,12 @@ func (s *Server) fromDomain(task *domain.Task) *pb.Task {
 		},
 		Description: task.Description,
 		Title:       task.Title,
-		Details:     task.Details,
+		Details:     details,
 		ChannelId:   task.ChannelId,
+		Reminders:   reminders,
 	}
+
+	return t
 }
 
 func (s *Server) searchRqFromPb(pb *pb.SearchRequest) *domain.SearchCriteria {

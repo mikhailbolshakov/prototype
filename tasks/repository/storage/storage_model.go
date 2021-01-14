@@ -23,6 +23,7 @@ type Task struct {
 	Description   string     `gorm:"column:description"`
 	Title         string     `gorm:"column:title"`
 	Details       string     `gorm:"column:details"`
+	Reminders     string     `gorm:"column:reminders"`
 	ChannelId     string     `gorm:"column:channel_id"`
 }
 

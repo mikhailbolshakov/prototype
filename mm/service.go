@@ -35,7 +35,7 @@ func New() service.Service {
 	s.tasksAdapter = tasks.NewAdapter(s.queue)
 	tasksService := s.tasksAdapter.GetService()
 
-	s.domainMMService = domain.NewService(mattermostService, usersService, tasksService)
+	s.domainMMService = domain.NewService(mattermostService, usersService, tasksService, s.queue)
 	s.grpc = grpc.New(s.domainMMService)
 
 	return s

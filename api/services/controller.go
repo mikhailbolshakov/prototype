@@ -64,3 +64,35 @@ func (c *controller) WriteOff(writer http.ResponseWriter, request *http.Request)
 func (c *controller) Lock(writer http.ResponseWriter, request *http.Request) {
 
 }
+
+func (c *controller) Delivery(writer http.ResponseWriter, request *http.Request) {
+
+	rq := &DeliveryRequest{}
+	decoder := json.NewDecoder(request.Body)
+	if err := decoder.Decode(rq); err != nil {
+		c.RespondError(writer,  http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	userId := mux.Vars(request)["userId"]
+
+	detailsB, err := json.Marshal(rq.Details)
+	if err != nil {
+		c.RespondError(writer,  http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+
+	if rsPb, err := c.grpc.services.DeliveryService(ctx, &pb.DeliveryRequest{
+		UserId:        userId,
+		ServiceTypeId: rq.ServiceTypeId,
+		Details:       detailsB,
+	}); err != nil {
+		c.RespondError(writer, http.StatusInternalServerError, err)
+	} else {
+		c.RespondOK(writer, c.deliveryFromPb(rsPb))
+	}
+
+}

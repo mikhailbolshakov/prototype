@@ -25,26 +25,43 @@ type Reported struct {
 	At *time.Time `json:"at"`
 }
 
+type BeforeDueDate struct {
+	Unit  string `json:"unit"`
+	Value uint   `json:"value"`
+}
+
+type SpecificTime struct {
+	At *time.Time `json:"at"`
+}
+
+type Reminder struct {
+	BeforeDueDate *BeforeDueDate `json:"beforeDueDate"`
+	SpecificTime  *SpecificTime  `json:"specificTime"`
+}
+
 type Task struct {
-	Id          string     `json:"id"`
-	Num         string     `json:"num"`
-	Type        *Type      `json:"type"`
-	Status      *Status    `json:"status"`
-	Reported    *Reported  `json:"reported"`
-	DueDate     *time.Time `json:"dueDate,omitempty"`
-	Assignee    *Assignee  `json:"assignee"`
-	Description string     `json:"description"`
-	Title       string     `json:"title"`
-	Details     string     `json:"details"`
+	Id          string                 `json:"id"`
+	Num         string                 `json:"num"`
+	Type        *Type                  `json:"type"`
+	Status      *Status                `json:"status"`
+	Reported    *Reported              `json:"reported"`
+	DueDate     *time.Time             `json:"dueDate,omitempty"`
+	Assignee    *Assignee              `json:"assignee"`
+	Description string                 `json:"description"`
+	Title       string                 `json:"title"`
+	Details     map[string]interface{} `json:"details"`
+	Reminders   []*Reminder            `json:"reminders"`
 }
 
 type NewTaskRequest struct {
-	Type        *Type      `json:"type"`
-	Reported    *Reported  `json:"reported"`
-	DueDate     *time.Time `json:"dueDate"`
-	Assignee    *Assignee  `json:"assignee"`
-	Description string     `json:"description"`
-	Title       string     `json:"title"`
+	Type        *Type                  `json:"type"`
+	Reported    *Reported              `json:"reported"`
+	DueDate     *time.Time             `json:"dueDate"`
+	Assignee    *Assignee              `json:"assignee"`
+	Description string                 `json:"description"`
+	Title       string                 `json:"title"`
+	Details     map[string]interface{} `json:"details"`
+	Reminders   []*Reminder            `json:"reminders"`
 }
 
 type SearchResponse struct {
@@ -55,7 +72,7 @@ type SearchResponse struct {
 
 type AssignmentLog struct {
 	Id              string     `json:"id"`
-	StartTime       *time.Time  `json:"startTime"`
+	StartTime       *time.Time `json:"startTime"`
 	FinishTime      *time.Time `json:"finishTime"`
 	Status          string     `json:"status"`
 	RuleCode        string     `json:"ruleCode"`

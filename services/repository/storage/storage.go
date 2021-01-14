@@ -5,25 +5,27 @@ import (
 	"time"
 )
 
-type BalanceStorage interface {
-	Create(b *Balance) (*Balance, error)
-	Update(b *Balance) (*Balance, error)
-	Get(userId string, at *time.Time) ([]Balance, error)
-	GetForServiceType(userId string, serviceTypeId string, at *time.Time) ([]Balance, error)
+type Storage interface {
+	CreateBalance(b *Balance) (*Balance, error)
+	UpdateBalance(b *Balance) (*Balance, error)
+	GetBalance(userId string, at *time.Time) ([]Balance, error)
+	GetBalanceForServiceType(userId string, serviceTypeId string, at *time.Time) ([]Balance, error)
 	GetTypes() []ServiceType
+	CreateDelivery(d *Delivery) (*Delivery, error)
+	UpdateDelivery(d *Delivery) (*Delivery, error)
 }
 
 type storageImpl struct {
 	infr *infrastructure.Container
 }
 
-func NewStorage(infr *infrastructure.Container) BalanceStorage {
+func NewStorage(infr *infrastructure.Container) Storage {
 	return &storageImpl{
 		infr: infr,
 	}
 }
 
-func (s *storageImpl) Create(b *Balance) (*Balance, error) {
+func (s *storageImpl) CreateBalance(b *Balance) (*Balance, error) {
 
 	t := time.Now()
 	b.CreatedAt, b.UpdatedAt = t, t
@@ -38,7 +40,7 @@ func (s *storageImpl) Create(b *Balance) (*Balance, error) {
 
 }
 
-func (s *storageImpl) Update(b *Balance) (*Balance, error) {
+func (s *storageImpl) UpdateBalance(b *Balance) (*Balance, error) {
 
 	b.UpdatedAt = time.Now()
 
@@ -52,7 +54,7 @@ func (s *storageImpl) Update(b *Balance) (*Balance, error) {
 
 }
 
-func (s *storageImpl) Get(userId string, at *time.Time) ([]Balance, error) {
+func (s *storageImpl) GetBalance(userId string, at *time.Time) ([]Balance, error) {
 
 	var balances []Balance
 	result := s.infr.Db.Instance.Where("client_id = ?", userId).Find(&balances)
@@ -65,7 +67,7 @@ func (s *storageImpl) Get(userId string, at *time.Time) ([]Balance, error) {
 
 }
 
-func (s *storageImpl) GetForServiceType(userId string, serviceTypeId string, at *time.Time) ([]Balance, error) {
+func (s *storageImpl) GetBalanceForServiceType(userId string, serviceTypeId string, at *time.Time) ([]Balance, error) {
 
 	var balances []Balance
 	result := s.infr.Db.Instance.
@@ -86,4 +88,31 @@ func (s *storageImpl) GetTypes() []ServiceType {
 	s.infr.Db.Instance.Find(&types)
 	return types
 
+}
+
+func (s *storageImpl) CreateDelivery(d *Delivery) (*Delivery, error) {
+
+	t := time.Now()
+	d.CreatedAt, d.UpdatedAt = t, t
+
+	result := s.infr.Db.Instance.Create(d)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return d, nil
+}
+
+func (s *storageImpl) UpdateDelivery(d *Delivery) (*Delivery, error) {
+
+	d.UpdatedAt = time.Now()
+
+	result := s.infr.Db.Instance.Save(d)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return d, nil
 }

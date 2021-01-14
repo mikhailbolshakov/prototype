@@ -35,7 +35,7 @@ func New(domain domain.Service) *Server {
 
 func (s *Server) ListenAsync() {
 
-	go func () {
+	go func() {
 		err := s.Server.Listen("localhost", "50053")
 		if err != nil {
 			log.Fatal(err)
@@ -59,10 +59,11 @@ func (s *Server) CreateUser(ctx context.Context, rq *pb.CreateUserRequest) (*pb.
 
 func (s *Server) CreateClientChannel(ctx context.Context, rq *pb.CreateClientChannelRequest) (*pb.CreateClientChannelResponse, error) {
 
-	rs, err := s.domain.CreateClientChannelRequest(&domain.CreateClientChannelRequest{
+	rs, err := s.domain.CreateClientChannel(&domain.CreateClientChannelRequest{
 		ClientUserId: rq.ClientUserId,
 		DisplayName:  rq.DisplayName,
 		Name:         rq.Name,
+		Subscribers:  rq.Subscribers,
 	})
 	if err != nil {
 		return nil, err

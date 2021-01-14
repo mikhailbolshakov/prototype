@@ -21,6 +21,21 @@ message Assignee {
   google.protobuf.Timestamp At = 3;
 }
 
+message BeforeDueDate {
+  string Unit = 1;
+  uint32 Value = 2;
+}
+
+message SpecificTime {
+  google.protobuf.Timestamp At = 1;
+}
+
+message Reminder {
+  BeforeDueDate BeforeDueDate = 1;
+  SpecificTime SpecificTime = 2;
+}
+
+
 message Task {
   string Id = 1;
   string Num = 2;
@@ -32,8 +47,9 @@ message Task {
   Assignee Assignee = 8;
   string Description = 9;
   string Title = 10;
-  string Details = 11;
+  bytes Details = 11;
   string ChannelId = 12;
+  repeated Reminder Reminders = 13;
 }
 
 message NewTaskRequest {
@@ -45,6 +61,8 @@ message NewTaskRequest {
   google.protobuf.Timestamp DueDate = 6;
   Assignee Assignee = 7;
   string ChannelId = 8;
+  bytes Details = 9;
+  repeated Reminder Reminders = 10;
 }
 
 message MakeTransitionRequest {

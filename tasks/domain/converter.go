@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	kit "gitlab.medzdrav.ru/prototype/kit/storage"
 	"gitlab.medzdrav.ru/prototype/queue_model"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/storage"
@@ -11,6 +12,9 @@ func toDto(domain *Task) *storage.Task {
 	if domain == nil {
 		return nil
 	}
+
+	detailsB, _ := json.Marshal(domain.Details)
+	remindersB, _ := json.Marshal(domain.Reminders)
 
 	return &storage.Task{
 		BaseDto:       kit.BaseDto{},
@@ -28,7 +32,8 @@ func toDto(domain *Task) *storage.Task {
 		AssigneeAt:    domain.Assignee.At,
 		Description:   domain.Description,
 		Title:         domain.Title,
-		Details:       domain.Details,
+		Details:       string(detailsB),
+		Reminders:     string(remindersB),
 		ChannelId:     domain.ChannelId,
 	}
 }
@@ -38,6 +43,12 @@ func fromDto(dto *storage.Task) *Task {
 	if dto == nil {
 		return nil
 	}
+
+	var reminders []*Reminder
+	_ = json.Unmarshal([]byte(dto.Reminders), &reminders)
+
+	var details map[string]interface{}
+	_ = json.Unmarshal([]byte(dto.Details), &details)
 
 	return &Task{
 		Id:  dto.Id,
@@ -62,7 +73,8 @@ func fromDto(dto *storage.Task) *Task {
 		},
 		Description: dto.Description,
 		Title:       dto.Title,
-		Details:     dto.Details,
+		Details:     details,
+		Reminders:   reminders,
 		ChannelId:   dto.ChannelId,
 	}
 }
@@ -146,7 +158,6 @@ func (ts *serviceImpl) taskToQueue(t *Task) *queue_model.Task {
 		},
 		Description: t.Description,
 		Title:       t.Title,
-		Details:     t.Details,
 		ChannelId:   t.ChannelId,
 	}
 
@@ -190,7 +201,7 @@ func assLogRsFromDto(rs *storage.AssignmentLogResponse) *AssignmentLogResponse {
 
 	r := &AssignmentLogResponse{
 		PagingResponse: rs.PagingResponse,
-		Logs:          []*AssignmentLog{},
+		Logs:           []*AssignmentLog{},
 	}
 
 	for _, t := range rs.Logs {

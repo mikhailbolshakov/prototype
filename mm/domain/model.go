@@ -1,6 +1,5 @@
 package domain
 
-
 type UserStatus struct {
 	UserId string
 	Status string
@@ -30,6 +29,7 @@ type CreateClientChannelRequest struct {
 	TeamName     string
 	DisplayName  string
 	Name         string
+	Subscribers  []string
 }
 
 type CreateClientChannelResponse struct {

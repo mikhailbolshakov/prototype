@@ -33,6 +33,7 @@ message CreateClientChannelRequest {
   string ClientUserId = 1;
   string Name = 2;
   string DisplayName = 3;
+  repeated string Subscribers = 4;
 }
 message CreateClientChannelResponse {
   string ChannelId = 2;
