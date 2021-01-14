@@ -5,6 +5,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/api"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/mm"
+	"gitlab.medzdrav.ru/prototype/services"
 	"gitlab.medzdrav.ru/prototype/tasks"
 	"gitlab.medzdrav.ru/prototype/users"
 	"os"
@@ -14,15 +15,16 @@ import (
 
 func main() {
 
-	services := []service.Service{
+	srvs := []service.Service{
 		users.New(),
 		tasks.New(),
 		mm.New(),
+		services.New(),
 		api.New(),
 	}
 
 	// init service
-	for _, s := range services {
+	for _, s := range srvs {
 		err := s.Init()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
@@ -31,7 +33,7 @@ func main() {
 	}
 
 	// run listeners
-	for _, s := range services {
+	for _, s := range srvs {
 		if err := s.ListenAsync(); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)

@@ -39,5 +39,12 @@ func (a *adapterImpl) GetService() Service {
 }
 
 func (a *adapterImpl) ListenAsync() error {
-	return a.taskServiceImpl.listenTaskAssigned()
+
+	err := a.taskServiceImpl.listenTaskAssigned()
+	if err != nil {
+		return err
+	}
+
+	return a.taskServiceImpl.listenNewExpertConsultationTask()
+
 }

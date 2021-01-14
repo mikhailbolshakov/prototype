@@ -12,17 +12,19 @@ import (
 type Service interface {
 	GetByChannelId(channelId string) []*pb.Task
 	CreateTask(rq *pb.NewTaskRequest) (*pb.Task, error)
-	SetTaskAssignedHandler(h TaskAssignedHandler)
+	SetTaskAssignedHandler(h TaskHandler)
+	SetNewExpertConsultationTaskHandler(h TaskHandler)
 	MakeTransition(rq *pb.MakeTransitionRequest) error
 }
 
 type serviceImpl struct {
-	queue queue.Queue
-	taskAssignedHandler TaskAssignedHandler
+	queue               queue.Queue
+	taskAssignedHandler TaskHandler
+	newExpertConsultationTaskHandler TaskHandler
 	pb.TasksClient
 }
 
-type TaskAssignedHandler func(task *queue_model.Task)
+type TaskHandler func(task *queue_model.Task)
 
 func newImpl(queue queue.Queue) *serviceImpl {
 	a := &serviceImpl{
@@ -31,7 +33,11 @@ func newImpl(queue queue.Queue) *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) SetTaskAssignedHandler(h TaskAssignedHandler) {
+func (u *serviceImpl) SetNewExpertConsultationTaskHandler(h TaskHandler) {
+	u.newExpertConsultationTaskHandler = h
+}
+
+func (u *serviceImpl) SetTaskAssignedHandler(h TaskHandler) {
 	u.taskAssignedHandler = h
 }
 
@@ -93,3 +99,32 @@ func (u *serviceImpl) listenTaskAssigned() error {
 	return nil
 }
 
+func (u *serviceImpl) listenNewExpertConsultationTask() error {
+
+	receiver := make(chan []byte)
+	err := u.queue.Subscribe("tasks.new-expert-consultation", receiver)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+
+		for {
+			select {
+			case msg := <-receiver:
+
+				task := &queue_model.Task{}
+				_ = json.Unmarshal(msg, task)
+
+				log.Printf("expert consultation task event received %v", task)
+
+				if u.newExpertConsultationTaskHandler != nil {
+					u.newExpertConsultationTaskHandler(task)
+				}
+			}
+		}
+
+	}()
+
+	return nil
+}

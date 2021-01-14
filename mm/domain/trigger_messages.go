@@ -10,6 +10,7 @@ const (
 	TP_CLIENT_NEW_REQUEST = "client.new-request"
 	TP_CLIENT_REQUEST_ASSIGNED = "client.request-assigned"
 	TP_CONSULTANT_REQUEST_ASSIGNED = "consultant.request-assigned"
+	TP_CLIENT_NEW_EXPERT_CONSULTATION = "client.new-expert-consultation"
 )
 
 type triggerPostHandler func(params triggerPostParams) (*mattermost.Post, error)
@@ -19,6 +20,7 @@ var postMap = map[string]triggerPostHandler{
 	TP_CLIENT_NEW_REQUEST: clientNewRequest,
 	TP_CLIENT_REQUEST_ASSIGNED: clientRequestAssigned,
 	TP_CONSULTANT_REQUEST_ASSIGNED: consultantRequestAssigned,
+	TP_CLIENT_NEW_EXPERT_CONSULTATION: clientNewExpertConsultation,
 }
 
 func (s *serviceImpl) sendTriggerPost(postCode string, userId string, channelId string, params triggerPostParams) error {
@@ -128,6 +130,29 @@ func consultantRequestAssigned(params triggerPostParams) (*mattermost.Post, erro
 		{
 			Text:    fmt.Sprintf("## Вам назначена консультация \n ### Клиент [**%s %s**](%s) \n #### Телефон: %s \n #### [МедКарта](%s)", clientFirstName, clientLastName, clientMedcardUrl, clientPhone, clientMedcardUrl),
 			ImageURL:   clientUrl.(string),
+		},
+	}
+
+	post := &mattermost.Post{
+		Attachments: attach,
+	}
+
+	return post, nil
+}
+
+func clientNewExpertConsultation(params triggerPostParams) (*mattermost.Post, error) {
+
+	expertFirstName := params["expert.first-name"]
+	expertLastName := params["expert.last-name"]
+	dueDate := params["due-date"]
+	expertUrl := params["expert.url"]
+	expertPhotoUrl := params["expert.photo-url"]
+
+	// https://pmed.moi-service.ru/doctor/7712?cityIdDF=1
+	attach := []*mattermost.PostAttachment{
+		{
+			Text:    fmt.Sprintf("### Для Вас назначена консультация с экспертом %s \n ##  Эксперт [**%s %s**](%s) ", dueDate, expertFirstName, expertLastName, expertUrl),
+			ImageURL:   expertPhotoUrl.(string),
 		},
 	}
 

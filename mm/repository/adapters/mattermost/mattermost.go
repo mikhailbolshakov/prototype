@@ -9,11 +9,13 @@ type NewPostMessageHandler func(post *Post)
 
 type Service interface {
 	CreateUser(user *CreateUserRequest) (*CreateUserResponse, error)
-	CreateClientChannel(rq *CreateClientChannelRequest) (*CreateClientChannelResponse, error)
+	CreateClientChannel(rq *CreateClientChannelRequest) (*CreateChannelResponse, error)
 	SubscribeUser(rq *SubscribeUserRequest) (*SubscribeUserResponse, error)
 	SetNewPostMessageHandler(handler NewPostMessageHandler)
 	CreateEphemeralPost(p *EphemeralPost) error
 	CreatePost(p *Post) error
+	GetUserStatuses(rq *GetUsersStatusesRequest) (*GetUsersStatusesResponse, error)
+	CreateDirectChannel(rq *CreateDirectChannelRequest) (*CreateChannelResponse, error)
 }
 
 type serviceImpl struct {
@@ -47,7 +49,7 @@ func (s *serviceImpl) CreateUser(rq *CreateUserRequest) (*CreateUserResponse, er
 	return rs, nil
 }
 
-func (s *serviceImpl) CreateClientChannel(rq *CreateClientChannelRequest) (*CreateClientChannelResponse, error) {
+func (s *serviceImpl) CreateClientChannel(rq *CreateClientChannelRequest) (*CreateChannelResponse, error) {
 
 	if rq.TeamName == "" {
 		rq.TeamName = "rgs"
@@ -80,6 +82,31 @@ func (s *serviceImpl) CreateEphemeralPost(p *EphemeralPost) error {
 
 func (s *serviceImpl) CreatePost(p *Post) error {
 	return s.client.createPost(p.ChannelId, p.Message, p.Attachments)
+}
+
+func (s *serviceImpl) GetUserStatuses(rq *GetUsersStatusesRequest) (*GetUsersStatusesResponse, error) {
+
+	rs := &GetUsersStatusesResponse{
+		Statuses: []*UserStatus{},
+	}
+
+	if statuses, err := s.client.getUsersStatuses(rq.UserIds); err == nil {
+
+		for _, s := range statuses {
+			rs.Statuses = append(rs.Statuses, &UserStatus{
+				UserId: s.UserId,
+				Status: s.Status,
+			})
+		}
+
+	} else {
+		return rs, err
+	}
+	return rs, nil
+}
+
+func (s *serviceImpl) CreateDirectChannel(rq *CreateDirectChannelRequest) (*CreateChannelResponse, error) {
+	return s.client.createDirectChannel(rq.UserId1, rq.UserId2)
 }
 
 func (s *serviceImpl) listenNewPosts() error {

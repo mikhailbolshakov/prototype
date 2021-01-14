@@ -21,9 +21,16 @@ type CreateUserResponse struct {
 type CreateClientChannelRequest struct {
 	ClientUserId string
 	TeamName     string
+	DisplayName  string
+	Name         string
 }
 
-type CreateClientChannelResponse struct {
+type CreateDirectChannelRequest struct {
+	UserId1 string
+	UserId2 string
+}
+
+type CreateChannelResponse struct {
 	ChannelId string
 }
 
@@ -66,4 +73,17 @@ type Post struct {
 type EphemeralPost struct {
 	*Post
 	UserId string
+}
+
+type UserStatus struct {
+	UserId string
+	Status string
+}
+
+type GetUsersStatusesRequest struct {
+	UserIds []string
+}
+
+type GetUsersStatusesResponse struct {
+	Statuses []*UserStatus
 }

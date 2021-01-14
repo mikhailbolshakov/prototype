@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.medzdrav.ru/prototype/api/services"
 	"gitlab.medzdrav.ru/prototype/api/tasks"
 	"gitlab.medzdrav.ru/prototype/api/users"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
@@ -17,7 +18,7 @@ func New() service.Service {
 }
 
 func (u *serviceImpl) Init() error {
-	u.Server = kitHttp.NewHttpServer("localhost", "8000", &users.Router{}, &tasks.Router{})
+	u.Server = kitHttp.NewHttpServer("localhost", "8000", &users.Router{}, &tasks.Router{}, &services.Router{})
 	return nil
 }
 

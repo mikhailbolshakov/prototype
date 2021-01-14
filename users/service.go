@@ -31,8 +31,11 @@ func New() service.Service {
 	s.infr = infrastructure.New()
 	s.storage = storage.NewStorage(s.infr)
 	s.mmAdapter = mattermost.NewAdapter()
-	s.search = domain.NewUserSearchService(s.storage)
-	s.domain = domain.NewUserService(s.storage, s.mmAdapter.GetService(), s.queue)
+
+	mmService := s.mmAdapter.GetService()
+
+	s.search = domain.NewUserSearchService(s.storage,mmService)
+	s.domain = domain.NewUserService(s.storage, mmService, s.queue)
 	s.grpc = grpc.New(s.domain, s.search)
 
 	return s

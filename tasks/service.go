@@ -66,8 +66,8 @@ func (s *serviceImpl) Init() error {
 	}
 
 	if err := s.assignTasksDaemon.AddTaskType(&domain.Type{
-		Type:    domain.TASK_TYPE_CLIENT,
-		SubType: domain.TASK_SUBTYPE_MED_REQUEST,
+		Type:    domain.TT_CLIENT,
+		SubType: domain.TST_MED_REQUEST,
 	}); err != nil {
 		return err
 	}

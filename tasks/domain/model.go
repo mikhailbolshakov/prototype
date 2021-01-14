@@ -6,25 +6,26 @@ import (
 )
 
 const (
-	TASK_TYPE_CLIENT         = "client"
-	TASK_SUBTYPE_MED_REQUEST = "medical-request"
+	TT_CLIENT       = "client"
+	TST_MED_REQUEST = "medical-request"
+	TST_EXPERT_CONSULTATION = "expert-consultation"
 
-	TASK_STATUS_EMPTY  = "#"
-	TASK_STATUS_OPEN   = "open"
-	TASK_STATUS_CLOSED = "closed"
+	TS_EMPTY  = "#"
+	TS_OPEN   = "open"
+	TS_CLOSED = "closed"
 
-	TASK_SUBSTATUS_EMPTY         = "#"
-	TASK_SUBSTATUS_REPORTED      = "reported"
-	TASK_SUBSTATUS_ON_ASSIGNMENT = "on-assignment"
-	TASK_SUBSTATUS_ASSIGNED      = "assigned"
-	TASK_SUBSTATUS_IN_PROGRESS   = "in-progress"
-	TASK_SUBSTATUS_ON_HOLD       = "on-hold"
-	TASK_SUBSTATUS_CANCELLED     = "cancelled"
-	TASK_SUBSTATUS_SOLVED        = "solved"
+	TSS_EMPTY                    = "#"
+	TSS_REPORTED      = "reported"
+	TSS_ON_ASSIGNMENT = "on-assignment"
+	TSS_ASSIGNED      = "assigned"
+	TSS_IN_PROGRESS   = "in-progress"
+	TSS_ON_HOLD       = "on-hold"
+	TSS_CANCELLED     = "cancelled"
+	TSS_SOLVED        = "solved"
 
-	GROUP_CLIENT     = "client"
-	GROUP_CONSULTANT = "consultant"
-	GROUP_EXPERT     = "expert"
+	G_CLIENT     = "client"
+	G_CONSULTANT = "consultant"
+	G_EXPERT     = "expert"
 
 	NUM_GEN_TYPE_RANDOM = "random"
 	NUM_GEN_TYPE_SEQ    = "sequence"

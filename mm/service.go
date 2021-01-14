@@ -14,7 +14,7 @@ import (
 )
 
 type serviceImpl struct {
-	domainMMService   domain.MMService
+	domainMMService   domain.Service
 	grpc              *grpc.Server
 	mattermostAdapter mattermost.Adapter
 	usersAdapter 	  users.Adapter
@@ -35,7 +35,7 @@ func New() service.Service {
 	s.tasksAdapter = tasks.NewAdapter(s.queue)
 	tasksService := s.tasksAdapter.GetService()
 
-	s.domainMMService = domain.NewMMService(mattermostService, usersService, tasksService)
+	s.domainMMService = domain.NewService(mattermostService, usersService, tasksService)
 	s.grpc = grpc.New(s.domainMMService)
 
 	return s

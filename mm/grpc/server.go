@@ -5,20 +5,18 @@ import (
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	"gitlab.medzdrav.ru/prototype/mm/domain"
 	pb "gitlab.medzdrav.ru/prototype/proto/mm"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"log"
 )
 
 type Server struct {
 	*kitGrpc.Server
-	domain domain.MMService
+	domain domain.Service
 	pb.UnimplementedUsersServer
 	pb.UnimplementedChannelsServer
 	pb.UnimplementedPostsServer
 }
 
-func New(domain domain.MMService) *Server {
+func New(domain domain.Service) *Server {
 
 	s := &Server{domain: domain}
 
@@ -46,9 +44,47 @@ func (s *Server) ListenAsync() {
 }
 
 func (s *Server) CreateUser(ctx context.Context, rq *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
+
+	rs, err := s.domain.CreateUser(&domain.CreateUserRequest{
+		Username: rq.Username,
+		Email:    rq.Email,
+	})
+	if err != nil {
+		return nil, err
+	}
+	response := &pb.CreateUserResponse{Id: rs.Id}
+
+	return response, nil
 }
 
 func (s *Server) CreateClientChannel(ctx context.Context, rq *pb.CreateClientChannelRequest) (*pb.CreateClientChannelResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateClientChannel not implemented")
+
+	rs, err := s.domain.CreateClientChannelRequest(&domain.CreateClientChannelRequest{
+		ClientUserId: rq.ClientUserId,
+		DisplayName:  rq.DisplayName,
+		Name:         rq.Name,
+	})
+	if err != nil {
+		return nil, err
+	}
+	response := &pb.CreateClientChannelResponse{ChannelId: rs.ChannelId}
+
+	return response, nil
+}
+
+func (s *Server) GetUsersStatuses(ctx context.Context, rq *pb.GetUsersStatusesRequest) (*pb.GetUserStatusesResponse, error) {
+
+	rs, err := s.domain.GetUsersStatuses(&domain.GetUsersStatusesRequest{UserIds: rq.MMUserIds})
+	if err != nil {
+		return nil, err
+	}
+	response := &pb.GetUserStatusesResponse{Statuses: []*pb.UserStatus{}}
+	for _, s := range rs.Statuses {
+		response.Statuses = append(response.Statuses, &pb.UserStatus{
+			Status:   s.Status,
+			MMUserId: s.UserId,
+		})
+	}
+	return response, nil
+
 }

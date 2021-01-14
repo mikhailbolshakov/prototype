@@ -9,6 +9,7 @@ import (
 type Service interface {
 	CreateUser(rq *pb.CreateUserRequest) (*pb.CreateUserResponse, error)
 	CreateClientChannel(rq *pb.CreateClientChannelRequest) (*pb.CreateClientChannelResponse, error)
+	GetUsersStatuses(rq *pb.GetUsersStatusesRequest) (*pb.GetUserStatusesResponse, error)
 }
 
 type serviceImpl struct {
@@ -43,7 +44,23 @@ func (u *serviceImpl) CreateClientChannel(rq *pb.CreateClientChannelRequest) (*p
 
 	rs, err := u.ChannelsClient.CreateClientChannel(ctx, &pb.CreateClientChannelRequest{
 		ClientUserId: rq.ClientUserId,
+		Name:         rq.Name,
+		DisplayName:  rq.DisplayName,
 	})
+	if err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+
+	return rs, err
+}
+
+func (u *serviceImpl) GetUsersStatuses(rq *pb.GetUsersStatusesRequest) (*pb.GetUserStatusesResponse, error) {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rs, err := u.UsersClient.GetUsersStatuses(ctx, rq)
 	if err != nil {
 		log.Printf("error: %v", err)
 		return nil, err

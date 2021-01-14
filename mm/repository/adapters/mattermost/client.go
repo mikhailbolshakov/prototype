@@ -121,7 +121,7 @@ func (c *Client) createUser(rq *CreateUserRequest) (*CreateUserResponse, error) 
 	return response, nil
 }
 
-func (c *Client) createClientChannel(rq *CreateClientChannelRequest) (*CreateClientChannelResponse, error) {
+func (c *Client) createClientChannel(rq *CreateClientChannelRequest) (*CreateChannelResponse, error) {
 
 	team, rs := c.RestApi.GetTeamByName(rq.TeamName, "")
 	if err := handleResponse(rs); err != nil {
@@ -131,8 +131,8 @@ func (c *Client) createClientChannel(rq *CreateClientChannelRequest) (*CreateCli
 	ch, rs := c.RestApi.CreateChannel(&model.Channel{
 		TeamId:      team.Id,
 		Type:        "P",
-		DisplayName: "Клиент-консультант",
-		Name:        "client-consultant-" + rq.ClientUserId,
+		DisplayName: rq.DisplayName,
+		Name:        rq.Name,
 	})
 	if err := handleResponse(rs); err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (c *Client) createClientChannel(rq *CreateClientChannelRequest) (*CreateCli
 		return nil, err
 	}
 
-	return &CreateClientChannelResponse{ChannelId: ch.Id}, nil
+	return &CreateChannelResponse{ChannelId: ch.Id}, nil
 }
 
 func (c *Client) subscribeUser(channelId string, userId string) error {
@@ -242,3 +242,31 @@ func (c *Client) createPost(channelId string, message string, attachments []*Pos
 
 }
 
+func (c *Client) getUsersStatuses(userIds []string) ([]*UserStatus, error) {
+
+	statuses, rs := c.RestApi.GetUsersStatusesByIds(userIds)
+	if err := handleResponse(rs); err != nil {
+		return nil, err
+	}
+
+	var res []*UserStatus
+	for _, s := range statuses {
+		res = append(res, &UserStatus{
+			UserId: s.UserId,
+			Status: s.Status,
+		})
+	}
+
+	return res, nil
+}
+
+func (c *Client) createDirectChannel(userId1, userId2 string) (*CreateChannelResponse, error) {
+
+	ch, rs := c.RestApi.CreateGroupChannel([]string{userId1, userId2})
+	if err := handleResponse(rs); err != nil {
+		return nil, err
+	}
+
+	return &CreateChannelResponse{ChannelId: ch.Id}, nil
+
+}

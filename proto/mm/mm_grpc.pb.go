@@ -18,6 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsersClient interface {
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
+	GetUsersStatuses(ctx context.Context, in *GetUsersStatusesRequest, opts ...grpc.CallOption) (*GetUserStatusesResponse, error)
 }
 
 type usersClient struct {
@@ -37,11 +38,21 @@ func (c *usersClient) CreateUser(ctx context.Context, in *CreateUserRequest, opt
 	return out, nil
 }
 
+func (c *usersClient) GetUsersStatuses(ctx context.Context, in *GetUsersStatusesRequest, opts ...grpc.CallOption) (*GetUserStatusesResponse, error) {
+	out := new(GetUserStatusesResponse)
+	err := c.cc.Invoke(ctx, "/mm.Users/GetUsersStatuses", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UsersServer is the server API for Users service.
 // All implementations must embed UnimplementedUsersServer
 // for forward compatibility
 type UsersServer interface {
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
+	GetUsersStatuses(context.Context, *GetUsersStatusesRequest) (*GetUserStatusesResponse, error)
 	mustEmbedUnimplementedUsersServer()
 }
 
@@ -51,6 +62,9 @@ type UnimplementedUsersServer struct {
 
 func (UnimplementedUsersServer) CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
+}
+func (UnimplementedUsersServer) GetUsersStatuses(context.Context, *GetUsersStatusesRequest) (*GetUserStatusesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUsersStatuses not implemented")
 }
 func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
 
@@ -83,6 +97,24 @@ func _Users_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Users_GetUsersStatuses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUsersStatusesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).GetUsersStatuses(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mm.Users/GetUsersStatuses",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).GetUsersStatuses(ctx, req.(*GetUsersStatusesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Users_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "mm.Users",
 	HandlerType: (*UsersServer)(nil),
@@ -90,6 +122,10 @@ var _Users_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateUser",
 			Handler:    _Users_CreateUser_Handler,
+		},
+		{
+			MethodName: "GetUsersStatuses",
+			Handler:    _Users_GetUsersStatuses_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

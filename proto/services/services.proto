@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package services;
+option go_package = "proto/services";
+
+message ChangeServicesRequest {
+  string UserId = 1;
+  string ServiceTypeId = 2;
+  int32 Quantity = 3;
+}
+
+message Balance {
+  int32 Available = 1;
+  int32 Delivered = 2;
+  int32 Locked = 3;
+  int32 Total = 4;
+}
+
+message UserBalance {
+  string UserId = 1;
+  map<string, Balance> Balance = 2;
+}
+
+message GetBalanceRequest {
+  string UserId = 1;
+  google.protobuf.Timestamp At = 2;
+}
+
+service UserServices {
+  rpc Add(ChangeServicesRequest) returns (UserBalance) {}
+  rpc GetBalance(GetBalanceRequest) returns (UserBalance) {}
+  rpc WriteOff(ChangeServicesRequest) returns (UserBalance) {}
+  rpc Lock(ChangeServicesRequest) returns (UserBalance) {}
+}
+

@@ -11,12 +11,28 @@ message CreateUserResponse {
   string Id = 1;
 }
 
+message UserStatus {
+  string Status = 1;
+  string MMUserId = 2;
+}
+
+message GetUsersStatusesRequest {
+  repeated string MMUserIds = 1;
+}
+
+message GetUserStatusesResponse {
+  repeated UserStatus Statuses = 1;
+}
+
 service Users {
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+  rpc GetUsersStatuses(GetUsersStatusesRequest) returns (GetUserStatusesResponse) {}
 }
 
 message CreateClientChannelRequest {
   string ClientUserId = 1;
+  string Name = 2;
+  string DisplayName = 3;
 }
 message CreateClientChannelResponse {
   string ChannelId = 2;

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"encoding/json"
+	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/proto/mm"
@@ -67,7 +68,11 @@ func (u *userServiceImpl) Create(user *User) (*User, error) {
 
 	// create a private channel client-consultant for the client
 	if user.Type == USER_TYPE_CLIENT {
-		chRs, err := u.mattermost.CreateClientChannel(&mm.CreateClientChannelRequest{ClientUserId: user.MMUserId})
+		chRs, err := u.mattermost.CreateClientChannel(&mm.CreateClientChannelRequest{
+			ClientUserId: user.MMUserId,
+			Name:         user.MMUserId,
+			DisplayName:  fmt.Sprintf("Клиент %s %s - консультант", user.FirstName, user.LastName),
+		})
 		if err != nil {
 			return nil, err
 		}
