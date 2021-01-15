@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-co-op/gocron"
 	"gitlab.medzdrav.ru/prototype/kit"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
@@ -30,29 +29,36 @@ type TaskService interface {
 	Update(task *Task) (*Task, error)
 	// get assignment tasks execution log
 	GetAssignmentLog(cr *AssignmentLogCriteria) (*AssignmentLogResponse, error)
-	// check all non final tasks and setup reminders
-	// should be called once on start
-	StartReminders() error
 }
 
 type serviceImpl struct {
+	scheduler    TaskScheduler
 	storage      storage.TaskStorage
 	config       ConfigService
 	usersService users.Service
 	queue        queue.Queue
 }
 
-func NewTaskService(storage storage.TaskStorage,
+func NewTaskService(
+	scheduler TaskScheduler,
+	storage storage.TaskStorage,
 	config ConfigService,
 	usersAdapter users.Service,
 	queue queue.Queue,
 ) TaskService {
-	return &serviceImpl{
+
+	s := &serviceImpl{
+		scheduler:    scheduler,
 		storage:      storage,
 		config:       config,
 		usersService: usersAdapter,
 		queue:        queue,
 	}
+
+	s.scheduler.SetDueDateHandler(s.dueDateSchedulerHandler)
+	s.scheduler.SetReminderHandler(s.remindsSchedulerHandler)
+
+	return s
 }
 
 func (t *Type) equals(another *Type) bool {
@@ -71,6 +77,18 @@ func (s *Status) equals(another *Status) bool {
 	return s.Status == another.Status && s.SubStatus == another.SubStatus
 }
 
+func (t *serviceImpl) remindsSchedulerHandler(taskId string) {
+	log.Println("reminder fired")
+	task := fromDto(t.storage.Get(taskId))
+	t.publish(task, "tasks.remind")
+}
+
+func (t *serviceImpl) dueDateSchedulerHandler(taskId string) {
+	log.Println("due date fired")
+	task := fromDto(t.storage.Get(taskId))
+	t.publish(task, "tasks.duedate")
+}
+
 func (t *serviceImpl) New(task *Task) (*Task, error) {
 
 	// check configuration by the task type
@@ -79,7 +97,7 @@ func (t *serviceImpl) New(task *Task) (*Task, error) {
 		return nil, err
 	}
 
-	tm := time.Now()
+	tm := time.Now().UTC()
 
 	// get an initial transition
 	tr, err := t.config.InitialTransition(task.Type)
@@ -146,6 +164,11 @@ func (t *serviceImpl) New(task *Task) (*Task, error) {
 		t.publish(task, tr.QueueTopic)
 	}
 
+	// add task to scheduler
+	if task.DueDate != nil || len(task.Reminders) > 0 {
+		t.scheduler.ScheduleTask(task)
+	}
+
 	return task, nil
 
 }
@@ -160,7 +183,7 @@ func (t *serviceImpl) putHistory(task *Task) {
 			Assignee: task.Assignee,
 			// TODO: current user from session
 			ChangedBy: "user",
-			ChangedAt: time.Now(),
+			ChangedAt: time.Now().UTC(),
 		})
 
 		if _, err := t.storage.CreateHistory(dto); err != nil {
@@ -176,7 +199,7 @@ func (t *serviceImpl) newNum(cfg *Config) (string, error) {
 
 func (t *serviceImpl) MakeTransition(taskId, transitionId string) (*Task, error) {
 
-	tm := time.Now()
+	tm := time.Now().UTC()
 
 	// get task from storage
 	dto := t.storage.Get(taskId)
@@ -265,7 +288,7 @@ func (t *serviceImpl) setAssignee(task *Task, assignee *Assignee) error {
 			task.Assignee.User = ""
 		}
 	}
-	tm := time.Now()
+	tm := time.Now().UTC()
 	task.Assignee.At = &tm
 	return nil
 
@@ -357,81 +380,4 @@ func (t *serviceImpl) GetAssignmentLog(cr *AssignmentLogCriteria) (*AssignmentLo
 	}
 
 	return assLogRsFromDto(r), nil
-}
-
-func (t *serviceImpl) StartReminders() error {
-
-	go func() {
-
-		rs, err := t.storage.Search(&storage.SearchCriteria{
-			PagingRequest: &common.PagingRequest{
-				Size: 10000,
-			},
-		})
-		if err != nil {
-			log.Printf("ERROR: start reminder, search error: %v", err)
-			return
-		}
-
-		log.Printf("preparing reminders... found %d tasks", len(rs.Tasks))
-
-		scheduler := gocron.NewScheduler(time.Local)
-
-		remindFunc := func(ts *Task) {
-			t.publish(ts, "tasks.remind")
-			log.Println("reminder fired")
-		}
-
-		for _, dto := range rs.Tasks {
-
-			ts := fromDto(dto)
-
-			if t.config.IsFinalStatus(ts.Type, ts.Status) {
-				continue
-			}
-
-			for _, r := range ts.Reminders {
-
-				if r.BeforeDueDate != nil && ts.DueDate != nil && r.BeforeDueDate.Unit != "" {
-
-					var d int64
-
-					switch r.BeforeDueDate.Unit {
-					case seconds:
-						d = int64(time.Second) * int64(r.BeforeDueDate.Value)
-					case minutes:
-						d = int64(time.Minute) * int64(r.BeforeDueDate.Value)
-					case hours:
-						d = int64(time.Hour) * int64(r.BeforeDueDate.Value)
-					case days:
-						d = 24 * int64(time.Hour) * int64(r.BeforeDueDate.Value)
-					default:
-						log.Println("ERROR: not supported unit type ", r.BeforeDueDate.Unit)
-						continue
-					}
-
-					schedTime := ts.DueDate.Add(-time.Duration(d))
-
-					if schedTime.After(time.Now()) {
-						scheduler.Every(1).Hours().StartAt(schedTime).Do(remindFunc, ts)
-						log.Printf("reminder 'before due date': %v", schedTime)
-					}
-
-				}
-
-				if r.SpecificTime != nil && r.SpecificTime.At != nil {
-					scheduler.Every(1).Day().StartAt(*r.SpecificTime.At).Do(remindFunc, ts)
-					log.Printf("reminder 'specific time': %v", r.SpecificTime.At)
-				}
-
-			}
-
-		}
-
-		scheduler.StartAsync()
-
-	}()
-
-	return nil
-
 }

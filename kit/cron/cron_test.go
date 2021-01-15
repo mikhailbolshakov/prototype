@@ -3,6 +3,7 @@ package cron
 import (
 	"fmt"
 	"github.com/go-co-op/gocron"
+	"log"
 	"testing"
 	"time"
 )
@@ -95,6 +96,53 @@ func Test_SpecificTimeMultiple(t *testing.T) {
 	select {
 		case <-time.After(time.Second * 10):
 			fmt.Println("time out")
+	}
+
+}
+
+func Test_SpecificTimeMultipleAfterStart(t *testing.T) {
+
+	s := gocron.NewScheduler(time.Local)
+
+	expectedTime1 := time.Now().Add(time.Second * 10)
+	expectedTime2 := time.Now().Add(time.Second * 20)
+
+	_, _ = s.Every(1).Day().StartAt(expectedTime1).Do(func() {
+		fmt.Println("hello 1")
+	})
+
+	s.StartAsync()
+
+	time.Sleep(time.Second * 2)
+
+	_, _ = s.Every(1).Day().StartAt(expectedTime2).Do(func() {
+		fmt.Println("hello 2")
+	})
+
+	select {
+	case <-time.After(time.Minute * 1):
+		fmt.Println("time out")
+	}
+
+}
+
+func Test_SpecificTimeZones(t *testing.T) {
+
+	s := gocron.NewScheduler(time.Local)
+
+	//expectedTime := time.Date(2021, 01, 15, 15, 58, 00, 00, time.Local)
+	expectedTime, _ := time.Parse(time.RFC3339, "2021-01-15T13:14:00.000Z")
+
+	j, _ := s.Every(1).Day().StartAt(expectedTime).Do(func() {
+		fmt.Println("hello 1")
+	})
+	log.Println(j.NextRun())
+
+	s.StartAsync()
+
+	select {
+	case <-time.After(time.Minute * 10):
+		fmt.Println("time out")
 	}
 
 }

@@ -52,7 +52,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 
 	logSuccess := func(log *storage.AssignmentLog) {
 		log.Status = "success"
-		t := time.Now()
+		t := time.Now().UTC()
 		log.FinishTime = &t
 		_, _ = d.storage.SaveAssignmentLog(log)
 	}
@@ -60,7 +60,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 	logFail := func(log *storage.AssignmentLog, err error) {
 		log.Status = "fail"
 		log.Error = err.Error()
-		t := time.Now()
+		t := time.Now().UTC()
 		log.FinishTime = &t
 		_, _ = d.storage.SaveAssignmentLog(log)
 	}
@@ -68,7 +68,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 	for _, rule := range tt.cfg.AssignmentRules {
 
 		l, _ := d.storage.SaveAssignmentLog(&storage.AssignmentLog{
-			StartTime:       time.Now(),
+			StartTime:       time.Now().UTC(),
 			Status:          "in-progress",
 			RuleCode:        rule.Code,
 			RuleDescription: rule.Description,

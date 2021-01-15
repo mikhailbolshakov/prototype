@@ -23,11 +23,11 @@ type Balance struct {
 
 type Delivery struct {
 	kit.BaseDto
-	Id            string                 `gorm:"column:id"`
-	UserId        string                 `gorm:"column:client_id"`
-	ServiceTypeId string                 `gorm:"column:service_type_id"`
-	Status        string                 `gorm:"column:status"`
-	StartTime     time.Time              `gorm:"column:start_time"`
-	FinishTime    *time.Time             `gorm:"column:finish_time"`
-	Details       string `gorm:"column:details"`
+	Id            string     `gorm:"column:id"`
+	UserId        string     `gorm:"column:client_id"`
+	ServiceTypeId string     `gorm:"column:service_type_id"`
+	Status        string     `gorm:"column:status"`
+	StartTime     time.Time  `gorm:"column:start_time"`
+	FinishTime    *time.Time `gorm:"column:finish_time"`
+	Details       string     `gorm:"column:details"`
 }

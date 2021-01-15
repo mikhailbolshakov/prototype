@@ -18,6 +18,7 @@ type serviceImpl struct {
 	domainConfigService     domain.ConfigService
 	domainTaskSearchService domain.TaskSearchService
 	assignTasksDaemon       domain.AssignmentDaemon
+	scheduler               domain.TaskScheduler
 	grpc                    *grpc.Server
 	usersAdapter            users.Adapter
 	storage                 storage.TaskStorage
@@ -28,23 +29,24 @@ type serviceImpl struct {
 func New() service.Service {
 
 	s := &serviceImpl{}
+
+	s.queue = &stan.Stan{}
 	s.infr = infrastructure.New()
 	s.storage = storage.NewStorage(s.infr)
 	s.usersAdapter = users.NewAdapter()
 	s.domainConfigService = domain.NewTaskConfigService()
-
-	s.queue = &stan.Stan{}
+	s.scheduler = domain.NewScheduler(s.domainConfigService, s.storage)
 
 	userService := s.usersAdapter.GetUserService()
 
-	s.domainTaskService = domain.NewTaskService(s.storage, s.domainConfigService, userService, s.queue)
+	s.domainTaskService = domain.NewTaskService(s.scheduler, s.storage, s.domainConfigService, userService, s.queue)
 	s.domainTaskSearchService = domain.NewTaskSearchService(s.storage)
 
 	s.assignTasksDaemon = domain.NewAssignmentDaemon(s.domainConfigService,
-													 s.domainTaskService,
-													 s.domainTaskSearchService,
-													 userService,
-													 s.storage)
+		s.domainTaskService,
+		s.domainTaskSearchService,
+		userService,
+		s.storage)
 
 	s.grpc = grpc.New(s.domainTaskService, s.domainTaskSearchService)
 
@@ -83,12 +85,8 @@ func (s *serviceImpl) Listen() error {
 func (s *serviceImpl) ListenAsync() error {
 
 	s.grpc.ListenAsync()
-
 	//s.assignTasksDaemon.Run()
-
-	if err := s.domainTaskService.StartReminders(); err != nil {
-		return err
-	}
+	s.scheduler.StartAsync()
 
 	return nil
 }

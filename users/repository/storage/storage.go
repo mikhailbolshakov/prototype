@@ -28,7 +28,7 @@ func NewStorage(infr *infrastructure.Container) UserStorage {
 
 func (s *storageImpl) CreateUser(user *User) (*User, error) {
 
-	t := time.Now()
+	t := time.Now().UTC()
 	user.CreatedAt, user.UpdatedAt = t, t
 
 	result := s.infr.Db.Instance.Create(user)

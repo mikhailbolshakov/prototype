@@ -7,7 +7,7 @@ create table service_types (
   delivery_wf_id varchar
 );
 
-insert into service_types values ('expert-online-consultation', 'Онлайн-консультация с экспертом', null);
+insert into service_types values ('expert-online-consultation', 'Онлайн-консультация с экспертом', 'expert_online_consultation');
 insert into service_types values ('medical-checkup', 'Медицинское обследование', null);
 
 create table balances (

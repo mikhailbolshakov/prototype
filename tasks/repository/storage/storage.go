@@ -30,7 +30,7 @@ func NewStorage(infr *infrastructure.Container) TaskStorage {
 
 func (s *taskStorageImpl) Create(task *Task) (*Task, error) {
 
-	t := time.Now()
+	t := time.Now().UTC()
 	task.CreatedAt, task.UpdatedAt = t, t
 
 	result := s.infr.Db.Instance.Create(task)
@@ -61,7 +61,7 @@ func (s *taskStorageImpl) Get(id string) *Task {
 
 func (s *taskStorageImpl) Update(task *Task) (*Task, error) {
 
-	task.UpdatedAt = time.Now()
+	task.UpdatedAt = time.Now().UTC()
 
 	result := s.infr.Db.Instance.Save(task)
 

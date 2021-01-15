@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1d34tfj" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Zeebe Modeler" exporterVersion="0.11.0">
+  <bpmn:process id="p-expert-online-consultation" name="p-expert-online-consultation" isExecutable="true">
+    <bpmn:startEvent id="Event_1yoy1nk">
+      <bpmn:outgoing>Flow_0jzxg5c</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_0jzxg5c" sourceRef="Event_1yoy1nk" targetRef="t-create-task" />
+    <bpmn:serviceTask id="t-create-task" name="создать задачу на эксперта">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="st-create-task" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0jzxg5c</bpmn:incoming>
+      <bpmn:outgoing>Flow_14yq6to</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_14yq6to" sourceRef="t-create-task" targetRef="e-consultation-time" />
+    <bpmn:intermediateCatchEvent id="e-consultation-time">
+      <bpmn:incoming>Flow_14yq6to</bpmn:incoming>
+      <bpmn:outgoing>Flow_0508yzr</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_1dwt1xj" messageRef="Message_0v4ajl8" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_0508yzr" sourceRef="e-consultation-time" targetRef="t-task-in-progress" />
+    <bpmn:sequenceFlow id="Flow_03ymqn8" sourceRef="t-task-in-progress" targetRef="Gateway_0x3z8ht" />
+    <bpmn:sequenceFlow id="Flow_1phixgt" sourceRef="Gateway_0x3z8ht" targetRef="e-consultation-timeout" />
+    <bpmn:intermediateCatchEvent id="e-consultation-timeout">
+      <bpmn:incoming>Flow_1phixgt</bpmn:incoming>
+      <bpmn:outgoing>Flow_12xula4</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_1wrra01">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_12xula4" sourceRef="e-consultation-timeout" targetRef="Gateway_039onlu" />
+    <bpmn:sequenceFlow id="Flow_0qd4mf3" sourceRef="Gateway_0x3z8ht" targetRef="e-task-finished" />
+    <bpmn:intermediateCatchEvent id="e-task-finished">
+      <bpmn:incoming>Flow_0qd4mf3</bpmn:incoming>
+      <bpmn:outgoing>Flow_0opvt2n</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_1bv7pu9" messageRef="Message_1n6r1zx" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_0opvt2n" sourceRef="e-task-finished" targetRef="Gateway_039onlu" />
+    <bpmn:exclusiveGateway id="Gateway_0ygf6aq" name="Статус задачи &#34;Выполнена&#34; ?">
+      <bpmn:incoming>Flow_0684nbe</bpmn:incoming>
+      <bpmn:outgoing>Flow_0s8mr2h</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0ricf0i</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0684nbe" sourceRef="Gateway_039onlu" targetRef="Gateway_0ygf6aq" />
+    <bpmn:sequenceFlow id="Flow_0s8mr2h" name="да" sourceRef="Gateway_0ygf6aq" targetRef="t-complete-consultation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=taskCompleted</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="t-task-in-progress" name="перевести задачу в статус in-progress">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="st-task-in-progress" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0508yzr</bpmn:incoming>
+      <bpmn:outgoing>Flow_03ymqn8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:eventBasedGateway id="Gateway_0x3z8ht">
+      <bpmn:incoming>Flow_03ymqn8</bpmn:incoming>
+      <bpmn:outgoing>Flow_1phixgt</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0qd4mf3</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:exclusiveGateway id="Gateway_039onlu">
+      <bpmn:incoming>Flow_12xula4</bpmn:incoming>
+      <bpmn:incoming>Flow_0opvt2n</bpmn:incoming>
+      <bpmn:outgoing>Flow_0684nbe</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0ricf0i" name="нет" sourceRef="Gateway_0ygf6aq" targetRef="t-cancel-task">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= not(taskCompleted)</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="t-complete-consultation" name="Завершить консультацию &#34;Оказана&#34;">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="ts-complete-consultation" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0s8mr2h</bpmn:incoming>
+      <bpmn:outgoing>Flow_1euv6d4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="t-cancel-task" name="Отменить задачу">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="ts-cancel-task" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0ricf0i</bpmn:incoming>
+      <bpmn:outgoing>Flow_0vsimag</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0vsimag" sourceRef="t-cancel-task" targetRef="t-cancel-consultation" />
+    <bpmn:serviceTask id="t-cancel-consultation" name="Завершить консультацию &#34;Отменена&#34;">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="ts-cancel-consultation" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0vsimag</bpmn:incoming>
+      <bpmn:outgoing>Flow_0tw3abt</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="Event_1s4s6vu">
+      <bpmn:incoming>Flow_1euv6d4</bpmn:incoming>
+      <bpmn:incoming>Flow_0tw3abt</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1euv6d4" sourceRef="t-complete-consultation" targetRef="Event_1s4s6vu" />
+    <bpmn:sequenceFlow id="Flow_0tw3abt" sourceRef="t-cancel-consultation" targetRef="Event_1s4s6vu" />
+    <bpmn:textAnnotation id="TextAnnotation_14smb76">
+      <bpmn:text>Ожидать события начала консультации</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1fglqx5" sourceRef="e-consultation-time" targetRef="TextAnnotation_14smb76" />
+    <bpmn:textAnnotation id="TextAnnotation_08drrzo">
+      <bpmn:text>ожидаем окончания консультации</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_0mz8qwe" sourceRef="e-consultation-timeout" targetRef="TextAnnotation_08drrzo" />
+    <bpmn:textAnnotation id="TextAnnotation_12lmrpi">
+      <bpmn:text>ожидаем завершения задачи</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1p88hz5" sourceRef="e-task-finished" targetRef="TextAnnotation_12lmrpi" />
+  </bpmn:process>
+  <bpmn:message id="Message_0v4ajl8" name="msg-consultation-time">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=expertTaskId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_1n6r1zx" name="msg-task-finished">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=deliveryId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="p-expert-online-consultation">
+      <bpmndi:BPMNEdge id="Flow_0tw3abt_di" bpmnElement="Flow_0tw3abt">
+        <di:waypoint x="1460" y="370" />
+        <di:waypoint x="1550" y="370" />
+        <di:waypoint x="1550" y="278" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1euv6d4_di" bpmnElement="Flow_1euv6d4">
+        <di:waypoint x="1450" y="260" />
+        <di:waypoint x="1532" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0vsimag_di" bpmnElement="Flow_0vsimag">
+        <di:waypoint x="1280" y="370" />
+        <di:waypoint x="1360" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ricf0i_di" bpmnElement="Flow_0ricf0i">
+        <di:waypoint x="1080" y="285" />
+        <di:waypoint x="1080" y="370" />
+        <di:waypoint x="1180" y="370" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1087" y="325" width="17" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0s8mr2h_di" bpmnElement="Flow_0s8mr2h">
+        <di:waypoint x="1105" y="260" />
+        <di:waypoint x="1350" y="260" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1222" y="242" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0684nbe_di" bpmnElement="Flow_0684nbe">
+        <di:waypoint x="985" y="260" />
+        <di:waypoint x="1055" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0opvt2n_di" bpmnElement="Flow_0opvt2n">
+        <di:waypoint x="868" y="330" />
+        <di:waypoint x="960" y="330" />
+        <di:waypoint x="960" y="285" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0qd4mf3_di" bpmnElement="Flow_0qd4mf3">
+        <di:waypoint x="740" y="285" />
+        <di:waypoint x="740" y="330" />
+        <di:waypoint x="832" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12xula4_di" bpmnElement="Flow_12xula4">
+        <di:waypoint x="868" y="180" />
+        <di:waypoint x="960" y="180" />
+        <di:waypoint x="960" y="235" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1phixgt_di" bpmnElement="Flow_1phixgt">
+        <di:waypoint x="740" y="235" />
+        <di:waypoint x="740" y="180" />
+        <di:waypoint x="832" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03ymqn8_di" bpmnElement="Flow_03ymqn8">
+        <di:waypoint x="620" y="260" />
+        <di:waypoint x="715" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0508yzr_di" bpmnElement="Flow_0508yzr">
+        <di:waypoint x="428" y="260" />
+        <di:waypoint x="520" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14yq6to_di" bpmnElement="Flow_14yq6to">
+        <di:waypoint x="340" y="260" />
+        <di:waypoint x="392" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0jzxg5c_di" bpmnElement="Flow_0jzxg5c">
+        <di:waypoint x="188" y="260" />
+        <di:waypoint x="240" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Event_1yoy1nk_di" bpmnElement="Event_1yoy1nk">
+        <dc:Bounds x="152" y="242" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0dkd2ij_di" bpmnElement="t-create-task">
+        <dc:Bounds x="240" y="220" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0hwh666_di" bpmnElement="e-consultation-time">
+        <dc:Bounds x="392" y="242" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1gwz174_di" bpmnElement="e-consultation-timeout">
+        <dc:Bounds x="832" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1hzv2om_di" bpmnElement="e-task-finished">
+        <dc:Bounds x="832" y="312" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0ygf6aq_di" bpmnElement="Gateway_0ygf6aq" isMarkerVisible="true">
+        <dc:Bounds x="1055" y="235" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1042" y="196" width="75" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0fd5boy_di" bpmnElement="t-task-in-progress">
+        <dc:Bounds x="520" y="220" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1ewxqeu_di" bpmnElement="Gateway_0x3z8ht">
+        <dc:Bounds x="715" y="235" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1bvw2kw_di" bpmnElement="Gateway_039onlu" isMarkerVisible="true">
+        <dc:Bounds x="935" y="235" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1i9t892_di" bpmnElement="t-complete-consultation">
+        <dc:Bounds x="1350" y="220" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0mm1pwh_di" bpmnElement="t-cancel-task">
+        <dc:Bounds x="1180" y="330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_09kfeak_di" bpmnElement="t-cancel-consultation">
+        <dc:Bounds x="1360" y="330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1s4s6vu_di" bpmnElement="Event_1s4s6vu">
+        <dc:Bounds x="1532" y="242" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_14smb76_di" bpmnElement="TextAnnotation_14smb76">
+        <dc:Bounds x="430" y="160" width="100" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_08drrzo_di" bpmnElement="TextAnnotation_08drrzo">
+        <dc:Bounds x="870" y="80" width="100" height="54" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_12lmrpi_di" bpmnElement="TextAnnotation_12lmrpi">
+        <dc:Bounds x="760" y="380" width="100" height="54" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_1fglqx5_di" bpmnElement="Association_1fglqx5">
+        <di:waypoint x="421" y="246" />
+        <di:waypoint x="436" y="228" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_0mz8qwe_di" bpmnElement="Association_0mz8qwe">
+        <di:waypoint x="861" y="166" />
+        <di:waypoint x="888" y="134" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_1p88hz5_di" bpmnElement="Association_1p88hz5">
+        <di:waypoint x="841" y="345" />
+        <di:waypoint x="819" y="380" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

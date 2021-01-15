@@ -13,6 +13,7 @@ type Storage interface {
 	GetTypes() []ServiceType
 	CreateDelivery(d *Delivery) (*Delivery, error)
 	UpdateDelivery(d *Delivery) (*Delivery, error)
+	GetDelivery(id string) *Delivery
 }
 
 type storageImpl struct {
@@ -27,7 +28,7 @@ func NewStorage(infr *infrastructure.Container) Storage {
 
 func (s *storageImpl) CreateBalance(b *Balance) (*Balance, error) {
 
-	t := time.Now()
+	t := time.Now().UTC()
 	b.CreatedAt, b.UpdatedAt = t, t
 
 	result := s.infr.Db.Instance.Create(b)
@@ -42,7 +43,7 @@ func (s *storageImpl) CreateBalance(b *Balance) (*Balance, error) {
 
 func (s *storageImpl) UpdateBalance(b *Balance) (*Balance, error) {
 
-	b.UpdatedAt = time.Now()
+	b.UpdatedAt = time.Now().UTC()
 
 	result := s.infr.Db.Instance.Save(b)
 
@@ -92,7 +93,7 @@ func (s *storageImpl) GetTypes() []ServiceType {
 
 func (s *storageImpl) CreateDelivery(d *Delivery) (*Delivery, error) {
 
-	t := time.Now()
+	t := time.Now().UTC()
 	d.CreatedAt, d.UpdatedAt = t, t
 
 	result := s.infr.Db.Instance.Create(d)
@@ -106,7 +107,7 @@ func (s *storageImpl) CreateDelivery(d *Delivery) (*Delivery, error) {
 
 func (s *storageImpl) UpdateDelivery(d *Delivery) (*Delivery, error) {
 
-	d.UpdatedAt = time.Now()
+	d.UpdatedAt = time.Now().UTC()
 
 	result := s.infr.Db.Instance.Save(d)
 
@@ -115,4 +116,10 @@ func (s *storageImpl) UpdateDelivery(d *Delivery) (*Delivery, error) {
 	}
 
 	return d, nil
+}
+
+func (s *storageImpl) GetDelivery(id string) *Delivery {
+	res := &Delivery{Id: id}
+	s.infr.Db.Instance.First(res)
+	return res
 }

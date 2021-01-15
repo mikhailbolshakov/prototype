@@ -3,12 +3,12 @@ package kit
 import (
 	"encoding/json"
 	uuid "github.com/satori/go.uuid"
-	"strings"
 	"time"
 )
 
 func NewId() string {
-	return strings.Replace(uuid.NewV4().String(), "-", "", -1)
+	//return strings.Replace(uuid.NewV4().String(), "-", "", -1)
+	return uuid.NewV4().String()
 }
 
 func ToJson(v interface{}) (string, error) {

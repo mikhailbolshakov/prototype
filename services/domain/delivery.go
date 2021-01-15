@@ -1,23 +1,32 @@
 package domain
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/zeebe-io/zeebe/clients/go/pkg/entities"
+	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
 	"gitlab.medzdrav.ru/prototype/kit"
+	"gitlab.medzdrav.ru/prototype/kit/bpm"
 	"gitlab.medzdrav.ru/prototype/kit/grpc"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/proto/mm"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
+	"gitlab.medzdrav.ru/prototype/queue_model"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/mattermost"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/tasks"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/services/repository/storage"
+	"log"
 	"time"
 )
 
 type DeliveryService interface {
 	// delivery user service
+	RegisterBpmHandlers() error
 	Delivery(rq *DeliveryRequest) (*Delivery, error)
+	Complete(deliveryId string, finishTime *time.Time) (*Delivery, error)
+	Cancel(deliveryId string, cancelTime *time.Time) (*Delivery, error)
 }
 
 func NewDeliveryService(balanceService UserBalanceService,
@@ -25,15 +34,22 @@ func NewDeliveryService(balanceService UserBalanceService,
 	userService users.Service,
 	mmService mattermost.Service,
 	storage storage.Storage,
-	queue queue.Queue) DeliveryService {
-	return &deliveryServiceImpl{
+	queue queue.Queue,
+	bpm bpm.Engine) DeliveryService {
+
+	d := &deliveryServiceImpl{
 		balance:     balanceService,
 		taskService: taskService,
 		userService: userService,
 		mmService:   mmService,
 		storage:     storage,
 		queue:       queue,
+		bpm:         bpm,
 	}
+
+	d.taskService.SetTaskDueDateHandler(d.dueDateTaskHandler)
+
+	return d
 }
 
 type deliveryServiceImpl struct {
@@ -43,14 +59,15 @@ type deliveryServiceImpl struct {
 	mmService   mattermost.Service
 	queue       queue.Queue
 	storage     storage.Storage
+	bpm         bpm.Engine
 }
 
 type deliveryHandler func(dl *Delivery) (*Delivery, error)
 
-func (d *deliveryServiceImpl) getHandlers() map[string]deliveryHandler {
-	return map[string]deliveryHandler{
-		ST_EXPERT_ONLINE_CONSULTATION: d.onlineConsultationHandler,
-	}
+func (d *deliveryServiceImpl) RegisterBpmHandlers() error {
+	return d.bpm.RegisterTaskHandlers(map[string]interface{}{
+		"st-create-task": d.createTaskHandler,
+	})
 }
 
 func (d *deliveryServiceImpl) Delivery(rq *DeliveryRequest) (*Delivery, error) {
@@ -91,7 +108,7 @@ func (d *deliveryServiceImpl) Delivery(rq *DeliveryRequest) (*Delivery, error) {
 		UserId:        rq.UserId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Status:        "in-progress",
-		StartTime:     time.Now(),
+		StartTime:     time.Now().UTC(),
 		FinishTime:    nil,
 		Details:       rq.Details,
 	}
@@ -104,9 +121,20 @@ func (d *deliveryServiceImpl) Delivery(rq *DeliveryRequest) (*Delivery, error) {
 	delivery = d.deliveryFromDto(dto)
 
 	// execute a handler for corresponding task
-	delivery, err = d.getHandlers()[rq.ServiceTypeId](delivery)
-	if err != nil {
-		return nil, err
+	if st, ok := d.balance.GetTypes()[rq.ServiceTypeId]; ok {
+		if st.DeliveryWfId != "" {
+			// start WF
+			variables := make(map[string]interface{})
+			variables["deliveryId"] = delivery.Id
+			_, err := d.bpm.StartProcess("p-expert-online-consultation", variables)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, errors.New(fmt.Sprintf("WF process isn't specified for service type %s", rq.ServiceTypeId))
+		}
+	} else {
+		return nil, errors.New(fmt.Sprintf("service type %s isn't supported", rq.ServiceTypeId))
 	}
 
 	// update storage
@@ -119,7 +147,65 @@ func (d *deliveryServiceImpl) Delivery(rq *DeliveryRequest) (*Delivery, error) {
 	return delivery, nil
 }
 
-func (d *deliveryServiceImpl) onlineConsultationHandler(dl *Delivery) (*Delivery, error) {
+func (d *deliveryServiceImpl) Complete(deliveryId string, finishTime *time.Time) (*Delivery, error) {
+
+	delivery := d.deliveryFromDto(d.storage.GetDelivery(deliveryId))
+	delivery.Status = "completed"
+	if finishTime != nil {
+		delivery.FinishTime = finishTime
+	} else {
+		t := time.Now().UTC()
+		delivery.FinishTime = &t
+	}
+
+	dto, err := d.storage.UpdateDelivery(d.deliveryToDto(delivery))
+	if err != nil {
+		return nil, err
+	}
+
+	return d.deliveryFromDto(dto), nil
+
+}
+
+func (d *deliveryServiceImpl) Cancel(deliveryId string, cancelTime *time.Time) (*Delivery, error) {
+
+	delivery := d.deliveryFromDto(d.storage.GetDelivery(deliveryId))
+	delivery.Status = "canceled"
+	if cancelTime != nil {
+		delivery.FinishTime = cancelTime
+	} else {
+		t := time.Now().UTC()
+		delivery.FinishTime = &t
+	}
+
+	dto, err := d.storage.UpdateDelivery(d.deliveryToDto(delivery))
+	if err != nil {
+		return nil, err
+	}
+
+	return d.deliveryFromDto(dto), nil
+}
+
+func (d *deliveryServiceImpl) dueDateTaskHandler(ts *queue_model.Task) {
+	log.Printf("due date task message received %v", ts)
+	_ = d.bpm.SendMessage("msg-consultation-time", ts.Id, nil)
+}
+
+func (d *deliveryServiceImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
+
+	log.Println("create task handler executed")
+
+	jobKey := job.GetKey()
+
+	variables, err := job.GetVariablesAsMap()
+	if err != nil {
+		d.failJob(client, job, err)
+		return
+	}
+
+	deliveryId := variables["deliveryId"].(string)
+
+	dl := d.deliveryFromDto(d.storage.GetDelivery(deliveryId))
 
 	user := d.userService.Get(dl.UserId)
 
@@ -127,7 +213,8 @@ func (d *deliveryServiceImpl) onlineConsultationHandler(dl *Delivery) (*Delivery
 	expertUserId := dl.Details["expertUserId"].(string)
 	consultationTime, err := time.Parse(time.RFC3339, dl.Details["consultationTime"].(string))
 	if err != nil {
-		return nil, err
+		d.failJob(client, job, err)
+		return
 	}
 
 	expert := d.userService.Get(expertUserId)
@@ -140,7 +227,8 @@ func (d *deliveryServiceImpl) onlineConsultationHandler(dl *Delivery) (*Delivery
 		Subscribers:  []string{expert.MMId},
 	})
 	if err != nil {
-		return nil, err
+		d.failJob(client, job, err)
+		return
 	}
 
 	// create a task
@@ -170,20 +258,47 @@ func (d *deliveryServiceImpl) onlineConsultationHandler(dl *Delivery) (*Delivery
 		},
 	})
 	if err != nil {
-		return nil, err
+		d.failJob(client, job, err)
+		return
 	}
 
 	if err := d.taskService.MakeTransition(&pb.MakeTransitionRequest{
 		TaskId:       task.Id,
 		TransitionId: "3",
 	}); err != nil {
-		return nil, err
+		d.failJob(client, job, err)
+		return
 	}
 
-	dl.Details["tasks"] = []string{task.Id}
-	dl.Details["channel"] = []string{chRs.ChannelId}
+	dl.Details["tasks"] = []string{task.Num}
+	dl.Details["channels"] = []string{chRs.ChannelId}
+	_, err = d.storage.UpdateDelivery(d.deliveryToDto(dl))
+	if err != nil {
+		d.failJob(client, job, err)
+		return
+	}
 
-	//TODO: we should run WF here
+	variables["taskCompleted"] = false
+	variables["expertTaskId"] = task.Id
 
-	return dl, nil
+	request, err := client.NewCompleteJobCommand().JobKey(jobKey).VariablesFromMap(variables)
+	if err != nil {
+		d.failJob(client, job, err)
+		return
+	}
+
+	ctx := context.Background()
+	_, err = request.Send(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func (d *deliveryServiceImpl) failJob(client worker.JobClient, job entities.Job, err error) {
+	log.Printf("failed to complete job %s error %v", job.GetKey(), err)
+
+	ctx := context.Background()
+	_, _ = client.NewFailJobCommand().JobKey(job.GetKey()).Retries(job.Retries - 1).ErrorMessage(err.Error()).Send(ctx)
+
 }

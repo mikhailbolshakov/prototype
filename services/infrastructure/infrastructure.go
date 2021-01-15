@@ -1,6 +1,8 @@
 package infrastructure
 
 import (
+	"gitlab.medzdrav.ru/prototype/kit/bpm"
+	"gitlab.medzdrav.ru/prototype/kit/bpm/zeebe"
 	kitCache "gitlab.medzdrav.ru/prototype/kit/cache"
 	kitStorage "gitlab.medzdrav.ru/prototype/kit/storage"
 )
@@ -8,10 +10,16 @@ import (
 type Container struct {
 	Db    *kitStorage.Storage
 	Cache *kitCache.Redis
+	Bpm   bpm.Engine
 }
 
 func New() *Container {
-	c := &Container{}
+	c := &Container{
+		Bpm: zeebe.NewEngine(&zeebe.Params{
+			Port: "26500",
+			Host: "localhost",
+		}),
+	}
 	return c
 }
 
@@ -39,6 +47,10 @@ func (c *Container) Init() error {
 		Ttl:      7200,
 	})
 	if err != nil {
+		return err
+	}
+
+	if err := c.Bpm.Open(); err != nil {
 		return err
 	}
 

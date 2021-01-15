@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"gitlab.medzdrav.ru/prototype/kit/bpm"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
@@ -25,6 +26,7 @@ type serviceImpl struct {
 	storage         storage.Storage
 	infr            *infrastructure.Container
 	queue           queue.Queue
+	bpm  			bpm.Engine
 }
 
 func New() service.Service {
@@ -34,6 +36,7 @@ func New() service.Service {
 	s.storage = storage.NewStorage(s.infr)
 
 	s.queue = &stan.Stan{}
+	s.bpm = s.infr.Bpm
 
 	s.tasksAdapter = tasks.NewAdapter(s.queue)
 	taskService := s.tasksAdapter.GetService()
@@ -45,7 +48,7 @@ func New() service.Service {
 	mmService := s.mmAdapter.GetService()
 
 	s.balanceService = domain.NewBalanceService(s.storage, s.queue)
-	s.deliveryService = domain.NewDeliveryService(s.balanceService, taskService, userService, mmService, s.storage, s.queue)
+	s.deliveryService = domain.NewDeliveryService(s.balanceService, taskService, userService, mmService, s.storage, s.queue, s.bpm)
 
 	s.grpc = grpc.New(s.balanceService, s.deliveryService)
 
@@ -74,6 +77,14 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
+	if err := s.bpm.DeployBPMNs([]string{"../services/bpmn/expert_online_consultation.bpmn"}); err != nil {
+		return err
+	}
+
+	if err := s.deliveryService.RegisterBpmHandlers(); err != nil {
+		return err
+	}
+
 	return nil
 
 }
@@ -85,6 +96,7 @@ func (s *serviceImpl) Listen() error {
 func (s *serviceImpl) ListenAsync() error {
 
 	s.grpc.ListenAsync()
+	s.tasksAdapter.ListenAsync()
 
 	return nil
 }
