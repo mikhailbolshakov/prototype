@@ -151,3 +151,23 @@ func (s *controller) assLogRsFromPb(rs *pb.AssignmentLogResponse) *AssignmentLog
 
 	return r
 }
+
+func (s *controller) histFromPb(rs *pb.GetHistoryResponse) []*History {
+	var res []*History
+	for _, h := range rs.Items {
+		res = append(res, &History{
+			Status:    &Status{
+				Status:    h.Status.Status,
+				SubStatus: h.Status.Substatus,
+			},
+			Assignee:  &Assignee{
+				Group: h.Assignee.Group,
+				User:  h.Assignee.User,
+				At:    grpc.PbTSToTime(h.Assignee.At),
+			},
+			ChangedBy: h.ChangedBy,
+			ChangedAt: *grpc.PbTSToTime(h.ChangedAt),
+		})
+	}
+	return res
+}

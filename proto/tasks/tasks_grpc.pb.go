@@ -25,6 +25,7 @@ type TasksClient interface {
 	GetById(ctx context.Context, in *GetByIdRequest, opts ...grpc.CallOption) (*Task, error)
 	Search(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchResponse, error)
 	GetAssignmentLog(ctx context.Context, in *AssignmentLogRequest, opts ...grpc.CallOption) (*AssignmentLogResponse, error)
+	GetHistory(ctx context.Context, in *GetHistoryRequest, opts ...grpc.CallOption) (*GetHistoryResponse, error)
 }
 
 type tasksClient struct {
@@ -107,6 +108,15 @@ func (c *tasksClient) GetAssignmentLog(ctx context.Context, in *AssignmentLogReq
 	return out, nil
 }
 
+func (c *tasksClient) GetHistory(ctx context.Context, in *GetHistoryRequest, opts ...grpc.CallOption) (*GetHistoryResponse, error) {
+	out := new(GetHistoryResponse)
+	err := c.cc.Invoke(ctx, "/tasks.Tasks/GetHistory", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TasksServer is the server API for Tasks service.
 // All implementations must embed UnimplementedTasksServer
 // for forward compatibility
@@ -119,6 +129,7 @@ type TasksServer interface {
 	GetById(context.Context, *GetByIdRequest) (*Task, error)
 	Search(context.Context, *SearchRequest) (*SearchResponse, error)
 	GetAssignmentLog(context.Context, *AssignmentLogRequest) (*AssignmentLogResponse, error)
+	GetHistory(context.Context, *GetHistoryRequest) (*GetHistoryResponse, error)
 	mustEmbedUnimplementedTasksServer()
 }
 
@@ -149,6 +160,9 @@ func (UnimplementedTasksServer) Search(context.Context, *SearchRequest) (*Search
 }
 func (UnimplementedTasksServer) GetAssignmentLog(context.Context, *AssignmentLogRequest) (*AssignmentLogResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAssignmentLog not implemented")
+}
+func (UnimplementedTasksServer) GetHistory(context.Context, *GetHistoryRequest) (*GetHistoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHistory not implemented")
 }
 func (UnimplementedTasksServer) mustEmbedUnimplementedTasksServer() {}
 
@@ -307,6 +321,24 @@ func _Tasks_GetAssignmentLog_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Tasks_GetHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TasksServer).GetHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tasks.Tasks/GetHistory",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TasksServer).GetHistory(ctx, req.(*GetHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Tasks_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "tasks.Tasks",
 	HandlerType: (*TasksServer)(nil),
@@ -342,6 +374,10 @@ var _Tasks_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAssignmentLog",
 			Handler:    _Tasks_GetAssignmentLog_Handler,
+		},
+		{
+			MethodName: "GetHistory",
+			Handler:    _Tasks_GetHistory_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

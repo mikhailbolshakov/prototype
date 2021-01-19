@@ -20,6 +20,8 @@ type UserBalanceService interface {
 	WriteOff(rq *ModifyBalanceRequest) (*UserBalance, error)
 	// lock service
 	Lock(rq *ModifyBalanceRequest) (*UserBalance, error)
+	// cancel locked service
+	Cancel(rq *ModifyBalanceRequest) (*UserBalance, error)
 }
 
 func NewBalanceService(storage storage.Storage, queue queue.Queue) UserBalanceService {
@@ -135,6 +137,7 @@ func (s *balanceServiceImpl) WriteOff(rq *ModifyBalanceRequest) (*UserBalance, e
 
 	return s.get(rq.UserId, nil)
 }
+
 func (s *balanceServiceImpl) Lock(rq *ModifyBalanceRequest) (*UserBalance, error) {
 
 	types := s.GetTypes()
@@ -157,6 +160,39 @@ func (s *balanceServiceImpl) Lock(rq *ModifyBalanceRequest) (*UserBalance, error
 		}
 
 		b.Locked = b.Locked + rq.Quantity
+		_, err = s.storage.UpdateBalance(&b)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, errors.New("balance is corrupted")
+	}
+
+	return s.get(rq.UserId, nil)
+}
+
+func (s *balanceServiceImpl) Cancel(rq *ModifyBalanceRequest) (*UserBalance, error) {
+
+	types := s.GetTypes()
+	if _, ok := types[rq.ServiceTypeId]; !ok {
+		return nil, errors.New(fmt.Sprintf("service type %s isn't supported", rq.ServiceTypeId))
+	}
+
+	balances, err := s.storage.GetBalanceForServiceType(rq.UserId, rq.ServiceTypeId, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(balances) == 0 {
+		return nil, errors.New(fmt.Sprintf("cannot cancel service %s, no locked", rq.ServiceTypeId))
+	} else if len(balances) == 1 {
+		b := balances[0]
+
+		if rq.Quantity > b.Locked {
+			return nil, errors.New("cannot cancel more then locked")
+		}
+
+		b.Locked = b.Locked - rq.Quantity
 		_, err = s.storage.UpdateBalance(&b)
 		if err != nil {
 			return nil, err

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/api"
+	"gitlab.medzdrav.ru/prototype/bp"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/mm"
 	"gitlab.medzdrav.ru/prototype/services"
@@ -20,6 +21,7 @@ func main() {
 		tasks.New(),
 		mm.New(),
 		services.New(),
+		bp.New(),
 		api.New(),
 	}
 

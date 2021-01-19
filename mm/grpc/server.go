@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	"gitlab.medzdrav.ru/prototype/mm/domain"
 	pb "gitlab.medzdrav.ru/prototype/proto/mm"
@@ -73,6 +74,32 @@ func (s *Server) CreateClientChannel(ctx context.Context, rq *pb.CreateClientCha
 	return response, nil
 }
 
+func (s *Server) Subscribe(ctx context.Context, rq *pb.SubscribeRequest) (*pb.SubscribeResponse, error) {
+	err := s.domain.SubscribeUser(&domain.SubscribeUserRequest{
+		UserId:    rq.UserId,
+		ChannelId: rq.ChannelId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &pb.SubscribeResponse{}, nil
+}
+
+func (s *Server) GetChannelsForUserAndMembers(ctx context.Context, rq *pb.GetChannelsForUserAndMembersRequest) (*pb.GetChannelsForUserAndMembersResponse, error) {
+
+	channels, err := s.domain.GetChannelsForUserAndMembers(&domain.GetChannelsForUserAndMembersRequest{
+		UserId:        rq.UserId,
+		TeamName:      rq.TeamName,
+		MemberUserIds: rq.MemberUserIds,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetChannelsForUserAndMembersResponse{ChannelIds: channels}, nil
+
+}
+
 func (s *Server) GetUsersStatuses(ctx context.Context, rq *pb.GetUsersStatusesRequest) (*pb.GetUserStatusesResponse, error) {
 
 	rs, err := s.domain.GetUsersStatuses(&domain.GetUsersStatusesRequest{UserIds: rq.MMUserIds})
@@ -88,4 +115,27 @@ func (s *Server) GetUsersStatuses(ctx context.Context, rq *pb.GetUsersStatusesRe
 	}
 	return response, nil
 
+}
+
+func (s *Server) SendTriggerPost(ctx context.Context, rq *pb.SendTriggerPostRequest) (*pb.SendTriggerPostResponse, error) {
+
+	var params map[string]interface{}
+	if rq.Params != nil {
+		if err := json.Unmarshal(rq.Params, &params); err != nil {
+			return nil, err
+		}
+	}
+
+	domainRq := &domain.SendTriggerPostRequest{
+		TriggerPostCode: rq.PostCode,
+		UserId:          rq.UserId,
+		ChannelId:       rq.ChannelId,
+		Params:          params,
+	}
+	err := s.domain.SendTriggerPost(domainRq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.SendTriggerPostResponse{}, nil
 }

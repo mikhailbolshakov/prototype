@@ -13,6 +13,7 @@ type Storage interface {
 	GetTypes() []ServiceType
 	CreateDelivery(d *Delivery) (*Delivery, error)
 	UpdateDelivery(d *Delivery) (*Delivery, error)
+	UpdateDetails(deliveryId string, details string) (*Delivery, error)
 	GetDelivery(id string) *Delivery
 }
 
@@ -116,6 +117,15 @@ func (s *storageImpl) UpdateDelivery(d *Delivery) (*Delivery, error) {
 	}
 
 	return d, nil
+}
+
+func (s *storageImpl) UpdateDetails(deliveryId string, details string) (*Delivery, error) {
+	d := &Delivery{	Id: deliveryId}
+	result := s.infr.Db.Instance.Model(d).Updates(map[string]interface{}{"details": details, "updated_at": time.Now().UTC()})
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return s.GetDelivery(deliveryId), nil
 }
 
 func (s *storageImpl) GetDelivery(id string) *Delivery {

@@ -270,3 +270,56 @@ func (c *Client) createDirectChannel(userId1, userId2 string) (*CreateChannelRes
 	return &CreateChannelResponse{ChannelId: ch.Id}, nil
 
 }
+
+func (c *Client) getChannelsForUserAndMembers(userId, teamName string, memberUserIds []string) ([]string, error) {
+
+	team, rs := c.RestApi.GetTeamByName(teamName, "")
+	if err := handleResponse(rs); err != nil {
+		return nil, err
+	}
+
+	channels, rs := c.RestApi.GetChannelsForTeamForUser(team.Id, userId,false, "")
+	if err := handleResponse(rs); err != nil {
+		return nil, err
+	}
+
+	var res []string
+
+	for _, ch := range channels {
+
+		if ch.Type != model.CHANNEL_PRIVATE {
+			continue
+		}
+
+		chMembers, rs := c.RestApi.GetChannelMembers(ch.Id, 0, 1000, "")
+		if err := handleResponse(rs); err != nil {
+			return nil, err
+		}
+
+		ok := true
+		for _, srcM := range memberUserIds {
+
+			found := false
+			for _, m := range *chMembers {
+				if srcM == m.UserId {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				ok = false
+				break
+			}
+
+		}
+
+		if ok {
+			res = append(res, ch.Id)
+		}
+
+	}
+
+	return res, nil
+
+}

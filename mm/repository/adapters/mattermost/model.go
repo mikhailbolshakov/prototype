@@ -87,3 +87,11 @@ type GetUsersStatusesRequest struct {
 type GetUsersStatusesResponse struct {
 	Statuses []*UserStatus
 }
+
+type GetChannelsForUserAndMembersRequest struct {
+	UserId string
+	TeamName string
+	MemberUserIds []string
+}
+
+

@@ -39,9 +39,38 @@ message CreateClientChannelResponse {
   string ChannelId = 2;
 }
 
-service Channels {
-  rpc CreateClientChannel(CreateClientChannelRequest) returns (CreateClientChannelResponse) {}
+message GetChannelsForUserAndMembersRequest {
+  string UserId = 1;
+  string TeamName = 2;
+  repeated string MemberUserIds = 3;
 }
 
+message GetChannelsForUserAndMembersResponse {
+  repeated string ChannelIds = 1;
+}
+
+message SubscribeRequest {
+  string UserId = 1;
+  string ChannelId = 2;
+}
+
+message SubscribeResponse {}
+
+service Channels {
+  rpc CreateClientChannel(CreateClientChannelRequest) returns (CreateClientChannelResponse) {}
+  rpc GetChannelsForUserAndMembers(GetChannelsForUserAndMembersRequest) returns(GetChannelsForUserAndMembersResponse) {}
+  rpc Subscribe(SubscribeRequest) returns (SubscribeResponse) {}
+}
+
+message SendTriggerPostRequest {
+  string PostCode = 1;
+  string UserId = 2;
+  string ChannelId = 3;
+  bytes Params = 4;
+}
+
+message SendTriggerPostResponse {}
+
 service Posts {
+  rpc SendTriggerPost(SendTriggerPostRequest) returns (SendTriggerPostResponse) {}
 }

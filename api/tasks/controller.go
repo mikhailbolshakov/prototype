@@ -212,3 +212,19 @@ func (c *controller) AssignmentLog(writer http.ResponseWriter, request *http.Req
 	}
 
 }
+
+func (c *controller) GetHistory(writer http.ResponseWriter, request *http.Request) {
+
+	taskId := mux.Vars(request)["id"]
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if rsPb, err := c.grpc.tasks.GetHistory(ctx, &pb.GetHistoryRequest{
+		TaskId:       taskId,
+	}); err != nil {
+		c.RespondError(writer, http.StatusInternalServerError, err)
+	} else {
+		c.RespondOK(writer, c.histFromPb(rsPb))
+	}
+}

@@ -13,227 +13,454 @@ import (
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion7
 
-// UserServicesClient is the client API for UserServices service.
+// BalanceServiceClient is the client API for BalanceService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type UserServicesClient interface {
+type BalanceServiceClient interface {
 	Add(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error)
 	GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*UserBalance, error)
 	WriteOff(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error)
 	Lock(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error)
-	DeliveryService(ctx context.Context, in *DeliveryRequest, opts ...grpc.CallOption) (*Delivery, error)
+	CancelLock(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error)
 }
 
-type userServicesClient struct {
+type balanceServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewUserServicesClient(cc grpc.ClientConnInterface) UserServicesClient {
-	return &userServicesClient{cc}
+func NewBalanceServiceClient(cc grpc.ClientConnInterface) BalanceServiceClient {
+	return &balanceServiceClient{cc}
 }
 
-func (c *userServicesClient) Add(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error) {
+func (c *balanceServiceClient) Add(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error) {
 	out := new(UserBalance)
-	err := c.cc.Invoke(ctx, "/services.UserServices/Add", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/services.BalanceService/Add", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *userServicesClient) GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*UserBalance, error) {
+func (c *balanceServiceClient) GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*UserBalance, error) {
 	out := new(UserBalance)
-	err := c.cc.Invoke(ctx, "/services.UserServices/GetBalance", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/services.BalanceService/GetBalance", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *userServicesClient) WriteOff(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error) {
+func (c *balanceServiceClient) WriteOff(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error) {
 	out := new(UserBalance)
-	err := c.cc.Invoke(ctx, "/services.UserServices/WriteOff", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/services.BalanceService/WriteOff", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *userServicesClient) Lock(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error) {
+func (c *balanceServiceClient) Lock(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error) {
 	out := new(UserBalance)
-	err := c.cc.Invoke(ctx, "/services.UserServices/Lock", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/services.BalanceService/Lock", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *userServicesClient) DeliveryService(ctx context.Context, in *DeliveryRequest, opts ...grpc.CallOption) (*Delivery, error) {
-	out := new(Delivery)
-	err := c.cc.Invoke(ctx, "/services.UserServices/DeliveryService", in, out, opts...)
+func (c *balanceServiceClient) CancelLock(ctx context.Context, in *ChangeServicesRequest, opts ...grpc.CallOption) (*UserBalance, error) {
+	out := new(UserBalance)
+	err := c.cc.Invoke(ctx, "/services.BalanceService/CancelLock", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// UserServicesServer is the server API for UserServices service.
-// All implementations must embed UnimplementedUserServicesServer
+// BalanceServiceServer is the server API for BalanceService service.
+// All implementations must embed UnimplementedBalanceServiceServer
 // for forward compatibility
-type UserServicesServer interface {
+type BalanceServiceServer interface {
 	Add(context.Context, *ChangeServicesRequest) (*UserBalance, error)
 	GetBalance(context.Context, *GetBalanceRequest) (*UserBalance, error)
 	WriteOff(context.Context, *ChangeServicesRequest) (*UserBalance, error)
 	Lock(context.Context, *ChangeServicesRequest) (*UserBalance, error)
-	DeliveryService(context.Context, *DeliveryRequest) (*Delivery, error)
-	mustEmbedUnimplementedUserServicesServer()
+	CancelLock(context.Context, *ChangeServicesRequest) (*UserBalance, error)
+	mustEmbedUnimplementedBalanceServiceServer()
 }
 
-// UnimplementedUserServicesServer must be embedded to have forward compatible implementations.
-type UnimplementedUserServicesServer struct {
+// UnimplementedBalanceServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedBalanceServiceServer struct {
 }
 
-func (UnimplementedUserServicesServer) Add(context.Context, *ChangeServicesRequest) (*UserBalance, error) {
+func (UnimplementedBalanceServiceServer) Add(context.Context, *ChangeServicesRequest) (*UserBalance, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Add not implemented")
 }
-func (UnimplementedUserServicesServer) GetBalance(context.Context, *GetBalanceRequest) (*UserBalance, error) {
+func (UnimplementedBalanceServiceServer) GetBalance(context.Context, *GetBalanceRequest) (*UserBalance, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBalance not implemented")
 }
-func (UnimplementedUserServicesServer) WriteOff(context.Context, *ChangeServicesRequest) (*UserBalance, error) {
+func (UnimplementedBalanceServiceServer) WriteOff(context.Context, *ChangeServicesRequest) (*UserBalance, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WriteOff not implemented")
 }
-func (UnimplementedUserServicesServer) Lock(context.Context, *ChangeServicesRequest) (*UserBalance, error) {
+func (UnimplementedBalanceServiceServer) Lock(context.Context, *ChangeServicesRequest) (*UserBalance, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Lock not implemented")
 }
-func (UnimplementedUserServicesServer) DeliveryService(context.Context, *DeliveryRequest) (*Delivery, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeliveryService not implemented")
+func (UnimplementedBalanceServiceServer) CancelLock(context.Context, *ChangeServicesRequest) (*UserBalance, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelLock not implemented")
 }
-func (UnimplementedUserServicesServer) mustEmbedUnimplementedUserServicesServer() {}
+func (UnimplementedBalanceServiceServer) mustEmbedUnimplementedBalanceServiceServer() {}
 
-// UnsafeUserServicesServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to UserServicesServer will
+// UnsafeBalanceServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to BalanceServiceServer will
 // result in compilation errors.
-type UnsafeUserServicesServer interface {
-	mustEmbedUnimplementedUserServicesServer()
+type UnsafeBalanceServiceServer interface {
+	mustEmbedUnimplementedBalanceServiceServer()
 }
 
-func RegisterUserServicesServer(s grpc.ServiceRegistrar, srv UserServicesServer) {
-	s.RegisterService(&_UserServices_serviceDesc, srv)
+func RegisterBalanceServiceServer(s grpc.ServiceRegistrar, srv BalanceServiceServer) {
+	s.RegisterService(&_BalanceService_serviceDesc, srv)
 }
 
-func _UserServices_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _BalanceService_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChangeServicesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServicesServer).Add(ctx, in)
+		return srv.(BalanceServiceServer).Add(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/services.UserServices/Add",
+		FullMethod: "/services.BalanceService/Add",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServicesServer).Add(ctx, req.(*ChangeServicesRequest))
+		return srv.(BalanceServiceServer).Add(ctx, req.(*ChangeServicesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserServices_GetBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _BalanceService_GetBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetBalanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServicesServer).GetBalance(ctx, in)
+		return srv.(BalanceServiceServer).GetBalance(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/services.UserServices/GetBalance",
+		FullMethod: "/services.BalanceService/GetBalance",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServicesServer).GetBalance(ctx, req.(*GetBalanceRequest))
+		return srv.(BalanceServiceServer).GetBalance(ctx, req.(*GetBalanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserServices_WriteOff_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _BalanceService_WriteOff_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChangeServicesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServicesServer).WriteOff(ctx, in)
+		return srv.(BalanceServiceServer).WriteOff(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/services.UserServices/WriteOff",
+		FullMethod: "/services.BalanceService/WriteOff",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServicesServer).WriteOff(ctx, req.(*ChangeServicesRequest))
+		return srv.(BalanceServiceServer).WriteOff(ctx, req.(*ChangeServicesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserServices_Lock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _BalanceService_Lock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChangeServicesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServicesServer).Lock(ctx, in)
+		return srv.(BalanceServiceServer).Lock(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/services.UserServices/Lock",
+		FullMethod: "/services.BalanceService/Lock",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServicesServer).Lock(ctx, req.(*ChangeServicesRequest))
+		return srv.(BalanceServiceServer).Lock(ctx, req.(*ChangeServicesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserServices_DeliveryService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _BalanceService_CancelLock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangeServicesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BalanceServiceServer).CancelLock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/services.BalanceService/CancelLock",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BalanceServiceServer).CancelLock(ctx, req.(*ChangeServicesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _BalanceService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "services.BalanceService",
+	HandlerType: (*BalanceServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Add",
+			Handler:    _BalanceService_Add_Handler,
+		},
+		{
+			MethodName: "GetBalance",
+			Handler:    _BalanceService_GetBalance_Handler,
+		},
+		{
+			MethodName: "WriteOff",
+			Handler:    _BalanceService_WriteOff_Handler,
+		},
+		{
+			MethodName: "Lock",
+			Handler:    _BalanceService_Lock_Handler,
+		},
+		{
+			MethodName: "CancelLock",
+			Handler:    _BalanceService_CancelLock_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/services/services.proto",
+}
+
+// DeliveryServiceClient is the client API for DeliveryService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type DeliveryServiceClient interface {
+	Create(ctx context.Context, in *DeliveryRequest, opts ...grpc.CallOption) (*Delivery, error)
+	GetDelivery(ctx context.Context, in *GetDeliveryRequest, opts ...grpc.CallOption) (*Delivery, error)
+	Cancel(ctx context.Context, in *CancelDeliveryRequest, opts ...grpc.CallOption) (*Delivery, error)
+	Complete(ctx context.Context, in *CompleteDeliveryRequest, opts ...grpc.CallOption) (*Delivery, error)
+	UpdateDetails(ctx context.Context, in *UpdateDetailsRequest, opts ...grpc.CallOption) (*Delivery, error)
+}
+
+type deliveryServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewDeliveryServiceClient(cc grpc.ClientConnInterface) DeliveryServiceClient {
+	return &deliveryServiceClient{cc}
+}
+
+func (c *deliveryServiceClient) Create(ctx context.Context, in *DeliveryRequest, opts ...grpc.CallOption) (*Delivery, error) {
+	out := new(Delivery)
+	err := c.cc.Invoke(ctx, "/services.DeliveryService/Create", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *deliveryServiceClient) GetDelivery(ctx context.Context, in *GetDeliveryRequest, opts ...grpc.CallOption) (*Delivery, error) {
+	out := new(Delivery)
+	err := c.cc.Invoke(ctx, "/services.DeliveryService/GetDelivery", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *deliveryServiceClient) Cancel(ctx context.Context, in *CancelDeliveryRequest, opts ...grpc.CallOption) (*Delivery, error) {
+	out := new(Delivery)
+	err := c.cc.Invoke(ctx, "/services.DeliveryService/Cancel", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *deliveryServiceClient) Complete(ctx context.Context, in *CompleteDeliveryRequest, opts ...grpc.CallOption) (*Delivery, error) {
+	out := new(Delivery)
+	err := c.cc.Invoke(ctx, "/services.DeliveryService/Complete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *deliveryServiceClient) UpdateDetails(ctx context.Context, in *UpdateDetailsRequest, opts ...grpc.CallOption) (*Delivery, error) {
+	out := new(Delivery)
+	err := c.cc.Invoke(ctx, "/services.DeliveryService/UpdateDetails", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// DeliveryServiceServer is the server API for DeliveryService service.
+// All implementations must embed UnimplementedDeliveryServiceServer
+// for forward compatibility
+type DeliveryServiceServer interface {
+	Create(context.Context, *DeliveryRequest) (*Delivery, error)
+	GetDelivery(context.Context, *GetDeliveryRequest) (*Delivery, error)
+	Cancel(context.Context, *CancelDeliveryRequest) (*Delivery, error)
+	Complete(context.Context, *CompleteDeliveryRequest) (*Delivery, error)
+	UpdateDetails(context.Context, *UpdateDetailsRequest) (*Delivery, error)
+	mustEmbedUnimplementedDeliveryServiceServer()
+}
+
+// UnimplementedDeliveryServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedDeliveryServiceServer struct {
+}
+
+func (UnimplementedDeliveryServiceServer) Create(context.Context, *DeliveryRequest) (*Delivery, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedDeliveryServiceServer) GetDelivery(context.Context, *GetDeliveryRequest) (*Delivery, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetDelivery not implemented")
+}
+func (UnimplementedDeliveryServiceServer) Cancel(context.Context, *CancelDeliveryRequest) (*Delivery, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Cancel not implemented")
+}
+func (UnimplementedDeliveryServiceServer) Complete(context.Context, *CompleteDeliveryRequest) (*Delivery, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Complete not implemented")
+}
+func (UnimplementedDeliveryServiceServer) UpdateDetails(context.Context, *UpdateDetailsRequest) (*Delivery, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateDetails not implemented")
+}
+func (UnimplementedDeliveryServiceServer) mustEmbedUnimplementedDeliveryServiceServer() {}
+
+// UnsafeDeliveryServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DeliveryServiceServer will
+// result in compilation errors.
+type UnsafeDeliveryServiceServer interface {
+	mustEmbedUnimplementedDeliveryServiceServer()
+}
+
+func RegisterDeliveryServiceServer(s grpc.ServiceRegistrar, srv DeliveryServiceServer) {
+	s.RegisterService(&_DeliveryService_serviceDesc, srv)
+}
+
+func _DeliveryService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeliveryRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServicesServer).DeliveryService(ctx, in)
+		return srv.(DeliveryServiceServer).Create(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/services.UserServices/DeliveryService",
+		FullMethod: "/services.DeliveryService/Create",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServicesServer).DeliveryService(ctx, req.(*DeliveryRequest))
+		return srv.(DeliveryServiceServer).Create(ctx, req.(*DeliveryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-var _UserServices_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "services.UserServices",
-	HandlerType: (*UserServicesServer)(nil),
+func _DeliveryService_GetDelivery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDeliveryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DeliveryServiceServer).GetDelivery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/services.DeliveryService/GetDelivery",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DeliveryServiceServer).GetDelivery(ctx, req.(*GetDeliveryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DeliveryService_Cancel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelDeliveryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DeliveryServiceServer).Cancel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/services.DeliveryService/Cancel",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DeliveryServiceServer).Cancel(ctx, req.(*CancelDeliveryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DeliveryService_Complete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompleteDeliveryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DeliveryServiceServer).Complete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/services.DeliveryService/Complete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DeliveryServiceServer).Complete(ctx, req.(*CompleteDeliveryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DeliveryService_UpdateDetails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DeliveryServiceServer).UpdateDetails(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/services.DeliveryService/UpdateDetails",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DeliveryServiceServer).UpdateDetails(ctx, req.(*UpdateDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _DeliveryService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "services.DeliveryService",
+	HandlerType: (*DeliveryServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Add",
-			Handler:    _UserServices_Add_Handler,
+			MethodName: "Create",
+			Handler:    _DeliveryService_Create_Handler,
 		},
 		{
-			MethodName: "GetBalance",
-			Handler:    _UserServices_GetBalance_Handler,
+			MethodName: "GetDelivery",
+			Handler:    _DeliveryService_GetDelivery_Handler,
 		},
 		{
-			MethodName: "WriteOff",
-			Handler:    _UserServices_WriteOff_Handler,
+			MethodName: "Cancel",
+			Handler:    _DeliveryService_Cancel_Handler,
 		},
 		{
-			MethodName: "Lock",
-			Handler:    _UserServices_Lock_Handler,
+			MethodName: "Complete",
+			Handler:    _DeliveryService_Complete_Handler,
 		},
 		{
-			MethodName: "DeliveryService",
-			Handler:    _UserServices_DeliveryService_Handler,
+			MethodName: "UpdateDetails",
+			Handler:    _DeliveryService_UpdateDetails_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

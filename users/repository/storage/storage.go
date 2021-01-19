@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/google/uuid"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/users/infrastructure"
 	"math"
@@ -41,9 +42,16 @@ func (s *storageImpl) CreateUser(user *User) (*User, error) {
 }
 
 func (s *storageImpl) Get(id string) *User{
-	user := &User{Id: id}
-	s.infr.Db.Instance.First(user)
-	return user
+
+	_, err := uuid.Parse(id)
+	if err != nil {
+		return s.GetByUsername(id)
+	} else {
+		user := &User{Id: id}
+		s.infr.Db.Instance.First(user)
+		return user
+	}
+
 }
 
 func (s *storageImpl) GetByUsername(username string) *User {

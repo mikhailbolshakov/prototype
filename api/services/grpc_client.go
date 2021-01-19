@@ -7,7 +7,8 @@ import (
 
 type grpcClient struct {
 	*kitGrpc.Client
-	services pb.UserServicesClient
+	delivery pb.DeliveryServiceClient
+	balance pb.BalanceServiceClient
 }
 
 func newGrpcClient() (*grpcClient, error) {
@@ -18,7 +19,8 @@ func newGrpcClient() (*grpcClient, error) {
 		return nil, err
 	}
 	c.Client = cl
-	c.services = pb.NewUserServicesClient(c.Conn)
+	c.delivery = pb.NewDeliveryServiceClient(c.Conn)
+	c.balance = pb.NewBalanceServiceClient(c.Conn)
 
 	return c, nil
 

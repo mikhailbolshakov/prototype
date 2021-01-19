@@ -137,6 +137,8 @@ var _Users_serviceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChannelsClient interface {
 	CreateClientChannel(ctx context.Context, in *CreateClientChannelRequest, opts ...grpc.CallOption) (*CreateClientChannelResponse, error)
+	GetChannelsForUserAndMembers(ctx context.Context, in *GetChannelsForUserAndMembersRequest, opts ...grpc.CallOption) (*GetChannelsForUserAndMembersResponse, error)
+	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (*SubscribeResponse, error)
 }
 
 type channelsClient struct {
@@ -156,11 +158,31 @@ func (c *channelsClient) CreateClientChannel(ctx context.Context, in *CreateClie
 	return out, nil
 }
 
+func (c *channelsClient) GetChannelsForUserAndMembers(ctx context.Context, in *GetChannelsForUserAndMembersRequest, opts ...grpc.CallOption) (*GetChannelsForUserAndMembersResponse, error) {
+	out := new(GetChannelsForUserAndMembersResponse)
+	err := c.cc.Invoke(ctx, "/mm.Channels/GetChannelsForUserAndMembers", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *channelsClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (*SubscribeResponse, error) {
+	out := new(SubscribeResponse)
+	err := c.cc.Invoke(ctx, "/mm.Channels/Subscribe", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChannelsServer is the server API for Channels service.
 // All implementations must embed UnimplementedChannelsServer
 // for forward compatibility
 type ChannelsServer interface {
 	CreateClientChannel(context.Context, *CreateClientChannelRequest) (*CreateClientChannelResponse, error)
+	GetChannelsForUserAndMembers(context.Context, *GetChannelsForUserAndMembersRequest) (*GetChannelsForUserAndMembersResponse, error)
+	Subscribe(context.Context, *SubscribeRequest) (*SubscribeResponse, error)
 	mustEmbedUnimplementedChannelsServer()
 }
 
@@ -170,6 +192,12 @@ type UnimplementedChannelsServer struct {
 
 func (UnimplementedChannelsServer) CreateClientChannel(context.Context, *CreateClientChannelRequest) (*CreateClientChannelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateClientChannel not implemented")
+}
+func (UnimplementedChannelsServer) GetChannelsForUserAndMembers(context.Context, *GetChannelsForUserAndMembersRequest) (*GetChannelsForUserAndMembersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChannelsForUserAndMembers not implemented")
+}
+func (UnimplementedChannelsServer) Subscribe(context.Context, *SubscribeRequest) (*SubscribeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
 }
 func (UnimplementedChannelsServer) mustEmbedUnimplementedChannelsServer() {}
 
@@ -202,6 +230,42 @@ func _Channels_CreateClientChannel_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Channels_GetChannelsForUserAndMembers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChannelsForUserAndMembersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChannelsServer).GetChannelsForUserAndMembers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mm.Channels/GetChannelsForUserAndMembers",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChannelsServer).GetChannelsForUserAndMembers(ctx, req.(*GetChannelsForUserAndMembersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Channels_Subscribe_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubscribeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChannelsServer).Subscribe(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mm.Channels/Subscribe",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChannelsServer).Subscribe(ctx, req.(*SubscribeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Channels_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "mm.Channels",
 	HandlerType: (*ChannelsServer)(nil),
@@ -209,6 +273,14 @@ var _Channels_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateClientChannel",
 			Handler:    _Channels_CreateClientChannel_Handler,
+		},
+		{
+			MethodName: "GetChannelsForUserAndMembers",
+			Handler:    _Channels_GetChannelsForUserAndMembers_Handler,
+		},
+		{
+			MethodName: "Subscribe",
+			Handler:    _Channels_Subscribe_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -219,6 +291,7 @@ var _Channels_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PostsClient interface {
+	SendTriggerPost(ctx context.Context, in *SendTriggerPostRequest, opts ...grpc.CallOption) (*SendTriggerPostResponse, error)
 }
 
 type postsClient struct {
@@ -229,10 +302,20 @@ func NewPostsClient(cc grpc.ClientConnInterface) PostsClient {
 	return &postsClient{cc}
 }
 
+func (c *postsClient) SendTriggerPost(ctx context.Context, in *SendTriggerPostRequest, opts ...grpc.CallOption) (*SendTriggerPostResponse, error) {
+	out := new(SendTriggerPostResponse)
+	err := c.cc.Invoke(ctx, "/mm.Posts/SendTriggerPost", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PostsServer is the server API for Posts service.
 // All implementations must embed UnimplementedPostsServer
 // for forward compatibility
 type PostsServer interface {
+	SendTriggerPost(context.Context, *SendTriggerPostRequest) (*SendTriggerPostResponse, error)
 	mustEmbedUnimplementedPostsServer()
 }
 
@@ -240,6 +323,9 @@ type PostsServer interface {
 type UnimplementedPostsServer struct {
 }
 
+func (UnimplementedPostsServer) SendTriggerPost(context.Context, *SendTriggerPostRequest) (*SendTriggerPostResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendTriggerPost not implemented")
+}
 func (UnimplementedPostsServer) mustEmbedUnimplementedPostsServer() {}
 
 // UnsafePostsServer may be embedded to opt out of forward compatibility for this service.
@@ -253,10 +339,33 @@ func RegisterPostsServer(s grpc.ServiceRegistrar, srv PostsServer) {
 	s.RegisterService(&_Posts_serviceDesc, srv)
 }
 
+func _Posts_SendTriggerPost_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendTriggerPostRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PostsServer).SendTriggerPost(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mm.Posts/SendTriggerPost",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PostsServer).SendTriggerPost(ctx, req.(*SendTriggerPostRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Posts_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "mm.Posts",
 	HandlerType: (*PostsServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams:     []grpc.StreamDesc{},
-	Metadata:    "proto/mm/mm.proto",
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SendTriggerPost",
+			Handler:    _Posts_SendTriggerPost_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/mm/mm.proto",
 }

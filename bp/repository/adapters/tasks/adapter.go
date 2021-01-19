@@ -9,7 +9,6 @@ import (
 type Adapter interface {
 	Init() error
 	GetService() Service
-	ListenAsync() error
 }
 
 type adapterImpl struct {
@@ -19,7 +18,7 @@ type adapterImpl struct {
 
 func NewAdapter(queue queue.Queue) Adapter {
 	a := &adapterImpl{
-		taskServiceImpl: newImpl(queue),
+		taskServiceImpl: newImpl(),
 		initialized: false,
 	}
 	return a
@@ -38,7 +37,4 @@ func (a *adapterImpl) GetService() Service {
 	return a.taskServiceImpl
 }
 
-func (a *adapterImpl) ListenAsync() error {
-	return a.taskServiceImpl.listenTaskQueue()
-}
 

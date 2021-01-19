@@ -9,6 +9,7 @@ const (
 	TT_CLIENT               = "client"
 	TST_MED_REQUEST         = "medical-request"
 	TST_EXPERT_CONSULTATION = "expert-consultation"
+	TST_CLIENT_FEEDBACK     = "client-feedback"
 
 	TS_EMPTY  = "#"
 	TS_OPEN   = "open"
@@ -55,6 +56,9 @@ type Reported struct {
 type Transition struct {
 	// transition id (must be unique over status model)
 	Id string
+	// if true its an initial transition that is applied on creation a new task
+	// there must be one and the only one transition with Initial flag
+	Initial bool
 	// source status
 	From *Status
 	// target status
@@ -63,10 +67,9 @@ type Transition struct {
 	AllowAssignGroups []string
 	// if not empty the task is assigned onto the group once transition happens
 	AutoAssignGroup string
-	// if true its an initial transition that is applied on creation a new task
-	// there must be one and the only one transition with Initial flag
-	Initial bool
-	// if a topic is specified task is sent to Queue
+	// on making a transition if an assigned user isn't set, error occurs
+	AssignedUserMandatory bool
+	// if specified, a message will be send to this queue after a transition successfully has been made
 	QueueTopic string
 }
 

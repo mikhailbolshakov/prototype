@@ -131,74 +131,75 @@ func getMockConfig() []*Config {
 		StatusModel: &StatusModel{
 			Transitions: []*Transition{
 				{
-					Id:                "1",
-					From:              &Status{TS_EMPTY, TSS_EMPTY},
-					To:                &Status{TS_OPEN, TSS_REPORTED},
-					AllowAssignGroups: []string{G_EXPERT},
-					AutoAssignGroup:   G_EXPERT,
-					Initial:           true,
+					Id:                    "1",
+					From:                  &Status{TS_EMPTY, TSS_EMPTY},
+					To:                    &Status{TS_OPEN, TSS_ASSIGNED},
+					AllowAssignGroups:     []string{G_EXPERT},
+					AutoAssignGroup:       G_EXPERT,
+					AssignedUserMandatory: true,
+					Initial:               true,
 				},
 				{
 					Id:                "2",
-					From:              &Status{TS_OPEN, TSS_REPORTED},
-					To:                &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
-					AllowAssignGroups: []string{G_EXPERT},
-				},
-				{
-					Id:                "3",
-					From:              &Status{TS_OPEN, TSS_REPORTED},
-					To:                &Status{TS_OPEN, TSS_ASSIGNED},
-					AllowAssignGroups: []string{G_EXPERT},
-					QueueTopic:        "tasks.assigned",
-				},
-				{
-					Id:                "4",
-					From:              &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
-					To:                &Status{TS_OPEN, TSS_ASSIGNED},
-					AllowAssignGroups: []string{G_EXPERT},
-					QueueTopic:        "tasks.assigned",
-				},
-				{
-					Id:                "5",
-					From:              &Status{TS_OPEN, TSS_REPORTED},
-					To:                &Status{TS_CLOSED, TSS_CANCELLED},
-					AllowAssignGroups: []string{G_EXPERT},
-				},
-				{
-					Id:                "6",
-					From:              &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
-					To:                &Status{TS_CLOSED, TSS_CANCELLED},
-					AllowAssignGroups: []string{G_EXPERT},
-				},
-				{
-					Id:                "7",
-					From:              &Status{TS_OPEN, TSS_ASSIGNED},
-					To:                &Status{TS_CLOSED, TSS_CANCELLED},
-					AllowAssignGroups: []string{G_EXPERT},
-				},
-				{
-					Id:                "8",
 					From:              &Status{TS_OPEN, TSS_ASSIGNED},
 					To:                &Status{TS_OPEN, TSS_IN_PROGRESS},
 					AllowAssignGroups: []string{G_EXPERT},
 				},
 				{
-					Id:                "9",
-					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
-					To:                &Status{TS_OPEN, TSS_ON_HOLD},
+					Id:                "3",
+					From:              &Status{TS_OPEN, TSS_ASSIGNED},
+					To:                &Status{TS_OPEN, TSS_CANCELLED},
 					AllowAssignGroups: []string{G_EXPERT},
 				},
 				{
-					Id:                "10",
+					Id:                "4",
+					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
+					To:                &Status{TS_CLOSED, TSS_SOLVED},
+					AllowAssignGroups: []string{G_EXPERT},
+					QueueTopic:        "tasks.solved",
+				},
+				{
+					Id:                "5",
 					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
 					To:                &Status{TS_CLOSED, TSS_CANCELLED},
 					AllowAssignGroups: []string{G_EXPERT},
 				},
+			},
+		},
+		AssignmentRules: []*AssignmentRule{},
+	})
+
+	// обратная связь с клиентом
+	r = append(r, &Config{
+		Id: "3",
+		Type: &Type{
+			Type:    TT_CLIENT,
+			SubType: TST_CLIENT_FEEDBACK,
+		},
+		NumGenRule: &NumGenerationRule{
+			Prefix:         "FDB-",
+			GenerationType: NUM_GEN_TYPE_RANDOM,
+		},
+		StatusModel: &StatusModel{
+			Transitions: []*Transition{
 				{
-					Id:                "11",
-					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
+					Id:                    "1",
+					From:                  &Status{TS_EMPTY, TSS_EMPTY},
+					To:                    &Status{TS_OPEN, TSS_ASSIGNED},
+					AllowAssignGroups:     []string{G_CLIENT},
+					AutoAssignGroup:       G_CLIENT,
+					AssignedUserMandatory: true,
+					Initial:               true,
+				},
+				{
+					Id:                "2",
+					From:              &Status{TS_OPEN, TSS_ASSIGNED},
 					To:                &Status{TS_CLOSED, TSS_SOLVED},
-					AllowAssignGroups: []string{G_EXPERT},
+				},
+				{
+					Id:                "3",
+					From:              &Status{TS_OPEN, TSS_ASSIGNED},
+					To:                &Status{TS_CLOSED, TSS_CANCELLED},
 				},
 			},
 		},

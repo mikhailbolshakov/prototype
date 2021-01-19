@@ -112,3 +112,14 @@ func (s *Server) GetAssignmentLog(ctx context.Context, rq *pb.AssignmentLogReque
 
 	return s.assLogRsFromDomain(dRs), nil
 }
+
+func (s *Server) GetHistory(ctx context.Context, rq *pb.GetHistoryRequest) (*pb.GetHistoryResponse, error) {
+
+	rs := &pb.GetHistoryResponse{Items: []*pb.History{}}
+
+	for _, h := range s.domain.GetHistory(rq.TaskId) {
+		rs.Items = append(rs.Items, s.histToPb(h))
+	}
+
+	return rs, nil
+}

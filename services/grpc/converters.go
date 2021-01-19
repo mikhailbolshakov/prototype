@@ -1,6 +1,8 @@
 package grpc
 
 import (
+	"encoding/json"
+	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/services"
 	"gitlab.medzdrav.ru/prototype/services/domain"
 )
@@ -21,4 +23,23 @@ func userBalanceFromDomain(d *domain.UserBalance) *pb.UserBalance {
 		}
 	}
 	return rs
+}
+
+func deliveryFromDomain(d *domain.Delivery) *pb.Delivery {
+
+	if d == nil {
+		return nil
+	}
+
+	detailsB, _ := json.Marshal(d.Details)
+
+	return &pb.Delivery{
+		Id:            d.Id,
+		UserId:        d.UserId,
+		ServiceTypeId: d.ServiceTypeId,
+		Status:        d.Status,
+		StartTime:     kitGrpc.TimeToPbTS(&d.StartTime),
+		FinishTime:    kitGrpc.TimeToPbTS(d.FinishTime),
+		Details:       detailsB,
+	}
 }

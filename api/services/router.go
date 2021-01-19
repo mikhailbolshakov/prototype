@@ -16,16 +16,8 @@ func (u *Router) Set(r *mux.Router) {
 		return
 	}
 
-	r.HandleFunc("/api/{userId}/services", func(writer http.ResponseWriter, request *http.Request) {
-		c.AddUserServices(writer, request)
-	}).Methods("POST")
-
-	r.HandleFunc("/api/{userId}/services/writeoff", func(writer http.ResponseWriter, request *http.Request) {
-		c.WriteOff(writer, request)
-	}).Methods("POST")
-
-	r.HandleFunc("/api/{userId}/services/lock", func(writer http.ResponseWriter, request *http.Request) {
-		c.Lock(writer, request)
+	r.HandleFunc("/api/{userId}/services/balance", func(writer http.ResponseWriter, request *http.Request) {
+		c.AddBalance(writer, request)
 	}).Methods("POST")
 
 	r.HandleFunc("/api/{userId}/services/balance", func(writer http.ResponseWriter, request *http.Request) {

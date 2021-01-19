@@ -5,7 +5,6 @@ import "gitlab.medzdrav.ru/prototype/kit/queue"
 type Adapter interface {
 	Init() error
 	GetService() Service
-	ListenAsync() error
 }
 
 type adapterImpl struct {
@@ -34,19 +33,9 @@ func (a *adapterImpl) Init() error {
 		panic(err)
 	}
 
-	err = a.mmServiceImpl.queue.Open("prototype-mm")
-	if err != nil {
-		return err
-	}
-	a.initialized = true
-
 	return nil
 }
 
 func (a *adapterImpl) GetService() Service {
 	return a.mmServiceImpl
-}
-
-func (a *adapterImpl) ListenAsync() error {
-	return a.mmServiceImpl.listenNewPosts()
 }

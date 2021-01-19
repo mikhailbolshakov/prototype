@@ -1,7 +1,6 @@
 package mattermost
 
 import (
-	"encoding/json"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 )
 
@@ -11,11 +10,12 @@ type Service interface {
 	CreateUser(user *CreateUserRequest) (*CreateUserResponse, error)
 	CreateClientChannel(rq *CreateClientChannelRequest) (*CreateChannelResponse, error)
 	SubscribeUser(rq *SubscribeUserRequest) (*SubscribeUserResponse, error)
-	SetNewPostMessageHandler(handler NewPostMessageHandler)
 	CreateEphemeralPost(p *EphemeralPost) error
 	CreatePost(p *Post) error
 	GetUserStatuses(rq *GetUsersStatusesRequest) (*GetUsersStatusesResponse, error)
 	CreateDirectChannel(rq *CreateDirectChannelRequest) (*CreateChannelResponse, error)
+	// returns list of user's channels which have given active members (there might be more members and it's OK)
+	GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMembersRequest) ([]string, error)
 }
 
 type serviceImpl struct {
@@ -109,26 +109,14 @@ func (s *serviceImpl) CreateDirectChannel(rq *CreateDirectChannelRequest) (*Crea
 	return s.client.createDirectChannel(rq.UserId1, rq.UserId2)
 }
 
-func (s *serviceImpl) listenNewPosts() error {
+func (s *serviceImpl) GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMembersRequest) ([]string, error) {
 
-	receiver := make(chan []byte)
-	err := s.queue.Subscribe("mm.posts", receiver)
-	if err != nil {
-		return err
+	teamName := "rgs"
+	if rq.TeamName != "" {
+		teamName = rq.TeamName
 	}
 
-	go func() {
+	return s.client.getChannelsForUserAndMembers(rq.UserId, teamName, rq.MemberUserIds)
 
-		for {
-			select {
-			case msg := <-receiver:
-				post := &Post{}
-				_ = json.Unmarshal(msg, post)
-				s.newPostsHandler(post)
-			}
-		}
-
-	}()
-
-	return nil
 }
+

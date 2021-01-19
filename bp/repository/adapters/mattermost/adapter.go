@@ -30,6 +30,7 @@ func (a *adapterImpl) Init() error {
 		return err
 	}
 	a.mmServiceImpl.ChannelsClient = pb.NewChannelsClient(cl.Conn)
+	a.mmServiceImpl.PostsClient = pb.NewPostsClient(cl.Conn)
 	return nil
 }
 

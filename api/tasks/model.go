@@ -88,3 +88,10 @@ type AssignmentLogResponse struct {
 	Total int              `json:"total"`
 	Logs  []*AssignmentLog `json:"logs"`
 }
+
+type History struct {
+	Status    *Status   `json:"status"`
+	Assignee  *Assignee `json:"assignee"`
+	ChangedBy string    `json:"changedBy"`
+	ChangedAt time.Time `json:"changedAt"`
+}

@@ -28,6 +28,14 @@ message GetBalanceRequest {
   google.protobuf.Timestamp At = 2;
 }
 
+service BalanceService {
+  rpc Add(ChangeServicesRequest) returns (UserBalance) {}
+  rpc GetBalance(GetBalanceRequest) returns (UserBalance) {}
+  rpc WriteOff(ChangeServicesRequest) returns (UserBalance) {}
+  rpc Lock(ChangeServicesRequest) returns (UserBalance) {}
+  rpc CancelLock(ChangeServicesRequest) returns (UserBalance) {}
+}
+
 message DeliveryRequest {
   string UserId = 1;
   string ServiceTypeId = 2;
@@ -44,11 +52,29 @@ message Delivery {
   bytes Details = 7;
 }
 
-service UserServices {
-  rpc Add(ChangeServicesRequest) returns (UserBalance) {}
-  rpc GetBalance(GetBalanceRequest) returns (UserBalance) {}
-  rpc WriteOff(ChangeServicesRequest) returns (UserBalance) {}
-  rpc Lock(ChangeServicesRequest) returns (UserBalance) {}
-  rpc DeliveryService(DeliveryRequest) returns (Delivery) {}
+message GetDeliveryRequest {
+  string Id = 1;
 }
 
+message CancelDeliveryRequest {
+  string Id = 1;
+  google.protobuf.Timestamp CancelTime = 2;
+}
+
+message CompleteDeliveryRequest {
+  string Id = 1;
+  google.protobuf.Timestamp CompleteTime = 2;
+}
+
+message UpdateDetailsRequest {
+  string Id = 1;
+  bytes Details = 2;
+}
+
+service DeliveryService {
+  rpc Create(DeliveryRequest) returns (Delivery) {}
+  rpc GetDelivery(GetDeliveryRequest) returns (Delivery) {}
+  rpc Cancel(CancelDeliveryRequest) returns (Delivery) {}
+  rpc Complete(CompleteDeliveryRequest) returns (Delivery) {}
+  rpc UpdateDetails(UpdateDetailsRequest) returns (Delivery) {}
+}

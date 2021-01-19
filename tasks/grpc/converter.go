@@ -215,3 +215,39 @@ func (s *Server) assLogRsFromDomain(d *domain.AssignmentLogResponse) *pb.Assignm
 
 	return rs
 }
+
+func (s *Server) histToPb(src *domain.History) *pb.History {
+	return &pb.History{
+		Id:        src.Id,
+		TaskId:    src.TaskId,
+		Status:    &pb.Status{
+			Status:    src.Status.Status,
+			Substatus: src.Status.SubStatus,
+		},
+		Assignee:  &pb.Assignee{
+			Group: src.Assignee.Group,
+			User:  src.Assignee.User,
+			At:    grpc.TimeToPbTS(src.Assignee.At),
+		},
+		ChangedBy: src.ChangedBy,
+		ChangedAt: grpc.TimeToPbTS(&src.ChangedAt),
+	}
+}
+
+func (s *Server) histFromPb(src *pb.History) *domain.History {
+	return &domain.History{
+		Id:        src.Id,
+		TaskId:    src.TaskId,
+		Status:    &domain.Status{
+			Status:    src.Status.Status,
+			SubStatus: src.Status.Substatus,
+		},
+		Assignee:  &domain.Assignee{
+			Group: src.Assignee.Group,
+			User:  src.Assignee.User,
+			At:    grpc.PbTSToTime(src.Assignee.At),
+		},
+		ChangedBy: src.ChangedBy,
+		ChangedAt: *grpc.PbTSToTime(src.ChangedAt),
+	}
+}

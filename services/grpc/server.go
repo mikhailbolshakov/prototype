@@ -6,8 +6,6 @@ import (
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/services"
 	"gitlab.medzdrav.ru/prototype/services/domain"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"log"
 )
 
@@ -15,7 +13,8 @@ type Server struct {
 	*kitGrpc.Server
 	balanceService domain.UserBalanceService
 	deliveryService domain.DeliveryService
-	pb.UnimplementedUserServicesServer
+	pb.UnimplementedBalanceServiceServer
+	pb.UnimplementedDeliveryServiceServer
 }
 
 func New(balanceService domain.UserBalanceService,
@@ -32,7 +31,8 @@ func New(balanceService domain.UserBalanceService,
 		panic(err)
 	}
 	s.Server = gs
-	pb.RegisterUserServicesServer(s.Srv, s)
+	pb.RegisterBalanceServiceServer(s.Srv, s)
+	pb.RegisterDeliveryServiceServer(s.Srv, s)
 
 	return s
 }
@@ -48,7 +48,6 @@ func (s *Server) ListenAsync() {
 }
 
 func (s *Server) Add(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
-
 	rs, err := s.balanceService.Add(&domain.ModifyBalanceRequest{
 		UserId:        rq.UserId,
 		ServiceTypeId: rq.ServiceTypeId,
@@ -59,20 +58,98 @@ func (s *Server) Add(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.Use
 	}
 
 	return userBalanceFromDomain(rs), nil
-
 }
 
 func (s *Server) GetBalance(ctx context.Context, rq *pb.GetBalanceRequest) (*pb.UserBalance, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
-}
-func (s *Server) WriteOff(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method WriteOff not implemented")
-}
-func (s *Server) Lock(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Lock not implemented")
+
+	rs, err := s.balanceService.Get(&domain.GetBalanceRequest{
+		UserId:        rq.UserId,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return userBalanceFromDomain(rs), nil
 }
 
-func (s *Server) DeliveryService(ctx context.Context, rq *pb.DeliveryRequest) (*pb.Delivery, error) {
+func (s *Server) WriteOff(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
+
+	rs, err := s.balanceService.WriteOff(&domain.ModifyBalanceRequest{
+		UserId:        rq.UserId,
+		ServiceTypeId: rq.ServiceTypeId,
+		Quantity:      int(rq.Quantity),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return userBalanceFromDomain(rs), nil
+}
+
+func (s *Server) Lock(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
+	rs, err := s.balanceService.Lock(&domain.ModifyBalanceRequest{
+		UserId:        rq.UserId,
+		ServiceTypeId: rq.ServiceTypeId,
+		Quantity:      int(rq.Quantity),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return userBalanceFromDomain(rs), nil
+}
+
+func (s *Server) CancelLock(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
+
+	rs, err := s.balanceService.Cancel(&domain.ModifyBalanceRequest{
+		UserId:        rq.UserId,
+		ServiceTypeId: rq.ServiceTypeId,
+		Quantity:      int(rq.Quantity),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return userBalanceFromDomain(rs), nil
+}
+
+func (s *Server) GetDelivery(ctx context.Context, rq *pb.GetDeliveryRequest) (*pb.Delivery, error) {
+	return deliveryFromDomain(s.deliveryService.Get(rq.Id)), nil
+}
+
+func (s *Server) Cancel(ctx context.Context, rq *pb.CancelDeliveryRequest) (*pb.Delivery, error) {
+
+	d, err := s.deliveryService.Cancel(rq.Id, kitGrpc.PbTSToTime(rq.CancelTime))
+	if err != nil {
+		return nil, err
+	}
+	return deliveryFromDomain(d), nil
+}
+
+func (s *Server) Complete(ctx context.Context, rq *pb.CompleteDeliveryRequest) (*pb.Delivery, error) {
+	d, err := s.deliveryService.Complete(rq.Id, kitGrpc.PbTSToTime(rq.CompleteTime))
+	if err != nil {
+		return nil, err
+	}
+	return deliveryFromDomain(d), nil
+}
+
+func (s *Server) UpdateDetails(ctx context.Context, rq *pb.UpdateDetailsRequest) (*pb.Delivery, error) {
+
+	var details map[string]interface{}
+	err := json.Unmarshal(rq.Details, &details)
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := s.deliveryService.UpdateDetails(rq.Id, details)
+	if err != nil {
+		return nil, err
+	}
+	return deliveryFromDomain(d), nil
+}
+
+func (s *Server) Create(ctx context.Context, rq *pb.DeliveryRequest) (*pb.Delivery, error) {
 
 	var details map[string]interface{}
 	err := json.Unmarshal(rq.Details, &details)
@@ -89,18 +166,5 @@ func (s *Server) DeliveryService(ctx context.Context, rq *pb.DeliveryRequest) (*
 		return nil, err
 	}
 
-	detailsB, err := json.Marshal(d.Details)
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.Delivery{
-		Id:            d.Id,
-		UserId:        d.UserId,
-		ServiceTypeId: d.ServiceTypeId,
-		Status:        d.Status,
-		StartTime:     kitGrpc.TimeToPbTS(&d.StartTime),
-		FinishTime:    kitGrpc.TimeToPbTS(d.FinishTime),
-		Details:       detailsB,
-	}, nil
+	return deliveryFromDomain(d), nil
 }

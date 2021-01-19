@@ -98,6 +98,29 @@ func histToDto(h *History) *storage.History {
 	}
 }
 
+func histFromDto(h *storage.History) *History {
+
+	if h == nil {
+		return nil
+	}
+
+	return &History{
+		Id:     h.Id,
+		TaskId: h.TaskId,
+		Status: &Status{
+			Status:    h.Status,
+			SubStatus: h.SubStatus,
+		},
+		Assignee: &Assignee{
+			Group: h.AssigneeGroup,
+			User:  h.AssigneeUser,
+			At:    h.AssigneeAt,
+		},
+		ChangedBy: h.ChangedBy,
+		ChangedAt: h.ChangedAt,
+	}
+}
+
 func criteriaToDto(c *SearchCriteria) *storage.SearchCriteria {
 	if c == nil {
 		return nil

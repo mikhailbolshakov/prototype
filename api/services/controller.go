@@ -27,7 +27,7 @@ func newController() (*controller, error) {
 	}, nil
 }
 
-func (c *controller) AddUserServices(writer http.ResponseWriter, request *http.Request) {
+func (c *controller) AddBalance(writer http.ResponseWriter, request *http.Request) {
 
 	rq := &ModifyUserBalanceRequest{}
 	decoder := json.NewDecoder(request.Body)
@@ -41,7 +41,7 @@ func (c *controller) AddUserServices(writer http.ResponseWriter, request *http.R
 
 	userId := mux.Vars(request)["userId"]
 
-	if rsPb, err := c.grpc.services.Add(ctx, &pb.ChangeServicesRequest{
+	if rsPb, err := c.grpc.balance.Add(ctx, &pb.ChangeServicesRequest{
 		UserId:        userId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Quantity:      int32(rq.Quantity),
@@ -55,14 +55,18 @@ func (c *controller) AddUserServices(writer http.ResponseWriter, request *http.R
 
 func (c *controller) GetBalance(writer http.ResponseWriter, request *http.Request) {
 
-}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-func (c *controller) WriteOff(writer http.ResponseWriter, request *http.Request) {
+	userId := mux.Vars(request)["userId"]
 
-}
-
-func (c *controller) Lock(writer http.ResponseWriter, request *http.Request) {
-
+	if rsPb, err := c.grpc.balance.GetBalance(ctx, &pb.GetBalanceRequest{
+		UserId:        userId,
+	}); err != nil {
+		c.RespondError(writer, http.StatusInternalServerError, err)
+	} else {
+		c.RespondOK(writer, c.balanceFromPb(rsPb))
+	}
 }
 
 func (c *controller) Delivery(writer http.ResponseWriter, request *http.Request) {
@@ -85,7 +89,7 @@ func (c *controller) Delivery(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	if rsPb, err := c.grpc.services.DeliveryService(ctx, &pb.DeliveryRequest{
+	if rsPb, err := c.grpc.delivery.Create(ctx, &pb.DeliveryRequest{
 		UserId:        userId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Details:       detailsB,

@@ -1,4 +1,4 @@
-package domain
+package expert_online_consultation
 
 import (
 	"context"

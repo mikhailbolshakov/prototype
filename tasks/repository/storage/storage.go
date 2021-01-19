@@ -18,6 +18,7 @@ type TaskStorage interface {
 	Search(cr *SearchCriteria) (*SearchResponse, error)
 	SaveAssignmentLog(l *AssignmentLog) (*AssignmentLog, error)
 	GetAssignmentLog(c *AssignmentLogCriteria) (*AssignmentLogResponse, error)
+	GetHistory(taskId string) []*History
 }
 
 type taskStorageImpl struct {
@@ -87,6 +88,12 @@ func (s *taskStorageImpl) CreateHistory(h *History) (*History, error) {
 		return nil, result.Error
 	}
 	return h, nil
+}
+
+func (s *taskStorageImpl) GetHistory(taskId string) []*History {
+	var histories []*History
+	s.infr.Db.Instance.Where("task_id = ?", taskId).Order("changed_at desc").Find(&histories)
+	return histories
 }
 
 func (s *taskStorageImpl) Search(cr *SearchCriteria) (*SearchResponse, error) {

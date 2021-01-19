@@ -35,3 +35,21 @@ type CreateClientChannelRequest struct {
 type CreateClientChannelResponse struct {
 	ChannelId string
 }
+
+type GetChannelsForUserAndMembersRequest struct {
+	UserId        string
+	TeamName      string
+	MemberUserIds []string
+}
+
+type SendTriggerPostRequest struct {
+	TriggerPostCode string
+	UserId          string
+	ChannelId       string
+	Params          map[string]interface{}
+}
+
+type SubscribeUserRequest struct {
+	UserId    string
+	ChannelId string
+}

@@ -40,4 +40,8 @@ func (u *Router) Set(r *mux.Router) {
 		c.AssignmentLog(writer, request)
 	}).Methods("GET")
 
+	r.HandleFunc("/api/tasks/{id}/history", func(writer http.ResponseWriter, request *http.Request) {
+		c.GetHistory(writer, request)
+	}).Methods("GET")
+
 }

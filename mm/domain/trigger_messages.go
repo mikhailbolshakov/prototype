@@ -7,24 +7,30 @@ import (
 )
 
 const (
-	TP_CLIENT_NEW_REQUEST = "client.new-request"
-	TP_CLIENT_REQUEST_ASSIGNED = "client.request-assigned"
-	TP_CONSULTANT_REQUEST_ASSIGNED = "consultant.request-assigned"
+	TP_CLIENT_NEW_REQUEST             = "client.new-request"
+	TP_CLIENT_REQUEST_ASSIGNED        = "client.request-assigned"
+	TP_CONSULTANT_REQUEST_ASSIGNED    = "consultant.request-assigned"
 	TP_CLIENT_NEW_EXPERT_CONSULTATION = "client.new-expert-consultation"
 	TP_EXPERT_NEW_EXPERT_CONSULTATION = "expert.new-expert-consultation"
-	TP_TASK_REMINDER = "task-reminder"
+	TP_TASK_REMINDER                  = "task-reminder"
+	TP_CLIENT_NO_CONSULTANT           = "client.no-consultant-available"
 )
 
 type triggerPostHandler func(params triggerPostParams) (*mattermost.Post, error)
 type triggerPostParams map[string]interface{}
 
 var postMap = map[string]triggerPostHandler{
-	TP_CLIENT_NEW_REQUEST: clientNewRequest,
-	TP_CLIENT_REQUEST_ASSIGNED: clientRequestAssigned,
-	TP_CONSULTANT_REQUEST_ASSIGNED: consultantRequestAssigned,
+	TP_CLIENT_NEW_REQUEST:             clientNewRequest,
+	TP_CLIENT_REQUEST_ASSIGNED:        clientRequestAssigned,
+	TP_CONSULTANT_REQUEST_ASSIGNED:    consultantRequestAssigned,
 	TP_CLIENT_NEW_EXPERT_CONSULTATION: clientNewExpertConsultation,
 	TP_EXPERT_NEW_EXPERT_CONSULTATION: expertNewExpertConsultation,
-	TP_TASK_REMINDER: taskReminder,
+	TP_TASK_REMINDER:                  taskReminder,
+	TP_CLIENT_NO_CONSULTANT:           clientNoConsultantAvailable,
+}
+
+func (s *serviceImpl) SendTriggerPost(rq *SendTriggerPostRequest) error {
+	return s.sendTriggerPost(rq.TriggerPostCode, rq.UserId, rq.ChannelId, rq.Params)
 }
 
 func (s *serviceImpl) sendTriggerPost(postCode string, userId string, channelId string, params triggerPostParams) error {
@@ -61,14 +67,30 @@ func clientNewRequest(params triggerPostParams) (*mattermost.Post, error) {
 	if !ok {
 		return nil, errors.New("parameter 'client.name' is empty")
 	}
-	
+
 	attach := []*mattermost.PostAttachment{
 		{
-			Text:    fmt.Sprintf("## добрый день, **%s** \n ### Мы подбираем для Вас консультанта...", clientName),
-			ImageURL:   "https://i.gifer.com/VAyR.gif",
+			Text:     fmt.Sprintf("## добрый день, **%s** \n ### Мы подбираем для Вас консультанта...", clientName),
+			ImageURL: "https://i.gifer.com/9XcW.gif",
 		},
 	}
-	
+
+	post := &mattermost.Post{
+		Attachments: attach,
+	}
+
+	return post, nil
+}
+
+func clientNoConsultantAvailable(params triggerPostParams) (*mattermost.Post, error) {
+
+	attach := []*mattermost.PostAttachment{
+		{
+			Text:     "### К сожалению в данный момент все консультанты заняты",
+			ImageURL: "https://i.gifer.com/9XcW.gif",
+		},
+	}
+
 	post := &mattermost.Post{
 		Attachments: attach,
 	}
@@ -95,7 +117,7 @@ func clientRequestAssigned(params triggerPostParams) (*mattermost.Post, error) {
 
 	attach := []*mattermost.PostAttachment{
 		{
-			Text:    fmt.Sprintf("## Ваш консультант - **%s %s**", consFirstName.(string), consLastName.(string)),
+			Text:     fmt.Sprintf("## Ваш консультант - **%s %s**", consFirstName.(string), consLastName.(string)),
 			ImageURL: consUrl.(string),
 		},
 	}
@@ -136,8 +158,8 @@ func consultantRequestAssigned(params triggerPostParams) (*mattermost.Post, erro
 
 	attach := []*mattermost.PostAttachment{
 		{
-			Text:    fmt.Sprintf("## Вам назначена консультация \n ### Клиент [**%s %s**](%s) \n #### Телефон: %s \n #### [МедКарта](%s)", clientFirstName, clientLastName, clientMedcardUrl, clientPhone, clientMedcardUrl),
-			ImageURL:   clientUrl.(string),
+			Text:     fmt.Sprintf("## Вам назначена консультация \n ### Клиент [**%s %s**](%s) \n #### Телефон: %s \n #### [МедКарта](%s)", clientFirstName, clientLastName, clientMedcardUrl, clientPhone, clientMedcardUrl),
+			ImageURL: clientUrl.(string),
 		},
 	}
 
@@ -159,8 +181,8 @@ func clientNewExpertConsultation(params triggerPostParams) (*mattermost.Post, er
 	// https://pmed.moi-service.ru/doctor/7712?cityIdDF=1
 	attach := []*mattermost.PostAttachment{
 		{
-			Text:    fmt.Sprintf("### Для Вас назначена консультация с экспертом %s \n ##  Эксперт [**%s %s**](%s) ", dueDate, expertFirstName, expertLastName, expertUrl),
-			ImageURL:   expertPhotoUrl.(string),
+			Text:     fmt.Sprintf("### Для Вас назначена консультация с экспертом %s \n ##  Эксперт [**%s %s**](%s) ", dueDate, expertFirstName, expertLastName, expertUrl),
+			ImageURL: expertPhotoUrl.(string),
 		},
 	}
 
@@ -182,8 +204,8 @@ func expertNewExpertConsultation(params triggerPostParams) (*mattermost.Post, er
 
 	attach := []*mattermost.PostAttachment{
 		{
-			Text:    fmt.Sprintf("## Вам назначена консультация %s\n ### Клиент [**%s %s**](%s) \n #### Телефон: %s \n #### [МедКарта](%s)", dueDate, clientFirstName, clientLastName, clientMedcardUrl, clientPhone, clientMedcardUrl),
-			ImageURL:   clientUrl.(string),
+			Text:     fmt.Sprintf("## Вам назначена консультация %s\n ### Клиент [**%s %s**](%s) \n #### Телефон: %s \n #### [МедКарта](%s)", dueDate, clientFirstName, clientLastName, clientMedcardUrl, clientPhone, clientMedcardUrl),
+			ImageURL: clientUrl.(string),
 		},
 	}
 
@@ -197,9 +219,11 @@ func expertNewExpertConsultation(params triggerPostParams) (*mattermost.Post, er
 func taskReminder(params triggerPostParams) (*mattermost.Post, error) {
 
 	attach := []*mattermost.PostAttachment{}
+	taskNum := params["task-num"]
+	dueDate := params["due-date"]
 
 	post := &mattermost.Post{
-		Message: "Напоминание о задаче",
+		Message:     fmt.Sprintf("### Дата исполнения по задаче %s истекает %s", taskNum, dueDate),
 		Attachments: attach,
 	}
 

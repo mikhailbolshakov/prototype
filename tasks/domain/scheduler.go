@@ -99,7 +99,7 @@ func (r *reminderImpl) ScheduleTask(ts *Task) {
 
 		}
 
-		if rmnd.SpecificTime != nil && rmnd.SpecificTime.At != nil {
+		if rmnd.SpecificTime != nil && rmnd.SpecificTime.At != nil && rmnd.SpecificTime.At.After(time.Now().UTC()) {
 			_, _ = r.reminderScheduler.Every(1).Day().StartAt(*rmnd.SpecificTime.At).Do(r.remindFunc, ts.Id)
 			log.Printf("scheduler set for remind 'specific time': %v", rmnd.SpecificTime.At)
 		}

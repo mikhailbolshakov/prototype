@@ -29,6 +29,8 @@ type TaskService interface {
 	Update(task *Task) (*Task, error)
 	// get assignment tasks execution log
 	GetAssignmentLog(cr *AssignmentLogCriteria) (*AssignmentLogResponse, error)
+	// get task history
+	GetHistory(taskId string) []*History
 }
 
 type serviceImpl struct {
@@ -126,6 +128,12 @@ func (t *serviceImpl) New(task *Task) (*Task, error) {
 		}
 		task.Assignee.Group = assigneeUser.Type
 	} else {
+
+		// if assigned user is mandatory for the transition, then throw
+		if tr.AssignedUserMandatory {
+			return nil, fmt.Errorf("task transition is disallowed due to it's configured as assigned user is manadatory")
+		}
+
 		// if assignee user isn't passed, then check groups
 		// if group passed check if it's allowed in transition
 		if task.Assignee.Group != "" && !tr.checkGroup(task.Assignee.Group) {
@@ -193,6 +201,17 @@ func (t *serviceImpl) putHistory(task *Task) {
 	}()
 }
 
+func (t *serviceImpl) GetHistory(taskId string) []*History{
+
+	dto := t.storage.Get(taskId)
+
+	var res []*History
+	for _, dto := range t.storage.GetHistory(dto.Id) {
+		res = append(res, histFromDto(dto))
+	}
+	return res
+}
+
 func (t *serviceImpl) newNum(cfg *Config) (string, error) {
 	return fmt.Sprintf("%s%d", cfg.NumGenRule.Prefix, rand.Intn(99999)), nil
 }
@@ -226,6 +245,11 @@ func (t *serviceImpl) MakeTransition(taskId, transitionId string) (*Task, error)
 
 	// set new status
 	task.Status = targetTr.To
+
+	// check mandatory assigned user
+	if targetTr.AssignedUserMandatory && task.Assignee.User == "" {
+		return nil, fmt.Errorf("task transition is disallowed due to it's configured as assigned user is manadatory")
+	}
 
 	// check assignee group
 	if !targetTr.checkGroup(task.Assignee.Group) {

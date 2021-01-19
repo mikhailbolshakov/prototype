@@ -138,6 +138,23 @@ message AssignmentLogResponse {
   repeated AssignmentLog Logs = 2;
 }
 
+message History {
+  string Id = 1;
+  string TaskId = 2;
+  Status Status = 3;
+  Assignee Assignee = 4;
+  string ChangedBy = 5;
+  google.protobuf.Timestamp ChangedAt = 6;
+}
+
+message GetHistoryRequest {
+  string TaskId = 1;
+}
+
+message GetHistoryResponse {
+  repeated History Items = 1;
+}
+
 service Tasks {
   rpc New(NewTaskRequest) returns (Task) {}
   rpc NextTransitions(NextTransitionsRequest) returns (NextTransitionsResponse) {}
@@ -147,4 +164,5 @@ service Tasks {
   rpc GetById(GetByIdRequest) returns (Task) {}
   rpc Search(SearchRequest) returns (SearchResponse) {}
   rpc GetAssignmentLog(AssignmentLogRequest) returns (AssignmentLogResponse) {}
+  rpc GetHistory(GetHistoryRequest) returns (GetHistoryResponse) {}
 }
