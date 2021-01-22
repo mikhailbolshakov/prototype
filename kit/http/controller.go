@@ -18,7 +18,7 @@ func (c *Controller) RespondWithJson(w http.ResponseWriter, code int, payload in
 }
 
 func (c *Controller) RespondError(w http.ResponseWriter, code int, err error) {
-	c.RespondWithJson(w, code, map[string]string{"error": err.Error()})
+	http.Error(w, err.Error(), code)
 }
 
 func (c *Controller) RespondOK(w http.ResponseWriter, payload interface{}) {

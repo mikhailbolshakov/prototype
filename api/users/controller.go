@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
+	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"net/http"
 	"strconv"
@@ -16,9 +17,10 @@ import (
 type controller struct {
 	kitHttp.Controller
 	grpc *grpcClient
+	auth auth.AuthenticationHandler
 }
 
-func newController() (*controller, error) {
+func newController(auth auth.AuthenticationHandler) (*controller, error) {
 
 	c, err := newGrpcClient()
 	if err != nil {
@@ -26,6 +28,7 @@ func newController() (*controller, error) {
 	}
 
 	return &controller{
+		auth: auth,
 		grpc: c,
 	}, nil
 }
@@ -35,7 +38,7 @@ func (c *controller) Create(writer http.ResponseWriter, request *http.Request) {
 	rq := &CreateUserRequest{}
 	decoder := json.NewDecoder(request.Body)
 	if err := decoder.Decode(rq); err != nil {
-		c.RespondError(writer,  http.StatusBadRequest, errors.New("invalid request"))
+		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
 		return
 	}
 
@@ -73,7 +76,7 @@ func (c *controller) GetByUsername(writer http.ResponseWriter, request *http.Req
 func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
 
 	rq := &pb.SearchRequest{
-		Paging:         &pb.PagingRequest{
+		Paging: &pb.PagingRequest{
 			Size:  0,
 			Index: 0,
 		},
@@ -93,7 +96,7 @@ func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
 	if sizeTxt := request.FormValue("limit"); sizeTxt != "" {
 		size, e := strconv.Atoi(sizeTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("limit: " + e.Error()))
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("limit: "+e.Error()))
 			return
 		}
 		rq.Paging.Size = int32(size)
@@ -102,7 +105,7 @@ func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
 	if indexTxt := request.FormValue("offset"); indexTxt != "" {
 		index, e := strconv.Atoi(indexTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("offset: " + e.Error()))
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("offset: "+e.Error()))
 			return
 		}
 		rq.Paging.Index = int32(index)
@@ -116,5 +119,33 @@ func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
 	} else {
 		c.RespondOK(writer, c.searchRsFromPb(rsPb))
 	}
+
+}
+
+func (c *controller) Login(writer http.ResponseWriter, request *http.Request) {
+
+	rq := &LoginRequest{}
+	decoder := json.NewDecoder(request.Body)
+	if err := decoder.Decode(rq); err != nil {
+		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+
+	jwt, err := c.auth.AuthenticateUser(&auth.AuthenticateUser{
+		UserName: rq.Username,
+		Password: rq.Password,
+	})
+	if err != nil {
+		c.RespondError(writer, http.StatusInternalServerError, err)
+		return
+	}
+
+	rs := &LoginResponse{
+		AccessToken:  jwt.AccessToken,
+		RefreshToken: jwt.RefreshToken,
+		ExpiresIn:    jwt.ExpiresIn,
+	}
+
+	c.RespondOK(writer, rs)
 
 }

@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"gitlab.medzdrav.ru/prototype/kit"
 	"gitlab.medzdrav.ru/prototype/kit/bpm"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
+	"gitlab.medzdrav.ru/prototype/services/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/services/repository/storage"
 	"time"
 )
@@ -21,12 +23,14 @@ type DeliveryService interface {
 }
 
 func NewDeliveryService(balanceService UserBalanceService,
+	userService users.Service,
 	storage storage.Storage,
 	queue queue.Queue,
 	bpm bpm.Engine) DeliveryService {
 
 	d := &deliveryServiceImpl{
 		balance:     balanceService,
+		userService: userService,
 		storage:     storage,
 		queue:       queue,
 		bpm:         bpm,
@@ -37,19 +41,32 @@ func NewDeliveryService(balanceService UserBalanceService,
 
 type deliveryServiceImpl struct {
 	balance     UserBalanceService
+	userService users.Service
 	queue       queue.Queue
 	storage     storage.Storage
 	bpm         bpm.Engine
 }
 
+func (s *deliveryServiceImpl) userIdName(input string) string {
+
+	if _, err := uuid.Parse(input); err == nil {
+		return input
+	} else {
+		return s.userService.Get(input).Id
+	}
+
+}
+
 func (d *deliveryServiceImpl) Delivery(rq *DeliveryRequest) (*Delivery, error) {
+
+	userId := d.userIdName(rq.UserId)
 
 	st, ok := d.balance.GetTypes()[rq.ServiceTypeId]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("service type %s isn't supported", rq.ServiceTypeId))
 	}
 
-	if userBalance, err := d.balance.Get(&GetBalanceRequest{UserId: rq.UserId}); err == nil {
+	if userBalance, err := d.balance.Get(&GetBalanceRequest{UserId: userId}); err == nil {
 
 		if b, ok := userBalance.Balance[st]; ok {
 
@@ -67,7 +84,7 @@ func (d *deliveryServiceImpl) Delivery(rq *DeliveryRequest) (*Delivery, error) {
 
 	// lock service
 	if _, err := d.balance.Lock(&ModifyBalanceRequest{
-		UserId:        rq.UserId,
+		UserId:        userId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Quantity:      1,
 	}); err != nil {
@@ -77,7 +94,7 @@ func (d *deliveryServiceImpl) Delivery(rq *DeliveryRequest) (*Delivery, error) {
 	// create a delivery object
 	delivery := &Delivery{
 		Id:            kit.NewId(),
-		UserId:        rq.UserId,
+		UserId:        userId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Status:        "in-progress",
 		StartTime:     time.Now().UTC(),

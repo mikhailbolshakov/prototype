@@ -17,6 +17,7 @@ type Service interface {
 	SendTriggerPost(rq *SendTriggerPostRequest) error
 	SubscribeUser(rq *SubscribeUserRequest) error
 	TaskRemindMessageHandler(payload []byte) error
+	TaskDueDateMessageHandler(payload []byte) error
 	MattermostPostMessageHandler(payload []byte) error
 }
 
@@ -156,6 +157,30 @@ func (s *serviceImpl) TaskRemindMessageHandler(payload []byte) error {
 	reportedUser := s.usersService.GetByUsername(task.Reported.By)
 	assigneeUser := s.usersService.GetByUsername(task.Assignee.User)
 
+	params := triggerPostParams{}
+	params["task-num"] = task.Num
+	params["due-date"] = task.DueDate
+	if err := s.sendTriggerPost(TP_TASK_REMINDER, assigneeUser.MMId, task.ChannelId, params); err != nil {
+		return err
+	}
+
+	if err := s.sendTriggerPost(TP_TASK_REMINDER, reportedUser.MMId, task.ChannelId, params); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *serviceImpl) TaskDueDateMessageHandler(payload []byte) error {
+
+	task := &queue_model.Task{}
+	if err := json.Unmarshal(payload, task); err != nil {
+		return err
+	}
+
+	reportedUser := s.usersService.GetByUsername(task.Reported.By)
+	assigneeUser := s.usersService.GetByUsername(task.Assignee.User)
+
 	dueDateStr := ""
 	if task.DueDate != nil {
 		dueDateStr = task.DueDate.Format("2006-01-02 15:04:05")
@@ -164,11 +189,11 @@ func (s *serviceImpl) TaskRemindMessageHandler(payload []byte) error {
 	params := triggerPostParams{}
 	params["task-num"] = task.Num
 	params["due-date"] = dueDateStr
-	if err := s.sendTriggerPost(TP_TASK_REMINDER, assigneeUser.MMId, task.ChannelId, params); err != nil {
+	if err := s.sendTriggerPost(TP_TASK_DUEDATE, assigneeUser.MMId, task.ChannelId, params); err != nil {
 		return err
 	}
 
-	if err := s.sendTriggerPost(TP_TASK_REMINDER, reportedUser.MMId, task.ChannelId, params); err != nil {
+	if err := s.sendTriggerPost(TP_TASK_DUEDATE, reportedUser.MMId, task.ChannelId, params); err != nil {
 		return err
 	}
 

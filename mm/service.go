@@ -73,6 +73,7 @@ func (s *serviceImpl) Init() error {
 	}
 
 	s.queueListener.Add("tasks.remind", s.domainService.TaskRemindMessageHandler)
+	s.queueListener.Add("tasks.duedate", s.domainService.TaskDueDateMessageHandler)
 	s.queueListener.Add("mm.posts", s.domainService.MattermostPostMessageHandler)
 
 	return nil

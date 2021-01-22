@@ -106,6 +106,16 @@ func (bp *bpImpl) solvedTaskHandler(payload []byte) error {
 	vars := map[string]interface{}{}
 	vars["taskCompleted"] = true
 	_ = bp.SendMessage("msg-task-finished", ts.Id, vars)
+
+	user := bp.userService.Get(ts.Reported.By)
+
+	if err := bp.mmService.SendTriggerPost("client.task-solved", user.MMId, ts.ChannelId, map[string]interface{}{
+		"task-num": ts.Num,
+	}); err != nil {
+		log.Println(err)
+		return err
+	}
+
 	return nil
 }
 
@@ -218,8 +228,8 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 		"expert.first-name": expert.FirstName,
 		"expert.last-name":  expert.LastName,
 		"due-date":          dueDateStr,
-		"expert.url":        "https://pmed.moi-service.ru/doctor/7712?cityIdDF=1",
-		"expert.photo-url":  "https://prodoctorov.ru/media/photo/tula/doctorimage/589564/432638-589564-ezhikov_l.jpg",
+		"expert.url":        "https://prodoctorov.ru/tula/vrach/182956-kasatkin/",
+		"expert.photo-url":  "https://prodoctorov.ru/media/photo/tula/doctorimage/182956/323195-182956-kasatkin_l.jpg",
 	}); err != nil {
 		log.Println(err)
 		return
@@ -229,7 +239,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 		"client.first-name": user.FirstName,
 		"client.last-name":  user.LastName,
 		"client.phone":      user.Phone,
-		"client.url":        "https://cdn5.vedomosti.ru/crop/image/2020/2s/qmb9n/original-yi0.jpg?height=934&width=1660",
+		"client.url":        "https://www.kinonews.ru/insimgs/persimg/persimg3150.jpg",
 		"client.med-card":   "https://pmed.moi-service.ru/profile/medcard",
 		"due-date":          dueDateStr,
 	}); err != nil {

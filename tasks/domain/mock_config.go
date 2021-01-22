@@ -86,6 +86,7 @@ func getMockConfig() []*Config {
 					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
 					To:                &Status{TS_CLOSED, TSS_SOLVED},
 					AllowAssignGroups: []string{G_CONSULTANT},
+					QueueTopic: 	   "tasks.clientrequest.solved",
 				},
 			},
 		},

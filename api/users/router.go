@@ -2,30 +2,44 @@ package users
 
 import (
 	"github.com/gorilla/mux"
+	http2 "gitlab.medzdrav.ru/prototype/kit/http"
+	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	"log"
 	"net/http"
 )
 
-type Router struct {}
+type Router struct {
+	auth auth.AuthenticationHandler
+}
 
-func (u *Router) Set(r *mux.Router) {
+func New(auth auth.AuthenticationHandler) http2.RouteSetter {
+	return &Router{
+		auth: auth,
+	}
+}
 
-	c, err := newController()
+func (u *Router) Set(authRouter, noAuthRouter *mux.Router) {
+
+	c, err := newController(u.auth)
 	if err != nil {
 		log.Fatalln(err)
 		return
 	}
 
-	r.HandleFunc("/api/users", func(writer http.ResponseWriter, request *http.Request) {
+	authRouter.HandleFunc("/api/users", func(writer http.ResponseWriter, request *http.Request) {
 		c.Create(writer, request)
 	}).Methods("POST")
 
-	r.HandleFunc("/api/users/username/{un}", func(writer http.ResponseWriter, request *http.Request) {
+	authRouter.HandleFunc("/api/users/username/{un}", func(writer http.ResponseWriter, request *http.Request) {
 		c.GetByUsername(writer, request)
 	}).Methods("GET")
 
-	r.HandleFunc("/api/users", func(writer http.ResponseWriter, request *http.Request) {
+	authRouter.HandleFunc("/api/users", func(writer http.ResponseWriter, request *http.Request) {
 		c.Search(writer, request)
 	}).Methods("GET")
+
+	noAuthRouter.HandleFunc("/api/users/login", func(writer http.ResponseWriter, request *http.Request) {
+		c.Login(writer, request)
+	}).Methods("POST")
 
 }

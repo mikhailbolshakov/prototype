@@ -9,16 +9,18 @@ import (
 	"gitlab.medzdrav.ru/prototype/services/domain"
 	"gitlab.medzdrav.ru/prototype/services/grpc"
 	"gitlab.medzdrav.ru/prototype/services/infrastructure"
+	"gitlab.medzdrav.ru/prototype/services/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/services/repository/storage"
 	"math/rand"
 )
 
 type serviceImpl struct {
-	grpc         *grpc.Server
-	storage      storage.Storage
-	infr         *infrastructure.Container
-	queue        queue.Queue
-	bpm          bpmKit.Engine
+	grpc               *grpc.Server
+	storage            storage.Storage
+	infr               *infrastructure.Container
+	queue              queue.Queue
+	bpm                bpmKit.Engine
+	userServiceAdapter users.Adapter
 }
 
 func New() service.Service {
@@ -30,8 +32,11 @@ func New() service.Service {
 	s.queue = &stan.Stan{}
 	s.bpm = s.infr.Bpm
 
-	balanceService := domain.NewBalanceService(s.storage, s.queue)
-	deliveryService := domain.NewDeliveryService(balanceService, s.storage, s.queue, s.bpm)
+	s.userServiceAdapter = users.NewAdapter()
+	userService := s.userServiceAdapter.GetService()
+
+	balanceService := domain.NewBalanceService(userService, s.storage, s.queue)
+	deliveryService := domain.NewDeliveryService(balanceService, userService, s.storage, s.queue, s.bpm)
 
 	s.grpc = grpc.New(balanceService, deliveryService)
 
@@ -41,6 +46,10 @@ func New() service.Service {
 func (s *serviceImpl) Init() error {
 
 	if err := s.infr.Init(); err != nil {
+		return err
+	}
+
+	if err := s.userServiceAdapter.Init(); err != nil {
 		return err
 	}
 

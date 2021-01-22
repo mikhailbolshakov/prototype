@@ -58,6 +58,7 @@ func (bp *bpImpl) Init() error {
 
 func (bp *bpImpl) SetQueueListeners(ql listener.QueueListener) {
 	ql.Add("tasks.assigned", bp.TaskAssignedMessageHandler)
+	ql.Add("tasks.clientrequest.solved", bp.TaskSolvedMessageHandler)
 }
 
 func (bp *bpImpl) GetId() string {
@@ -232,7 +233,7 @@ func (bp *bpImpl) sendMessageTaskAssignedHandler(client worker.JobClient, job en
 		"client.first-name": user.FirstName,
 		"client.last-name":  user.LastName,
 		"client.phone":      user.Phone,
-		"client.url":        "https://cdn5.vedomosti.ru/crop/image/2020/2s/qmb9n/original-yi0.jpg?height=934&width=1660",
+		"client.url":        "https://www.kinonews.ru/insimgs/persimg/persimg3150.jpg",
 		"client.med-card":   "https://pmed.moi-service.ru/profile/medcard",
 	}); err != nil {
 		log.Println(err)
@@ -283,6 +284,26 @@ func (bp *bpImpl) TaskAssignedMessageHandler(payload []byte) error {
 		variables := map[string]interface{}{}
 		variables["assignee"] = task.Assignee.User
 		_ = bp.SendMessage("msg-client-task-assigned", task.Id, variables)
+	}
+
+	return nil
+
+}
+
+func (bp *bpImpl) TaskSolvedMessageHandler(payload []byte) error {
+
+	task := &queue_model.Task{}
+	if err := json.Unmarshal(payload, task); err != nil {
+		return err
+	}
+
+	user := bp.userService.Get(task.Reported.By)
+
+	if err := bp.mmService.SendTriggerPost("client.task-solved", user.MMId, task.ChannelId, map[string]interface{}{
+		"task-num": task.Num,
+	}); err != nil {
+		log.Println(err)
+		return err
 	}
 
 	return nil
