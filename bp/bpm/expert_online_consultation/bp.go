@@ -225,8 +225,8 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	}
 
 	if err := bp.mmService.SendTriggerPost("client.new-expert-consultation", user.MMId, task.ChannelId, map[string]interface{}{
-		"expert.first-name": expert.FirstName,
-		"expert.last-name":  expert.LastName,
+		"expert.first-name": expert.ExpertDetails.FirstName,
+		"expert.last-name":  expert.ExpertDetails.LastName,
 		"due-date":          dueDateStr,
 		"expert.url":        "https://prodoctorov.ru/tula/vrach/182956-kasatkin/",
 		"expert.photo-url":  "https://prodoctorov.ru/media/photo/tula/doctorimage/182956/323195-182956-kasatkin_l.jpg",
@@ -236,9 +236,9 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	}
 
 	if err := bp.mmService.SendTriggerPost("expert.new-expert-consultation", expert.MMId, task.ChannelId, map[string]interface{}{
-		"client.first-name": user.FirstName,
-		"client.last-name":  user.LastName,
-		"client.phone":      user.Phone,
+		"client.first-name": user.ClientDetails.FirstName,
+		"client.last-name":  user.ClientDetails.LastName,
+		"client.phone":      user.ClientDetails.Phone,
 		"client.url":        "https://www.kinonews.ru/insimgs/persimg/persimg3150.jpg",
 		"client.med-card":   "https://pmed.moi-service.ru/profile/medcard",
 		"due-date":          dueDateStr,
@@ -347,7 +347,7 @@ func (bp *bpImpl) clientFeedbackHandler(client worker.JobClient, job entities.Jo
 		},
 		ReportedBy:  expertUser.Username,
 		ReportedAt:  grpc.TimeToPbTS(&startTime),
-		Description: fmt.Sprintf("Добрый день %s %s, просим заполнить обратную связь о консультации с экспертом %s %s", user.FirstName, user.LastName, expertUser.FirstName, expertUser.LastName),
+		Description: fmt.Sprintf("Добрый день %s %s, просим заполнить обратную связь о консультации с экспертом %s %s", user.ClientDetails.FirstName, user.ClientDetails.LastName, expertUser.ExpertDetails.FirstName, expertUser.ExpertDetails.LastName),
 		Title:       fmt.Sprintf("Обратная связь о консультации %s", deliveryTasks[0].(string)),
 		Assignee: &pb.Assignee{
 			Group: user.Type,
@@ -355,7 +355,7 @@ func (bp *bpImpl) clientFeedbackHandler(client worker.JobClient, job entities.Jo
 			At:    grpc.TimeToPbTS(&startTime),
 		},
 		DueDate: grpc.TimeToPbTS(&dueDate),
-		ChannelId: user.MMChannelId,
+		ChannelId: user.ClientDetails.MMChannelId,
 		Reminders: []*pb.Reminder{
 			{
 				BeforeDueDate: &pb.BeforeDueDate{

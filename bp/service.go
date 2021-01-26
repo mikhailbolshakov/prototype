@@ -2,8 +2,10 @@ package bp
 
 import (
 	"fmt"
+	"github.com/Nerzal/gocloak/v7"
 	"gitlab.medzdrav.ru/prototype/bp/bpm"
 	"gitlab.medzdrav.ru/prototype/bp/bpm/client_request"
+	"gitlab.medzdrav.ru/prototype/bp/bpm/create_user"
 	"gitlab.medzdrav.ru/prototype/bp/bpm/expert_online_consultation"
 	"gitlab.medzdrav.ru/prototype/bp/infrastructure"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/mattermost"
@@ -29,6 +31,7 @@ type serviceImpl struct {
 	queue           queue.Queue
 	queueListener   listener.QueueListener
 	bpm             bpmKit.Engine
+	keycloak        gocloak.GoCloak
 }
 
 func New() service.Service {
@@ -38,6 +41,8 @@ func New() service.Service {
 
 	s.queue = &stan.Stan{}
 	s.queueListener = listener.NewQueueListener(s.queue)
+
+	s.keycloak = gocloak.NewClient("http://localhost:8086")
 
 	s.bpm = s.infr.Bpm
 
@@ -58,6 +63,7 @@ func New() service.Service {
 		taskService, userService, mmService, s.bpm))
 
 	s.bps = append(s.bps, client_request.NewBp(taskService, userService, mmService, s.bpm))
+	s.bps = append(s.bps, create_user.NewBp(userService, mmService, s.bpm, s.keycloak))
 
 	return s
 }

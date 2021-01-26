@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/users/infrastructure"
@@ -14,6 +15,10 @@ type UserStorage interface {
 	GetByMMId(mmId string) *User
 	Get(id string) *User
 	Search(cr *SearchCriteria) (*SearchResponse, error)
+	UpdateStatus(userId, status string, isDeleted bool) (*User, error)
+	UpdateDetails(userId string, details string) (*User, error)
+	UpdateMMId(userId, mmId string) (*User, error)
+	UpdateKKId(userId, kkId string) (*User, error)
 }
 
 type storageImpl struct {
@@ -39,6 +44,47 @@ func (s *storageImpl) CreateUser(user *User) (*User, error) {
 	}
 
 	return user, nil
+}
+
+func (s *storageImpl) updateField(userId, fieldName string, value interface{}) error {
+	return s.infr.Db.Instance.Model(&User{Id: userId}).
+		Updates(map[string]interface{}{fieldName: value, "updated_at": time.Now().UTC()}).Error
+}
+
+func (s *storageImpl) UpdateStatus(userId, status string, isDeleted bool) (*User, error) {
+
+	var deletedAt *time.Time = nil
+	if isDeleted {
+		t := time.Now().UTC()
+		deletedAt = &t
+	}
+
+	if err:=  s.infr.Db.Instance.Model(&User{Id: userId}).
+		Updates(map[string]interface{}{"status": status, "updated_at": time.Now().UTC(), "deleted_at": deletedAt}).Error; err != nil {
+
+	}
+	return s.Get(userId), nil
+}
+
+func (s *storageImpl) UpdateMMId(userId, mmId string) (*User, error) {
+	if err := s.updateField(userId, "mm_id", mmId); err != nil {
+		return nil, err
+	}
+	return s.Get(userId), nil
+}
+
+func (s *storageImpl) UpdateKKId(userId, kkId string) (*User, error) {
+	if err := s.updateField(userId, "kk_id", kkId); err != nil {
+		return nil, err
+	}
+	return s.Get(userId), nil
+}
+
+func (s *storageImpl) UpdateDetails(userId string, details string) (*User, error) {
+	if err := s.updateField(userId, "details", details); err != nil {
+		return nil, err
+	}
+	return s.Get(userId), nil
 }
 
 func (s *storageImpl) Get(id string) *User{
@@ -67,6 +113,7 @@ func (s *storageImpl) GetByMMId(mmId string) *User {
 }
 
 func (s *storageImpl) Search(cr *SearchCriteria) (*SearchResponse, error) {
+
 	response := &SearchResponse{
 		PagingResponse: &common.PagingResponse{
 			Total: 0,
@@ -85,8 +132,12 @@ func (s *storageImpl) Search(cr *SearchCriteria) (*SearchResponse, error) {
 		query = query.Where(`u.username = ?`, cr.Username)
 	}
 
+	if cr.Status != "" {
+		query = query.Where(`u.status = ?`, cr.Status)
+	}
+
 	if cr.MMChannelId != "" {
-		query = query.Where(`u.mm_channel_id = ?`, cr.MMChannelId)
+		query = query.Where(`(u.details -> 'mmChannelId')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.MMChannelId))
 	}
 
 	if cr.MMId != "" {
@@ -94,11 +145,11 @@ func (s *storageImpl) Search(cr *SearchCriteria) (*SearchResponse, error) {
 	}
 
 	if cr.Email != "" {
-		query = query.Where(`u.email = ?`, cr.Email)
+		query = query.Where(`(u.details -> 'email')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.Email))
 	}
 
 	if cr.Phone != "" {
-		query = query.Where(`u.phone = ?`, cr.Phone)
+		query = query.Where(`(u.details -> 'phone')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.Phone))
 	}
 
 	if cr.UserType != "" {

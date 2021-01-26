@@ -10,12 +10,15 @@ import (
 )
 
 type Service interface {
+
 	GetUsersStatuses(rq *GetUsersStatusesRequest) (*GetUsersStatusesResponse, error)
 	CreateUser(rq *CreateUserRequest) (*CreateUserResponse, error)
 	CreateClientChannel(rq *CreateClientChannelRequest) (*CreateClientChannelResponse, error)
 	GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMembersRequest) ([]string, error)
 	SendTriggerPost(rq *SendTriggerPostRequest) error
 	SubscribeUser(rq *SubscribeUserRequest) error
+	DeleteUser(userId string) error
+
 	TaskRemindMessageHandler(payload []byte) error
 	TaskDueDateMessageHandler(payload []byte) error
 	MattermostPostMessageHandler(payload []byte) error
@@ -128,7 +131,7 @@ func (s *serviceImpl) MattermostPostMessageHandler(payload []byte) error{
 	// get user by MM user id
 	user := s.usersService.GetByMMId(post.UserId)
 
-	if user != nil && user.MMChannelId == post.ChannelId {
+	if user != nil && user.Type == "client" && user.ClientDetails.MMChannelId == post.ChannelId {
 
 		variables := make(map[string]interface{})
 		variables["userId"] = user.Id
@@ -198,4 +201,8 @@ func (s *serviceImpl) TaskDueDateMessageHandler(payload []byte) error {
 	}
 
 	return nil
+}
+
+func (s *serviceImpl) DeleteUser(userId string) error {
+	return s.mmService.DeleteUser(userId)
 }

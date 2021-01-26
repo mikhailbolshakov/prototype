@@ -161,8 +161,8 @@ func (bp *bpImpl) createClientRequestTaskHandler(client worker.JobClient, job en
 		return
 	}
 
-	if err := bp.mmService.SendTriggerPost("client.new-request", user.MMId, user.MMChannelId, map[string]interface{}{
-		"client.name": fmt.Sprintf("%s", user.FirstName),
+	if err := bp.mmService.SendTriggerPost("client.new-request", user.MMId, user.ClientDetails.MMChannelId, map[string]interface{}{
+		"client.name": fmt.Sprintf("%s", user.ClientDetails.FirstName),
 	}); err != nil {
 		zeebe.FailJob(client, job, err)
 		return
@@ -221,8 +221,8 @@ func (bp *bpImpl) sendMessageTaskAssignedHandler(client worker.JobClient, job en
 	assignee := bp.userService.Get(assigneeUsername)
 
 	if err := bp.mmService.SendTriggerPost("client.request-assigned", user.MMId, channelId, map[string]interface{}{
-		"consultant.first-name": assignee.FirstName,
-		"consultant.last-name":  assignee.LastName,
+		"consultant.first-name": assignee.ConsultantDetails.FirstName,
+		"consultant.last-name":  assignee.ConsultantDetails.LastName,
 		"consultant.url":        "https://prodoctorov.ru/media/photo/tula/doctorimage/589564/432638-589564-ezhikov_l.jpg",
 	}); err != nil {
 		log.Println(err)
@@ -230,9 +230,9 @@ func (bp *bpImpl) sendMessageTaskAssignedHandler(client worker.JobClient, job en
 	}
 
 	if err := bp.mmService.SendTriggerPost("consultant.request-assigned", assignee.MMId, channelId, map[string]interface{}{
-		"client.first-name": user.FirstName,
-		"client.last-name":  user.LastName,
-		"client.phone":      user.Phone,
+		"client.first-name": user.ClientDetails.FirstName,
+		"client.last-name":  user.ClientDetails.LastName,
+		"client.phone":      user.ClientDetails.Phone,
 		"client.url":        "https://www.kinonews.ru/insimgs/persimg/persimg3150.jpg",
 		"client.med-card":   "https://pmed.moi-service.ru/profile/medcard",
 	}); err != nil {

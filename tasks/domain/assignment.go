@@ -86,6 +86,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 				Index: 1,
 			},
 			UserType:       rule.UserPool.Group,
+			Status:         "active",
 			OnlineStatuses: rule.UserPool.Statuses,
 		})
 		if err != nil {

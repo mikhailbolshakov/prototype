@@ -144,3 +144,16 @@ func (z *engineImpl) SendMessage(messageId string, correlationId string, vars ma
 
 	return nil
 }
+
+func (z *engineImpl) SendError(jobId int64, errCode, errMessage string) error {
+
+	m := z.client.NewThrowErrorCommand().JobKey(jobId).ErrorCode(errCode).ErrorMessage(errMessage)
+
+	rs, err := m.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	log.Printf("zeebe sent error. code: %s, message: %s, response: %v", errCode, errMessage, rs)
+
+	return nil
+}

@@ -139,3 +139,11 @@ func (s *Server) SendTriggerPost(ctx context.Context, rq *pb.SendTriggerPostRequ
 
 	return &pb.SendTriggerPostResponse{}, nil
 }
+
+func (s *Server) DeleteUser(ctx context.Context, rq *pb.DeleteUserRequest) (*pb.DeleteUserResponse, error) {
+	err := s.domain.DeleteUser(rq.MMUserId)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.DeleteUserResponse{}, nil
+}

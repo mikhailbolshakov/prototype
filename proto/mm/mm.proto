@@ -24,9 +24,16 @@ message GetUserStatusesResponse {
   repeated UserStatus Statuses = 1;
 }
 
+message DeleteUserRequest {
+  string MMUserId = 1;
+}
+
+message DeleteUserResponse {}
+
 service Users {
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
   rpc GetUsersStatuses(GetUsersStatusesRequest) returns (GetUserStatusesResponse) {}
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
 }
 
 message CreateClientChannelRequest {

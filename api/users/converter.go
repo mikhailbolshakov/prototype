@@ -1,32 +1,61 @@
 package users
 
 import (
+	"gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 )
 
-func (c *controller) toPb(request *CreateUserRequest) *pb.CreateUserRequest {
-	return &pb.CreateUserRequest{
-		Username:  request.Username,
-		Type:      request.Type,
-		FirstName: request.FirstName,
-		LastName:  request.LastName,
-		Phone:     request.Phone,
-		Email:     request.Email,
-	}
-}
+const (
+	USER_TYPE_CLIENT     = "client"
+	USER_TYPE_CONSULTANT = "consultant"
+	USER_TYPE_EXPERT     = "expert"
+	USER_TYPE_SUPERVISOR = "supervisor"
+)
 
-func (s *controller) fromPb(response *pb.User) *User {
-	return &User{
-			Type:        response.Type,
-			Username:    response.Username,
-			FirstName:   response.FirstName,
-			LastName:    response.LastName,
-			Phone:       response.Phone,
-			Email:       response.Email,
-			Id:          response.Id,
-			MMId:        response.MMId,
-			MMChannelId: response.MMChannelId,
+func (s *controller) fromPb(r *pb.User) *User {
+	user := &User{
+		Id:       r.Id,
+		Username: r.Username,
+		Type:     r.Type,
+		Status:   r.Status,
+		MMUserId: r.MMId,
+		KKUserId: r.KKId,
+	}
+
+	switch user.Type {
+	case USER_TYPE_CLIENT:
+		user.ClientDetails = &ClientDetails{
+			FirstName:  r.ClientDetails.FirstName,
+			MiddleName: r.ClientDetails.MiddleName,
+			LastName:   r.ClientDetails.LastName,
+			Sex:        r.ClientDetails.Sex,
+			BirthDate:  *(grpc.PbTSToTime(r.ClientDetails.BirthDate)),
+			Phone:      r.ClientDetails.Phone,
+			Email:      r.ClientDetails.Email,
+			PersonalAgreement: &PersonalAgreement{
+				GivenAt:   grpc.PbTSToTime(r.ClientDetails.PersonalAgreement.GivenAt),
+				RevokedAt: grpc.PbTSToTime(r.ClientDetails.PersonalAgreement.RevokedAt),
+			},
+			MMChannelId: r.ClientDetails.MMChannelId,
 		}
+	case USER_TYPE_CONSULTANT:
+		user.ConsultantDetails = &ConsultantDetails{
+			FirstName:  r.ConsultantDetails.FirstName,
+			MiddleName: r.ConsultantDetails.MiddleName,
+			LastName:   r.ConsultantDetails.LastName,
+			Email:      r.ConsultantDetails.Email,
+		}
+	case USER_TYPE_EXPERT:
+		user.ExpertDetails = &ExpertDetails{
+			FirstName:      r.ExpertDetails.FirstName,
+			MiddleName:     r.ExpertDetails.MiddleName,
+			LastName:       r.ExpertDetails.LastName,
+			Email:          r.ExpertDetails.Email,
+			Specialization: r.ExpertDetails.Specialization,
+		}
+	}
+
+	return user
 }
 
 func (s *controller) searchRsFromPb(rs *pb.SearchResponse) *SearchResponse {

@@ -8,4 +8,5 @@ type Engine interface {
 	RegisterTaskHandlers(handlers map[string]interface{}) error
 	StartProcess(processId string, vars map[string]interface{}) (string, error)
 	SendMessage(messageId string, correlationId string, vars map[string]interface{}) error
+	SendError(jobId int64, errCode, errMessage string) error
 }

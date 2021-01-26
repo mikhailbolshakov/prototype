@@ -15,13 +15,11 @@ create table users
 (
   id uuid primary key,
   type varchar references user_types(code) not null,
-  username varchar,
-  first_name varchar,
-  last_name varchar,
-  email varchar,
-  phone varchar,
+  status varchar not null,
+  username varchar not null,
   mm_id varchar,
-  mm_channel_id varchar,
+  kk_id varchar,
+  details jsonb,
   created_at timestamp not null,
   updated_at timestamp not null,
   deleted_at timestamp null
@@ -29,8 +27,7 @@ create table users
 
 create index idx_users_un on users(username);
 create index idx_users_mm_id on users(mm_id);
-create index idx_users_phone on users(phone);
-create index idx_users_mmch on users(mm_channel_id);
+create index idx_users_kk_id on users(kk_id);
 
 -- +goose Down
 drop table users;

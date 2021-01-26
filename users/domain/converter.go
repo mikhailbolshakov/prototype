@@ -1,23 +1,37 @@
 package domain
 
 import (
+	"encoding/json"
 	kit "gitlab.medzdrav.ru/prototype/kit/storage"
 	"gitlab.medzdrav.ru/prototype/users/repository/storage"
 )
 
 func toDto(domain *User) *storage.User {
-	return &storage.User{
-		BaseDto:     kit.BaseDto{},
-		Id:          domain.Id,
-		Type:        domain.Type,
-		Username:    domain.Username,
-		FirstName:   domain.FirstName,
-		LastName:    domain.LastName,
-		Phone:       domain.Phone,
-		Email:       domain.Email,
-		MMUserId:    domain.MMUserId,
-		MMChannelId: domain.MMChannelId,
+
+	dto := &storage.User{
+		BaseDto:  kit.BaseDto{},
+		Id:       domain.Id,
+		Type:     domain.Type,
+		Status:   domain.Status,
+		Username: domain.Username,
+		MMUserId: domain.MMUserId,
+		KKUserId: domain.KKUserId,
 	}
+
+	var detailsBytes []byte
+	switch domain.Type {
+	case USER_TYPE_CLIENT:
+		detailsBytes, _ = json.Marshal(domain.ClientDetails)
+	case USER_TYPE_CONSULTANT:
+		detailsBytes, _ = json.Marshal(domain.ConsultantDetails)
+	case USER_TYPE_EXPERT:
+		detailsBytes, _ = json.Marshal(domain.ExpertDetails)
+	}
+
+	dto.Details = string(detailsBytes)
+
+	return dto
+
 }
 
 func fromDto(dto *storage.User) *User {
@@ -26,17 +40,34 @@ func fromDto(dto *storage.User) *User {
 		return nil
 	}
 
-	return &User{
-		Id:          dto.Id,
-		Type:        dto.Type,
-		Username:    dto.Username,
-		FirstName:   dto.FirstName,
-		LastName:    dto.LastName,
-		Phone:       dto.Phone,
-		Email:       dto.Email,
-		MMUserId:    dto.MMUserId,
-		MMChannelId: dto.MMChannelId,
+	domain := &User{
+		Id:         dto.Id,
+		Type:       dto.Type,
+		Username:   dto.Username,
+		Status:     dto.Status,
+		MMUserId:   dto.MMUserId,
+		KKUserId:   dto.KKUserId,
+		ModifiedAt: dto.UpdatedAt,
+		DeletedAt:  dto.DeletedAt,
 	}
+
+	switch dto.Type {
+	case USER_TYPE_CLIENT:
+		cd := &ClientDetails{}
+		_ = json.Unmarshal([]byte(dto.Details), cd)
+		domain.ClientDetails = cd
+	case USER_TYPE_CONSULTANT:
+		cd := &ConsultantDetails{}
+		_ = json.Unmarshal([]byte(dto.Details), cd)
+		domain.ConsultantDetails = cd
+	case USER_TYPE_EXPERT:
+		ed := &ExpertDetails{}
+		_ = json.Unmarshal([]byte(dto.Details), &ed)
+		domain.ExpertDetails = ed
+	}
+
+	return domain
+
 }
 
 func criteriaToDto(c *SearchCriteria) *storage.SearchCriteria {
@@ -48,6 +79,7 @@ func criteriaToDto(c *SearchCriteria) *storage.SearchCriteria {
 		PagingRequest: c.PagingRequest,
 		UserType:      c.UserType,
 		Username:      c.Username,
+		Status:        c.Status,
 		Email:         c.Email,
 		Phone:         c.Phone,
 		MMId:          c.MMId,
@@ -62,7 +94,7 @@ func searchRsFromDto(rs *storage.SearchResponse) *SearchResponse {
 
 	r := &SearchResponse{
 		PagingResponse: rs.PagingResponse,
-		Users: []*User{},
+		Users:          []*User{},
 	}
 
 	for _, t := range rs.Users {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
+	"gitlab.medzdrav.ru/prototype/kit/grpc"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
@@ -33,9 +34,9 @@ func newController(auth auth.AuthenticationHandler) (*controller, error) {
 	}, nil
 }
 
-func (c *controller) Create(writer http.ResponseWriter, request *http.Request) {
+func (c *controller) CreateClient(writer http.ResponseWriter, request *http.Request) {
 
-	rq := &CreateUserRequest{}
+	rq := &CreateClientRequest{}
 	decoder := json.NewDecoder(request.Body)
 	if err := decoder.Decode(rq); err != nil {
 		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
@@ -45,7 +46,72 @@ func (c *controller) Create(writer http.ResponseWriter, request *http.Request) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if rsPb, err := c.grpc.users.Create(ctx, c.toPb(rq)); err != nil {
+	p := &pb.CreateClientRequest{
+		FirstName:  rq.FirstName,
+		MiddleName: rq.MiddleName,
+		LastName:   rq.LastName,
+		Sex:        rq.Sex,
+		BirthDate:  grpc.TimeToPbTS(&rq.BirthDate),
+		Phone:      rq.Phone,
+		Email:      rq.Email,
+	}
+
+	if rsPb, err := c.grpc.users.CreateClient(ctx, p); err != nil {
+		c.RespondError(writer, http.StatusInternalServerError, err)
+	} else {
+		c.RespondOK(writer, c.fromPb(rsPb))
+	}
+
+}
+
+func (c *controller) CreateConsultant(writer http.ResponseWriter, request *http.Request) {
+
+	rq := &CreateConsultantRequest{}
+	decoder := json.NewDecoder(request.Body)
+	if err := decoder.Decode(rq); err != nil {
+		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	p := &pb.CreateConsultantRequest{
+		FirstName:  rq.FirstName,
+		MiddleName: rq.MiddleName,
+		LastName:   rq.LastName,
+		Email:      rq.Email,
+	}
+
+	if rsPb, err := c.grpc.users.CreateConsultant(ctx, p); err != nil {
+		c.RespondError(writer, http.StatusInternalServerError, err)
+	} else {
+		c.RespondOK(writer, c.fromPb(rsPb))
+	}
+
+}
+
+func (c *controller) CreateExpert(writer http.ResponseWriter, request *http.Request) {
+
+	rq := &CreateExpertRequest{}
+	decoder := json.NewDecoder(request.Body)
+	if err := decoder.Decode(rq); err != nil {
+		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	p := &pb.CreateExpertRequest{
+		FirstName:      rq.FirstName,
+		MiddleName:     rq.MiddleName,
+		LastName:       rq.LastName,
+		Email:          rq.Email,
+		Specialization: rq.Specialization,
+	}
+
+	if rsPb, err := c.grpc.users.CreateExpert(ctx, p); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.fromPb(rsPb))

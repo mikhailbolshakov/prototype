@@ -7,21 +7,20 @@ import (
 
 type User struct {
 	kit.BaseDto
-	Id          string `gorm:"column:id"`
-	Type        string `gorm:"column:type"`
-	Username    string `gorm:"column:username"`
-	FirstName   string `gorm:"column:first_name"`
-	LastName    string `gorm:"column:last_name"`
-	Phone       string `gorm:"column:phone"`
-	Email       string `gorm:"column:email"`
-	MMUserId    string `gorm:"column:mm_id"`
-	MMChannelId string `gorm:"column:mm_channel_id"`
+	Id       string `gorm:"column:id"`
+	Type     string `gorm:"column:type"`
+	Status   string `gorm:"column:status"`
+	Username string `gorm:"column:username"`
+	MMUserId string `gorm:"column:mm_id"`
+	KKUserId string `gorm:"column:kk_id"`
+	Details  string `gorm:"column:details"`
 }
 
 type SearchCriteria struct {
 	*common.PagingRequest
 	UserType    string `gorm:"column:type"`
 	Username    string `gorm:"column:username"`
+	Status      string `gorm:"column:status"`
 	Email       string `gorm:"column:email"`
 	Phone       string `gorm:"column:phone"`
 	MMId        string `gorm:"column:mm_id"`

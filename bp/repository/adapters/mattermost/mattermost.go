@@ -12,11 +12,14 @@ type Service interface {
 	GetChannelsForUserAndExpert(userId, expertId string) ([]string, error)
 	SendTriggerPost(postCode, userId, channelId string, params map[string]interface{}) error
 	Subscribe(userId, channelId string) error
+	CreateUser(rq *pb.CreateUserRequest) (*pb.CreateUserResponse, error)
+	DeleteUser(userId string) error
 }
 
 type serviceImpl struct {
 	pb.ChannelsClient
 	pb.PostsClient
+	pb.UsersClient
 }
 
 func newImpl() *serviceImpl {
@@ -82,3 +85,13 @@ func (u *serviceImpl) SendTriggerPost(postCode, userId, channelId string, params
 	return err
 
 }
+
+func (u *serviceImpl) CreateUser(rq *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
+	return u.UsersClient.CreateUser(context.Background(), rq)
+}
+
+func (u *serviceImpl) DeleteUser(userId string) error {
+	_, err := u.UsersClient.DeleteUser(context.Background(), &pb.DeleteUserRequest{MMUserId: userId})
+	return err
+}
+

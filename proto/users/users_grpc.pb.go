@@ -17,11 +17,18 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsersClient interface {
-	Create(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*User, error)
+	CreateClient(ctx context.Context, in *CreateClientRequest, opts ...grpc.CallOption) (*User, error)
+	CreateConsultant(ctx context.Context, in *CreateConsultantRequest, opts ...grpc.CallOption) (*User, error)
+	CreateExpert(ctx context.Context, in *CreateExpertRequest, opts ...grpc.CallOption) (*User, error)
 	GetByUsername(ctx context.Context, in *GetByUsernameRequest, opts ...grpc.CallOption) (*User, error)
 	GetByMMId(ctx context.Context, in *GetByMMIdRequest, opts ...grpc.CallOption) (*User, error)
 	Get(ctx context.Context, in *GetByIdRequest, opts ...grpc.CallOption) (*User, error)
 	Search(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchResponse, error)
+	Activate(ctx context.Context, in *ActivateRequest, opts ...grpc.CallOption) (*User, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*User, error)
+	SetClientDetails(ctx context.Context, in *SetClientDetailsRequest, opts ...grpc.CallOption) (*User, error)
+	SetMMUserId(ctx context.Context, in *SetMMIdRequest, opts ...grpc.CallOption) (*User, error)
+	SetKKUserId(ctx context.Context, in *SetKKIdRequest, opts ...grpc.CallOption) (*User, error)
 }
 
 type usersClient struct {
@@ -32,9 +39,27 @@ func NewUsersClient(cc grpc.ClientConnInterface) UsersClient {
 	return &usersClient{cc}
 }
 
-func (c *usersClient) Create(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*User, error) {
+func (c *usersClient) CreateClient(ctx context.Context, in *CreateClientRequest, opts ...grpc.CallOption) (*User, error) {
 	out := new(User)
-	err := c.cc.Invoke(ctx, "/users.Users/Create", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/users.Users/CreateClient", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) CreateConsultant(ctx context.Context, in *CreateConsultantRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, "/users.Users/CreateConsultant", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) CreateExpert(ctx context.Context, in *CreateExpertRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, "/users.Users/CreateExpert", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,15 +102,67 @@ func (c *usersClient) Search(ctx context.Context, in *SearchRequest, opts ...grp
 	return out, nil
 }
 
+func (c *usersClient) Activate(ctx context.Context, in *ActivateRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, "/users.Users/Activate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, "/users.Users/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) SetClientDetails(ctx context.Context, in *SetClientDetailsRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, "/users.Users/SetClientDetails", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) SetMMUserId(ctx context.Context, in *SetMMIdRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, "/users.Users/SetMMUserId", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) SetKKUserId(ctx context.Context, in *SetKKIdRequest, opts ...grpc.CallOption) (*User, error) {
+	out := new(User)
+	err := c.cc.Invoke(ctx, "/users.Users/SetKKUserId", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UsersServer is the server API for Users service.
 // All implementations must embed UnimplementedUsersServer
 // for forward compatibility
 type UsersServer interface {
-	Create(context.Context, *CreateUserRequest) (*User, error)
+	CreateClient(context.Context, *CreateClientRequest) (*User, error)
+	CreateConsultant(context.Context, *CreateConsultantRequest) (*User, error)
+	CreateExpert(context.Context, *CreateExpertRequest) (*User, error)
 	GetByUsername(context.Context, *GetByUsernameRequest) (*User, error)
 	GetByMMId(context.Context, *GetByMMIdRequest) (*User, error)
 	Get(context.Context, *GetByIdRequest) (*User, error)
 	Search(context.Context, *SearchRequest) (*SearchResponse, error)
+	Activate(context.Context, *ActivateRequest) (*User, error)
+	Delete(context.Context, *DeleteRequest) (*User, error)
+	SetClientDetails(context.Context, *SetClientDetailsRequest) (*User, error)
+	SetMMUserId(context.Context, *SetMMIdRequest) (*User, error)
+	SetKKUserId(context.Context, *SetKKIdRequest) (*User, error)
 	mustEmbedUnimplementedUsersServer()
 }
 
@@ -93,8 +170,14 @@ type UsersServer interface {
 type UnimplementedUsersServer struct {
 }
 
-func (UnimplementedUsersServer) Create(context.Context, *CreateUserRequest) (*User, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+func (UnimplementedUsersServer) CreateClient(context.Context, *CreateClientRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateClient not implemented")
+}
+func (UnimplementedUsersServer) CreateConsultant(context.Context, *CreateConsultantRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateConsultant not implemented")
+}
+func (UnimplementedUsersServer) CreateExpert(context.Context, *CreateExpertRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateExpert not implemented")
 }
 func (UnimplementedUsersServer) GetByUsername(context.Context, *GetByUsernameRequest) (*User, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetByUsername not implemented")
@@ -107,6 +190,21 @@ func (UnimplementedUsersServer) Get(context.Context, *GetByIdRequest) (*User, er
 }
 func (UnimplementedUsersServer) Search(context.Context, *SearchRequest) (*SearchResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Search not implemented")
+}
+func (UnimplementedUsersServer) Activate(context.Context, *ActivateRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Activate not implemented")
+}
+func (UnimplementedUsersServer) Delete(context.Context, *DeleteRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedUsersServer) SetClientDetails(context.Context, *SetClientDetailsRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetClientDetails not implemented")
+}
+func (UnimplementedUsersServer) SetMMUserId(context.Context, *SetMMIdRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetMMUserId not implemented")
+}
+func (UnimplementedUsersServer) SetKKUserId(context.Context, *SetKKIdRequest) (*User, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetKKUserId not implemented")
 }
 func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
 
@@ -121,20 +219,56 @@ func RegisterUsersServer(s grpc.ServiceRegistrar, srv UsersServer) {
 	s.RegisterService(&_Users_serviceDesc, srv)
 }
 
-func _Users_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateUserRequest)
+func _Users_CreateClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateClientRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UsersServer).Create(ctx, in)
+		return srv.(UsersServer).CreateClient(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/users.Users/Create",
+		FullMethod: "/users.Users/CreateClient",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).Create(ctx, req.(*CreateUserRequest))
+		return srv.(UsersServer).CreateClient(ctx, req.(*CreateClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_CreateConsultant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateConsultantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).CreateConsultant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/users.Users/CreateConsultant",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).CreateConsultant(ctx, req.(*CreateConsultantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_CreateExpert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateExpertRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).CreateExpert(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/users.Users/CreateExpert",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).CreateExpert(ctx, req.(*CreateExpertRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -211,13 +345,111 @@ func _Users_Search_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Users_Activate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActivateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).Activate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/users.Users/Activate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).Activate(ctx, req.(*ActivateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/users.Users/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).Delete(ctx, req.(*DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_SetClientDetails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetClientDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).SetClientDetails(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/users.Users/SetClientDetails",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).SetClientDetails(ctx, req.(*SetClientDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_SetMMUserId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetMMIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).SetMMUserId(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/users.Users/SetMMUserId",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).SetMMUserId(ctx, req.(*SetMMIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_SetKKUserId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetKKIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).SetKKUserId(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/users.Users/SetKKUserId",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).SetKKUserId(ctx, req.(*SetKKIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Users_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "users.Users",
 	HandlerType: (*UsersServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Create",
-			Handler:    _Users_Create_Handler,
+			MethodName: "CreateClient",
+			Handler:    _Users_CreateClient_Handler,
+		},
+		{
+			MethodName: "CreateConsultant",
+			Handler:    _Users_CreateConsultant_Handler,
+		},
+		{
+			MethodName: "CreateExpert",
+			Handler:    _Users_CreateExpert_Handler,
 		},
 		{
 			MethodName: "GetByUsername",
@@ -234,6 +466,26 @@ var _Users_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Search",
 			Handler:    _Users_Search_Handler,
+		},
+		{
+			MethodName: "Activate",
+			Handler:    _Users_Activate_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _Users_Delete_Handler,
+		},
+		{
+			MethodName: "SetClientDetails",
+			Handler:    _Users_SetClientDetails_Handler,
+		},
+		{
+			MethodName: "SetMMUserId",
+			Handler:    _Users_SetMMUserId_Handler,
+		},
+		{
+			MethodName: "SetKKUserId",
+			Handler:    _Users_SetKKUserId_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

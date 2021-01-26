@@ -121,6 +121,18 @@ func (c *Client) createUser(rq *CreateUserRequest) (*CreateUserResponse, error) 
 	return response, nil
 }
 
+func (c *Client) deleteUser(userId string) error {
+
+	_, rs := c.RestApi.DeleteUser(userId)
+	if err := handleResponse(rs); err != nil {
+		return err
+	}
+	log.Printf("user delete. Id: %s", userId)
+
+	return nil
+
+}
+
 func (c *Client) createClientChannel(rq *CreateClientChannelRequest) (*CreateChannelResponse, error) {
 
 	team, rs := c.RestApi.GetTeamByName(rq.TeamName, "")

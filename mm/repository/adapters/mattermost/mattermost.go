@@ -16,6 +16,7 @@ type Service interface {
 	CreateDirectChannel(rq *CreateDirectChannelRequest) (*CreateChannelResponse, error)
 	// returns list of user's channels which have given active members (there might be more members and it's OK)
 	GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMembersRequest) ([]string, error)
+	DeleteUser(userId string) error
 }
 
 type serviceImpl struct {
@@ -120,3 +121,6 @@ func (s *serviceImpl) GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMemb
 
 }
 
+func (s *serviceImpl) DeleteUser(userId string) error {
+	return s.client.deleteUser(userId)
+}

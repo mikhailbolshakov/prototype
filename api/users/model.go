@@ -1,24 +1,74 @@
 package users
 
-type CreateUserRequest struct {
-	Type      string `json:"type"`
-	Username  string `json:"username"`
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
-	Phone     string `json:"phone"`
-	Email     string `json:"email"`
+import "time"
+
+type CreateClientRequest struct {
+	FirstName  string    `json:"firstName"`
+	MiddleName string    `json:"middleName"`
+	LastName   string    `json:"lastName"`
+	Sex        string    `json:"sex"`
+	BirthDate  time.Time `json:"birthDate"`
+	Phone      string    `json:"phone"`
+	Email      string    `json:"email"`
+}
+
+type CreateConsultantRequest struct {
+	FirstName  string `json:"firstName"`
+	MiddleName string `json:"middleName"`
+	LastName   string `json:"lastName"`
+	Email      string `json:"email"`
+}
+
+type CreateExpertRequest struct {
+	FirstName      string `json:"firstName"`
+	MiddleName     string `json:"middleName"`
+	LastName       string `json:"lastName"`
+	Email          string `json:"email"`
+	Specialization string `json:"specialization"`
 }
 
 type User struct {
-	Id          string `json:"id,omitempty"`
-	Type        string `json:"type"`
-	Username    string `json:"username"`
-	FirstName   string `json:"firstName"`
-	LastName    string `json:"lastName"`
-	Phone       string `json:"phone"`
-	Email       string `json:"email"`
-	MMId        string `json:"mmId,omitempty"`
-	MMChannelId string `json:"mmChannelId,omitempty"`
+	Id                string             `json:"id"`
+	Username          string             `json:"username"`
+	Type              string             `json:"type"`
+	Status            string             `json:"status"`
+	MMUserId          string             `json:"mmId,omitempty"`
+	KKUserId          string             `json:"kkId,omitempty"`
+	ClientDetails     *ClientDetails     `json:"clientDetails,omitempty"`
+	ConsultantDetails *ConsultantDetails `json:"consultantDetails,omitempty"`
+	ExpertDetails     *ExpertDetails     `json:"expertDetails,omitempty"`
+}
+
+type PersonalAgreement struct {
+	GivenAt   *time.Time `json:"givenAt"`
+	RevokedAt *time.Time `json:"revokedAt"`
+}
+
+type ClientDetails struct {
+	FirstName         string             `json:"firstName"`
+	MiddleName        string             `json:"middleName"`
+	LastName          string             `json:"lastName"`
+	Sex               string             `json:"sex"`
+	BirthDate         time.Time          `json:"birthDate"`
+	Phone             string             `json:"phone"`
+	Email             string             `json:"email"`
+	PersonalAgreement *PersonalAgreement `json:"personalAgreement"`
+	MMChannelId       string             `json:"mmChannelId,omitempty"`
+}
+
+type ConsultantDetails struct {
+	FirstName  string `json:"firstName"`
+	MiddleName string `json:"middleName"`
+	LastName   string `json:"lastName"`
+	Email      string `json:"email"`
+}
+
+type ExpertDetails struct {
+	FirstName      string `json:"firstName"`
+	MiddleName     string `json:"middleName"`
+	LastName       string `json:"lastName"`
+	Email          string `json:"email"`
+	Specialization string `json:"specialization,omitempty"`
 }
 
 type SearchResponse struct {

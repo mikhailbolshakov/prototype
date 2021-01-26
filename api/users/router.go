@@ -26,8 +26,16 @@ func (u *Router) Set(authRouter, noAuthRouter *mux.Router) {
 		return
 	}
 
-	authRouter.HandleFunc("/api/users", func(writer http.ResponseWriter, request *http.Request) {
-		c.Create(writer, request)
+	authRouter.HandleFunc("/api/users/client", func(writer http.ResponseWriter, request *http.Request) {
+		c.CreateClient(writer, request)
+	}).Methods("POST")
+
+	authRouter.HandleFunc("/api/users/consultant", func(writer http.ResponseWriter, request *http.Request) {
+		c.CreateConsultant(writer, request)
+	}).Methods("POST")
+
+	authRouter.HandleFunc("/api/users/expert", func(writer http.ResponseWriter, request *http.Request) {
+		c.CreateExpert(writer, request)
 	}).Methods("POST")
 
 	authRouter.HandleFunc("/api/users/username/{un}", func(writer http.ResponseWriter, request *http.Request) {

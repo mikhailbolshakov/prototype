@@ -3,25 +3,50 @@ syntax = "proto3";
 package users;
 option go_package = "proto/users";
 
-message CreateUserRequest {
-  string Type = 1;
-  string Username = 2;
-  string FirstName = 3;
-  string LastName = 4;
-  string Phone = 5;
-  string Email = 6;
+import "google/protobuf/timestamp.proto";
+
+message PersonalAgreement {
+  google.protobuf.Timestamp GivenAt = 1;
+  google.protobuf.Timestamp RevokedAt = 2;
+}
+
+message ClientDetails {
+  string FirstName = 1;
+  string MiddleName = 2;
+  string LastName = 3;
+  string Sex = 4;
+  google.protobuf.Timestamp BirthDate = 5;
+  string Phone = 6;
+  string Email = 7;
+  string MMChannelId = 8;
+  PersonalAgreement PersonalAgreement = 9;
+}
+
+message ConsultantDetails {
+  string FirstName = 1;
+  string MiddleName = 2;
+  string LastName = 3;
+  string Email = 4;
+}
+
+message ExpertDetails {
+  string FirstName = 1;
+  string MiddleName = 2;
+  string LastName = 3;
+  string Email = 4;
+  string Specialization = 5;
 }
 
 message User {
   string Id = 1;
   string Type = 2;
-  string Username = 3;
-  string FirstName = 4;
-  string LastName = 5;
-  string Phone = 6;
-  string Email = 7;
-  string MMId = 8;
-  string MMChannelId = 9;
+  string Status = 3;
+  string Username = 4;
+  string MMId = 5;
+  string KKId = 6;
+  ClientDetails ClientDetails = 7;
+  ConsultantDetails ConsultantDetails = 8;
+  ExpertDetails ExpertDetails = 9;
 }
 
 message GetByUsernameRequest {
@@ -50,11 +75,12 @@ message SearchRequest {
   PagingRequest Paging = 1;
   string UserType = 2;
   string Username = 3;
-  string Email = 4;
-  string Phone = 5;
-  string MMId = 6;
-  string MMChannelId = 7;
-  repeated string OnlineStatuses = 8;
+  string Status = 4;
+  string Email = 5;
+  string Phone = 6;
+  string MMId = 7;
+  string MMChannelId = 8;
+  repeated string OnlineStatuses = 9;
 }
 
 message SearchResponse {
@@ -62,12 +88,67 @@ message SearchResponse {
   repeated User Users = 2;
 }
 
+message CreateClientRequest {
+  string FirstName = 1;
+  string MiddleName = 2;
+  string LastName = 3;
+  string Sex = 4;
+  google.protobuf.Timestamp BirthDate = 5;
+  string Phone = 6;
+  string Email = 7;
+}
+
+message CreateConsultantRequest {
+  string FirstName = 1;
+  string MiddleName = 2;
+  string LastName = 3;
+  string Email = 4;
+}
+
+message CreateExpertRequest {
+  string FirstName = 1;
+  string MiddleName = 2;
+  string LastName = 3;
+  string Email = 4;
+  string Specialization = 5;
+}
+
+message ActivateRequest {
+  string UserId = 1;
+}
+
+message DeleteRequest {
+  string UserId = 1;
+}
+
+message SetClientDetailsRequest {
+  string UserId = 1;
+  ClientDetails ClientDetails = 2;
+}
+
+message SetMMIdRequest {
+  string UserId = 1;
+  string MMId = 2;
+}
+
+message SetKKIdRequest {
+  string UserId = 1;
+  string KKId = 2;
+}
+
 service Users {
-  rpc Create(CreateUserRequest) returns (User) {}
+  rpc CreateClient(CreateClientRequest) returns (User) {}
+  rpc CreateConsultant(CreateConsultantRequest) returns (User) {}
+  rpc CreateExpert(CreateExpertRequest) returns (User) {}
   rpc GetByUsername(GetByUsernameRequest) returns (User) {}
   rpc GetByMMId(GetByMMIdRequest) returns (User) {}
   rpc Get(GetByIdRequest) returns (User) {}
   rpc Search(SearchRequest) returns (SearchResponse) {}
+  rpc Activate(ActivateRequest) returns (User) {}
+  rpc Delete(DeleteRequest) returns (User) {}
+  rpc SetClientDetails(SetClientDetailsRequest) returns (User) {}
+  rpc SetMMUserId(SetMMIdRequest) returns (User) {}
+  rpc SetKKUserId(SetKKIdRequest) returns (User) {}
 }
 
 
