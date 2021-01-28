@@ -6,7 +6,7 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/services"
 )
 
-func (c *controller) balanceFromPb(p *pb.UserBalance) *UserBalance {
+func (c *ctrlImpl) balanceFromPb(p *pb.UserBalance) *UserBalance {
 
 	rs := &UserBalance{
 		UserId:  p.UserId,
@@ -26,7 +26,7 @@ func (c *controller) balanceFromPb(p *pb.UserBalance) *UserBalance {
 	return rs
 }
 
-func (c *controller) deliveryFromPb(p *pb.Delivery) *Delivery {
+func (c *ctrlImpl) deliveryFromPb(p *pb.Delivery) *Delivery {
 
 	var details map[string]interface{}
 	err := json.Unmarshal(p.Details, &details)

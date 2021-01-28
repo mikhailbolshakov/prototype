@@ -3,9 +3,13 @@ package api
 import (
 	"context"
 	"github.com/Nerzal/gocloak/v7"
-	"gitlab.medzdrav.ru/prototype/api/services"
-	"gitlab.medzdrav.ru/prototype/api/tasks"
-	"gitlab.medzdrav.ru/prototype/api/users"
+	servRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/services"
+	tasksRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/tasks"
+	usersRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/users"
+	"gitlab.medzdrav.ru/prototype/api/public/services"
+	"gitlab.medzdrav.ru/prototype/api/session"
+	"gitlab.medzdrav.ru/prototype/api/public/tasks"
+	"gitlab.medzdrav.ru/prototype/api/public/users"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	"gitlab.medzdrav.ru/prototype/kit/service"
@@ -13,33 +17,75 @@ import (
 )
 
 type serviceImpl struct {
-	keycloak gocloak.GoCloak
-	mdw      auth.AuthMiddleware
 	*kitHttp.Server
+	keycloak    gocloak.GoCloak
+	mdw         auth.Middleware
+	hub         session.Hub
+	userAdapter usersRep.Adapter
+	taskAdapter tasksRep.Adapter
+	servAdapter servRep.Adapter
 }
 
 func New() service.Service {
-	return &serviceImpl{}
-}
-
-func (u *serviceImpl) Init() error {
+	s := &serviceImpl{}
 
 	ctx := context.Background()
 
-	authClient := &auth.AuthClient{
-		ClientID:     "app",
-		ClientSecret: "d6dbae97-8570-4758-a081-9077b7899a7d",
-		Realm:        "prototype",
+	authClient := &auth.ClientSecurityInfo{
+		ID:     "app",
+		Secret: "d6dbae97-8570-4758-a081-9077b7899a7d",
+		Realm:  "prototype",
 	}
 
-	u.keycloak = gocloak.NewClient("http://localhost:8086")
-	u.mdw = auth.NewKeyCloakMdw(ctx, u.keycloak, authClient, "", "")
+	s.keycloak = gocloak.NewClient("http://localhost:8086")
+	s.mdw = auth.NewMdw(ctx, s.keycloak, authClient, "", "")
 
-	authHandler := auth.NewAuthenticationHandler(ctx, u.keycloak, authClient)
-	u.Server = kitHttp.NewHttpServer("localhost", "8000", users.New(authHandler), tasks.New(), services.New())
+	authService := auth.New(ctx, s.keycloak, authClient)
 
-	// set auth middleware
-	u.Server.SetAuthMiddleware(u.mdw.CheckToken)
+	// HTTP server
+	s.Server = kitHttp.NewHttpServer("localhost", "8000")
+
+	s.userAdapter = usersRep.NewAdapter()
+	userService := s.userAdapter.GetService()
+	userController := users.NewController(authService, userService)
+
+	s.taskAdapter = tasksRep.NewAdapter()
+	taskService := s.taskAdapter.GetService()
+	taskController := tasks.NewController(taskService)
+
+	s.servAdapter = servRep.NewAdapter()
+	deliveryService := s.servAdapter.GetDeliveryService()
+	balanceService := s.servAdapter.GetBalanceService()
+	servController := services.NewController(balanceService, deliveryService)
+
+	s.Server.SetRouters(users.NewRouter(userController), tasks.NewRouter(taskController), services.NewRouter(servController))
+
+	// session HUB
+	s.hub = session.NewHub(s.Server, authService, userService)
+	s.Server.SetRouters(s.hub.GetLoginRouteSetter())
+
+	// set auth middlewares
+	// the first middleware checks session by X-SESSION-ID header and if correct sets Authorization Bearer with Access Token
+	// then the mdw which checks standard Bearer token takes its action
+	// TODO: currently if a token expires we don't remove session immediately, but we must
+	s.Server.SetAuthMiddleware(s.hub.SessionMiddleware, s.mdw.CheckToken)
+
+	return s
+}
+
+func (s *serviceImpl) Init() error {
+
+	if err := s.userAdapter.Init(); err != nil {
+		return err
+	}
+
+	if err := s.taskAdapter.Init(); err != nil {
+		return err
+	}
+
+	if err := s.servAdapter.Init(); err != nil {
+		return err
+	}
 
 	return nil
 }

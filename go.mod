@@ -11,7 +11,7 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0
-	github.com/labstack/echo/v4 v4.1.11
+	github.com/gorilla/websocket v1.4.2
 	github.com/nats-io/nats-streaming-server v0.19.0 // indirect
 	github.com/nats-io/stan.go v0.7.0
 	github.com/onsi/ginkgo v1.14.2 // indirect
@@ -19,6 +19,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c
 	github.com/zeebe-io/zeebe/clients/go v0.26.0
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	google.golang.org/grpc v1.34.0
 	google.golang.org/protobuf v1.25.0
 	gorm.io/driver/postgres v1.0.6

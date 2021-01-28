@@ -35,7 +35,7 @@ func New() service.Service {
 	mmService := s.mmAdapter.GetService()
 
 	s.search = domain.NewUserSearchService(s.storage,mmService)
-	s.domain = domain.NewUserService(s.storage, mmService, s.queue)
+	s.domain = domain.NewUserService(s.storage, s.queue)
 	s.grpc = grpc.New(s.domain, s.search)
 
 	return s

@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"time"
 )
@@ -11,13 +12,18 @@ type Server struct {
 	Srv          *http.Server
 	AuthRouter   *mux.Router
 	NoAuthRouter *mux.Router
+	WsUpgrader   *websocket.Upgrader
 }
 
 type RouteSetter interface {
 	Set(authRouter, noAuthRouter *mux.Router)
 }
 
-func NewHttpServer(host, port string, routeSetters ...RouteSetter) *Server {
+type WsUpgrader interface {
+	Set(noAuthRouter *mux.Router, upgrader *websocket.Upgrader)
+}
+
+func NewHttpServer(host, port string) *Server {
 
 	r := mux.NewRouter()
 	noAuthRouter := r.MatcherFunc(func(r *http.Request, rm *mux.RouteMatch) bool {
@@ -27,9 +33,6 @@ func NewHttpServer(host, port string, routeSetters ...RouteSetter) *Server {
 		return true
 	}).Subrouter()
 
-	for _, rs := range routeSetters {
-		rs.Set(authRouter, noAuthRouter)
-	}
 
 	s := &Server{
 		Srv: &http.Server{
@@ -38,11 +41,28 @@ func NewHttpServer(host, port string, routeSetters ...RouteSetter) *Server {
 			WriteTimeout: time.Hour,
 			ReadTimeout:  time.Hour,
 		},
-		AuthRouter: authRouter,
+		WsUpgrader: &websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		},
+		AuthRouter:   authRouter,
 		NoAuthRouter: noAuthRouter,
 	}
 
 	return s
+}
+
+func (s *Server) SetRouters(routeSetters ...RouteSetter) {
+	for _, rs := range routeSetters {
+		rs.Set(s.AuthRouter, s.NoAuthRouter)
+	}
+}
+
+func (s *Server) SetWsUpgrader(upgradeSetter WsUpgrader) {
+	upgradeSetter.Set(s.NoAuthRouter, s.WsUpgrader)
 }
 
 func (s *Server) SetAuthMiddleware(mdws ...mux.MiddlewareFunc) {

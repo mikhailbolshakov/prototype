@@ -7,7 +7,6 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
-	"gitlab.medzdrav.ru/prototype/users/repository/adapters/mattermost"
 	"gitlab.medzdrav.ru/prototype/users/repository/storage"
 	"strings"
 	"time"
@@ -28,14 +27,12 @@ type UserService interface {
 type userServiceImpl struct {
 	common.BaseService
 	storage    storage.UserStorage
-	mattermost mattermost.Service
 }
 
-func NewUserService(storage storage.UserStorage, mmService mattermost.Service, queue queue.Queue) UserService {
+func NewUserService(storage storage.UserStorage, queue queue.Queue) UserService {
 
 	s := &userServiceImpl{
 		storage:    storage,
-		mattermost: mmService,
 	}
 	s.BaseService = common.BaseService{Queue: queue}
 

@@ -1,6 +1,9 @@
 package mattermost
 
-import "gitlab.medzdrav.ru/prototype/kit/queue"
+import (
+	"gitlab.medzdrav.ru/prototype/kit/chat/mattermost"
+	"gitlab.medzdrav.ru/prototype/kit/queue"
+)
 
 type Adapter interface {
 	Init() error
@@ -23,7 +26,7 @@ func NewAdapter(queue queue.Queue) Adapter {
 func (a *adapterImpl) Init() error {
 
 	var err error
-	a.mmServiceImpl.client, err = login(&Params{
+	a.mmServiceImpl.client, err = mattermost.Login(&mattermost.Params{
 		Url:     "http://localhost:8065",
 		WsUrl:   "ws://localhost:8065",
 		Account: "admin",

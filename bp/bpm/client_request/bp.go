@@ -133,7 +133,7 @@ func (bp *bpImpl) createClientRequestTaskHandler(client worker.JobClient, job en
 	user := bp.userService.Get(userId)
 
 	// create a new task
-	createdTask, err := bp.taskService.CreateTask(&pb.NewTaskRequest{
+	createdTask, err := bp.taskService.New(&pb.NewTaskRequest{
 		Type: &pb.Type{
 			Type:    "client",
 			Subtype: "medical-request",

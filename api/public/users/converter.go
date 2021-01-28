@@ -12,7 +12,7 @@ const (
 	USER_TYPE_SUPERVISOR = "supervisor"
 )
 
-func (s *controller) fromPb(r *pb.User) *User {
+func (s *ctrlImpl) fromPb(r *pb.User) *User {
 	user := &User{
 		Id:       r.Id,
 		Username: r.Username,
@@ -58,7 +58,7 @@ func (s *controller) fromPb(r *pb.User) *User {
 	return user
 }
 
-func (s *controller) searchRsFromPb(rs *pb.SearchResponse) *SearchResponse {
+func (s *ctrlImpl) searchRsFromPb(rs *pb.SearchResponse) *SearchResponse {
 	r := &SearchResponse{
 		Index: int(rs.Paging.Index),
 		Total: int(rs.Paging.Total),

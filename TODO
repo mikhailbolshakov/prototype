@@ -5,4 +5,7 @@
 5. .env
 6. panic recover
 7. close all connections
-8.
+8. Elastic Search
+9. Cache
+10. Error handling
+11. Check session expiration

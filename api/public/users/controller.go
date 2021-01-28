@@ -1,11 +1,11 @@
 package users
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
+	"gitlab.medzdrav.ru/prototype/api/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/kit/grpc"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
@@ -15,26 +15,29 @@ import (
 	"strings"
 )
 
-type controller struct {
+type Controller interface {
+	CreateClient(http.ResponseWriter, *http.Request)
+	CreateConsultant(http.ResponseWriter, *http.Request)
+	CreateExpert(http.ResponseWriter, *http.Request)
+	GetByUsername(http.ResponseWriter, *http.Request)
+	Search(http.ResponseWriter, *http.Request)
+}
+
+type ctrlImpl struct {
 	kitHttp.Controller
-	grpc *grpcClient
-	auth auth.AuthenticationHandler
+	userService users.Service
+	auth        auth.Service
 }
 
-func newController(auth auth.AuthenticationHandler) (*controller, error) {
+func NewController(auth auth.Service, userService users.Service) Controller {
 
-	c, err := newGrpcClient()
-	if err != nil {
-		return nil, err
-	}
-
-	return &controller{
+	return &ctrlImpl{
 		auth: auth,
-		grpc: c,
-	}, nil
+		userService: userService,
+	}
 }
 
-func (c *controller) CreateClient(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) CreateClient(writer http.ResponseWriter, request *http.Request) {
 
 	rq := &CreateClientRequest{}
 	decoder := json.NewDecoder(request.Body)
@@ -42,9 +45,6 @@ func (c *controller) CreateClient(writer http.ResponseWriter, request *http.Requ
 		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
 		return
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	p := &pb.CreateClientRequest{
 		FirstName:  rq.FirstName,
@@ -56,7 +56,7 @@ func (c *controller) CreateClient(writer http.ResponseWriter, request *http.Requ
 		Email:      rq.Email,
 	}
 
-	if rsPb, err := c.grpc.users.CreateClient(ctx, p); err != nil {
+	if rsPb, err := c.userService.CreateClient(p); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.fromPb(rsPb))
@@ -64,7 +64,7 @@ func (c *controller) CreateClient(writer http.ResponseWriter, request *http.Requ
 
 }
 
-func (c *controller) CreateConsultant(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) CreateConsultant(writer http.ResponseWriter, request *http.Request) {
 
 	rq := &CreateConsultantRequest{}
 	decoder := json.NewDecoder(request.Body)
@@ -73,9 +73,6 @@ func (c *controller) CreateConsultant(writer http.ResponseWriter, request *http.
 		return
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	p := &pb.CreateConsultantRequest{
 		FirstName:  rq.FirstName,
 		MiddleName: rq.MiddleName,
@@ -83,7 +80,7 @@ func (c *controller) CreateConsultant(writer http.ResponseWriter, request *http.
 		Email:      rq.Email,
 	}
 
-	if rsPb, err := c.grpc.users.CreateConsultant(ctx, p); err != nil {
+	if rsPb, err := c.userService.CreateConsultant(p); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.fromPb(rsPb))
@@ -91,7 +88,7 @@ func (c *controller) CreateConsultant(writer http.ResponseWriter, request *http.
 
 }
 
-func (c *controller) CreateExpert(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) CreateExpert(writer http.ResponseWriter, request *http.Request) {
 
 	rq := &CreateExpertRequest{}
 	decoder := json.NewDecoder(request.Body)
@@ -99,9 +96,6 @@ func (c *controller) CreateExpert(writer http.ResponseWriter, request *http.Requ
 		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
 		return
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	p := &pb.CreateExpertRequest{
 		FirstName:      rq.FirstName,
@@ -111,7 +105,7 @@ func (c *controller) CreateExpert(writer http.ResponseWriter, request *http.Requ
 		Specialization: rq.Specialization,
 	}
 
-	if rsPb, err := c.grpc.users.CreateExpert(ctx, p); err != nil {
+	if rsPb, err := c.userService.CreateExpert(p); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.fromPb(rsPb))
@@ -119,27 +113,19 @@ func (c *controller) CreateExpert(writer http.ResponseWriter, request *http.Requ
 
 }
 
-func (c *controller) GetByUsername(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) GetByUsername(writer http.ResponseWriter, request *http.Request) {
 
 	username := mux.Vars(request)["un"]
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if rsPb, err := c.grpc.users.GetByUsername(ctx, &pb.GetByUsernameRequest{Username: username}); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+	if usr := c.userService.Get(username); usr != nil {
+		c.RespondOK(writer, c.fromPb(usr))
 	} else {
-
-		if rsPb == nil {
-			c.RespondError(writer, http.StatusNotFound, errors.New("user not found"))
-		}
-
-		c.RespondOK(writer, c.fromPb(rsPb))
+		c.RespondError(writer, http.StatusNotFound, errors.New("user not found"))
 	}
 
 }
 
-func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 
 	rq := &pb.SearchRequest{
 		Paging: &pb.PagingRequest{
@@ -177,10 +163,7 @@ func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
 		rq.Paging.Index = int32(index)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if rsPb, err := c.grpc.users.Search(ctx, rq); err != nil {
+	if rsPb, err := c.userService.Search(rq); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.searchRsFromPb(rsPb))
@@ -188,30 +171,3 @@ func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
 
 }
 
-func (c *controller) Login(writer http.ResponseWriter, request *http.Request) {
-
-	rq := &LoginRequest{}
-	decoder := json.NewDecoder(request.Body)
-	if err := decoder.Decode(rq); err != nil {
-		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
-		return
-	}
-
-	jwt, err := c.auth.AuthenticateUser(&auth.AuthenticateUser{
-		UserName: rq.Username,
-		Password: rq.Password,
-	})
-	if err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
-		return
-	}
-
-	rs := &LoginResponse{
-		AccessToken:  jwt.AccessToken,
-		RefreshToken: jwt.RefreshToken,
-		ExpiresIn:    jwt.ExpiresIn,
-	}
-
-	c.RespondOK(writer, rs)
-
-}

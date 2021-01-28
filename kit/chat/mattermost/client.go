@@ -1,7 +1,6 @@
 package mattermost
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/adacta-ru/mattermost-server/v6/model"
@@ -14,6 +13,7 @@ type Params struct {
 	WsUrl   string
 	Account string
 	Pwd     string
+	OpenWS  bool
 }
 
 type Client struct {
@@ -23,6 +23,11 @@ type Client struct {
 	User    *model.User
 	Quit    chan interface{}
 	Params  *Params
+}
+
+type UserStatus struct {
+	UserId string
+	Status string
 }
 
 func handleResponse(rs *model.Response) error {
@@ -39,7 +44,7 @@ func handleResponse(rs *model.Response) error {
 	return nil
 }
 
-func login(p *Params) (*Client, error) {
+func Login(p *Params) (*Client, error) {
 
 	cl := &Client{
 		Quit: make(chan interface{}),
@@ -55,35 +60,18 @@ func login(p *Params) (*Client, error) {
 
 	log.Printf("muttermost connected. user: %s", cl.User.Email)
 
-	appErr := &model.AppError{}
-	cl.WsApi, appErr = model.NewWebSocketClient(p.WsUrl, cl.Token)
-	if appErr != nil {
-		return nil, errors.New(appErr.Message)
-	}
-
-	go cl.WsApi.Listen()
-	go func() {
-		for {
-			select {
-
-			case event := <-cl.WsApi.EventChannel:
-				s, _ := json.MarshalIndent(event, "", "\t")
-				log.Printf("[WS event]. %s", s)
-			case response := <-cl.WsApi.ResponseChannel:
-				s, _ := json.MarshalIndent(response, "", "\t")
-				log.Printf("[WS response]. %s", s)
-			case <-cl.Quit:
-				log.Printf("[WS closing]. Closing request for user %s", cl.User.Email)
-				cl.WsApi.Close()
-				return
-			}
+	if p.OpenWS {
+		appErr := &model.AppError{}
+		cl.WsApi, appErr = model.NewWebSocketClient(p.WsUrl, cl.Token)
+		if appErr != nil {
+			return nil, errors.New(appErr.Message)
 		}
-	}()
+	}
 
 	return cl, nil
 }
 
-func (c *Client) logout() error {
+func (c *Client) Logout() error {
 	_, rs := c.RestApi.Logout()
 	if err := handleResponse(rs); err != nil {
 		return err
@@ -91,37 +79,32 @@ func (c *Client) logout() error {
 	return nil
 }
 
-func (c *Client) createUser(rq *CreateUserRequest) (*CreateUserResponse, error) {
+func (c *Client) CreateUser(teamName, username, password, email string) (string, error) {
 
 	user, rs := c.RestApi.CreateUser(&model.User{
-		Username: rq.Username,
-		Password: rq.Password,
-		Email:    rq.Email,
+		Username: username,
+		Password: password,
+		Email:    email,
 	})
 	if err := handleResponse(rs); err != nil {
-		return nil, err
+		return "", err
 	}
-	log.Printf("By created. Id: %s, email: %s", user.Id, user.Email)
 
 	// add to team
-	team, rs := c.RestApi.GetTeamByName(rq.TeamName, "")
+	team, rs := c.RestApi.GetTeamByName(teamName, "")
 	if err := handleResponse(rs); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	_, rs = c.RestApi.AddTeamMember(team.Id, user.Id)
 	if err := handleResponse(rs); err != nil {
-		return nil, err
+		return "", err
 	}
 
-	response := &CreateUserResponse{
-		Id: user.Id,
-	}
-
-	return response, nil
+	return user.Id, nil
 }
 
-func (c *Client) deleteUser(userId string) error {
+func (c *Client) DeleteUser(userId string) error {
 
 	_, rs := c.RestApi.DeleteUser(userId)
 	if err := handleResponse(rs); err != nil {
@@ -133,32 +116,32 @@ func (c *Client) deleteUser(userId string) error {
 
 }
 
-func (c *Client) createClientChannel(rq *CreateClientChannelRequest) (*CreateChannelResponse, error) {
+func (c *Client) CreateUserChannel(channelType, teamName, userId, displayName, name string) (string, error) {
 
-	team, rs := c.RestApi.GetTeamByName(rq.TeamName, "")
+	team, rs := c.RestApi.GetTeamByName(teamName, "")
 	if err := handleResponse(rs); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	ch, rs := c.RestApi.CreateChannel(&model.Channel{
 		TeamId:      team.Id,
-		Type:        "P",
-		DisplayName: rq.DisplayName,
-		Name:        rq.Name,
+		Type:        channelType,
+		DisplayName: displayName,
+		Name:        name,
 	})
 	if err := handleResponse(rs); err != nil {
-		return nil, err
+		return "", err
 	}
 
-	_, rs = c.RestApi.AddChannelMember(ch.Id, rq.ClientUserId)
+	_, rs = c.RestApi.AddChannelMember(ch.Id, userId)
 	if err := handleResponse(rs); err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &CreateChannelResponse{ChannelId: ch.Id}, nil
+	return ch.Id, nil
 }
 
-func (c *Client) subscribeUser(channelId string, userId string) error {
+func (c *Client) SubscribeUser(channelId string, userId string) error {
 	_, rs := c.RestApi.AddChannelMember(channelId, userId)
 	if err := handleResponse(rs); err != nil {
 		return err
@@ -166,53 +149,11 @@ func (c *Client) subscribeUser(channelId string, userId string) error {
 	return nil
 }
 
-func (c *Client) convertAttachments(attachments []*PostAttachment) []*model.SlackAttachment {
-
-	var slackAttachments []*model.SlackAttachment
-
-	for _, a := range attachments {
-
-		sa := &model.SlackAttachment{
-			Fallback:   a.Fallback,
-			Color:      a.Color,
-			Pretext:    a.Pretext,
-			AuthorName: a.AuthorName,
-			AuthorLink: a.AuthorLink,
-			AuthorIcon: a.AuthorIcon,
-			Title:      a.Title,
-			TitleLink:  a.TitleLink,
-			Text:       a.Text,
-			ImageURL:   a.ImageURL,
-			ThumbURL:   a.ThumbURL,
-			Footer:     a.Footer,
-			FooterIcon: a.FooterIcon,
-		}
-
-		if a.Fields != nil && len(a.Fields) > 0 {
-			sa.Fields = []*model.SlackAttachmentField{}
-
-			for _, f := range a.Fields {
-				sa.Fields = append(sa.Fields, &model.SlackAttachmentField{
-					Title: f.Title,
-					Value: f.Value,
-					Short: model.SlackCompatibleBool(f.Short),
-				})
-
-			}
-		}
-
-		slackAttachments = append(slackAttachments, sa)
-
-	}
-
-	return slackAttachments
-}
-
-func (c *Client) createEphemeralPost(channelId string, recipientUserId string, message string, attachments []*PostAttachment) error {
+func (c *Client) CreateEphemeralPost(channelId string, recipientUserId string, message string, attachments []*model.SlackAttachment) error {
 
 	props := model.StringInterface{}
 	if attachments != nil && len(attachments) > 0 {
-		props["attachments"] = c.convertAttachments(attachments)
+		props["attachments"] = attachments
 	}
 
 	ep := &model.PostEphemeral{
@@ -232,11 +173,11 @@ func (c *Client) createEphemeralPost(channelId string, recipientUserId string, m
 
 }
 
-func (c *Client) createPost(channelId string, message string, attachments []*PostAttachment) error {
+func (c *Client) CreatePost(channelId string, message string, attachments []*model.SlackAttachment) error {
 
 	props := model.StringInterface{}
 	if attachments != nil && len(attachments) > 0 {
-		props["attachments"] = c.convertAttachments(attachments)
+		props["attachments"] = attachments
 	}
 
 	p := &model.Post{
@@ -254,7 +195,7 @@ func (c *Client) createPost(channelId string, message string, attachments []*Pos
 
 }
 
-func (c *Client) getUsersStatuses(userIds []string) ([]*UserStatus, error) {
+func (c *Client) GetUsersStatuses(userIds []string) ([]*UserStatus, error) {
 
 	statuses, rs := c.RestApi.GetUsersStatusesByIds(userIds)
 	if err := handleResponse(rs); err != nil {
@@ -272,18 +213,18 @@ func (c *Client) getUsersStatuses(userIds []string) ([]*UserStatus, error) {
 	return res, nil
 }
 
-func (c *Client) createDirectChannel(userId1, userId2 string) (*CreateChannelResponse, error) {
+func (c *Client) CreateDirectChannel(userId1, userId2 string) (string, error) {
 
 	ch, rs := c.RestApi.CreateGroupChannel([]string{userId1, userId2})
 	if err := handleResponse(rs); err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &CreateChannelResponse{ChannelId: ch.Id}, nil
+	return ch.Id, nil
 
 }
 
-func (c *Client) getChannelsForUserAndMembers(userId, teamName string, memberUserIds []string) ([]string, error) {
+func (c *Client) GetChannelsForUserAndMembers(userId, teamName string, memberUserIds []string) ([]string, error) {
 
 	team, rs := c.RestApi.GetTeamByName(teamName, "")
 	if err := handleResponse(rs); err != nil {

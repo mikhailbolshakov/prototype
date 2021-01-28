@@ -1,11 +1,11 @@
 package tasks
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
+	"gitlab.medzdrav.ru/prototype/api/repository/adapters/tasks"
 	"gitlab.medzdrav.ru/prototype/kit/grpc"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
@@ -14,24 +14,28 @@ import (
 	"time"
 )
 
-type controller struct {
+type Controller interface {
+	New(http.ResponseWriter, *http.Request)
+	MakeTransition(http.ResponseWriter, *http.Request)
+	GetById(http.ResponseWriter, *http.Request)
+	SetAssignee(http.ResponseWriter, *http.Request)
+	Search(http.ResponseWriter, *http.Request)
+	AssignmentLog(http.ResponseWriter, *http.Request)
+	GetHistory(http.ResponseWriter, *http.Request)
+}
+
+type ctrlImpl struct {
 	kitHttp.Controller
-	grpc *grpcClient
+	taskService tasks.Service
 }
 
-func newController() (*controller, error) {
-
-	c, err := newGrpcClient()
-	if err != nil {
-		return nil, err
+func NewController(taskService tasks.Service) Controller {
+	return &ctrlImpl{
+		taskService: taskService,
 	}
-
-	return &controller{
-		grpc: c,
-	}, nil
 }
 
-func (c *controller) New(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) New(writer http.ResponseWriter, request *http.Request) {
 
 	rq := &NewTaskRequest{}
 	decoder := json.NewDecoder(request.Body)
@@ -40,10 +44,7 @@ func (c *controller) New(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if rsPb, err := c.grpc.tasks.New(ctx, c.toPb(rq)); err != nil {
+	if rsPb, err := c.taskService.New(c.toPb(rq)); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.fromPb(rsPb))
@@ -51,41 +52,33 @@ func (c *controller) New(writer http.ResponseWriter, request *http.Request) {
 
 }
 
-func (c *controller) MakeTransition(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) MakeTransition(writer http.ResponseWriter, request *http.Request) {
 
 	taskId := mux.Vars(request)["id"]
 	transitionId := mux.Vars(request)["transitionId"]
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if rsPb, err := c.grpc.tasks.MakeTransition(ctx, &pb.MakeTransitionRequest{
+	if t, err := c.taskService.MakeTransition(&pb.MakeTransitionRequest{
 		TaskId:       taskId,
 		TransitionId: transitionId,
 	}); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.fromPb(rsPb))
+		c.RespondOK(writer, c.fromPb(t))
 	}
 }
 
-func (c *controller) GetById(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) GetById(writer http.ResponseWriter, request *http.Request) {
 
 	taskId := mux.Vars(request)["id"]
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if rsPb, err := c.grpc.tasks.GetById(ctx, &pb.GetByIdRequest{
-		Id:       taskId,
-	}); err != nil {
+	if rsPb, err := c.taskService.GetById(taskId); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.fromPb(rsPb))
 	}
 }
 
-func (c *controller) SetAssignee(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) SetAssignee(writer http.ResponseWriter, request *http.Request) {
 
 	taskId := mux.Vars(request)["id"]
 
@@ -96,10 +89,7 @@ func (c *controller) SetAssignee(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if rsPb, err := c.grpc.tasks.SetAssignee(ctx, &pb.SetAssigneeRequest{
+	if rsPb, err := c.taskService.SetAssignee(&pb.SetAssigneeRequest{
 		TaskId:   taskId,
 		Assignee: &pb.Assignee{
 			Group: rq.Group,
@@ -113,7 +103,7 @@ func (c *controller) SetAssignee(writer http.ResponseWriter, request *http.Reque
 	}
 }
 
-func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 
 	rq := &pb.SearchRequest{
 		Paging:   &pb.PagingRequest{},
@@ -149,10 +139,7 @@ func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
 		rq.Paging.Index = int32(index)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if rsPb, err := c.grpc.tasks.Search(ctx, rq); err != nil {
+	if rsPb, err := c.taskService.Search(rq); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.searchRsFromPb(rsPb))
@@ -160,7 +147,7 @@ func (c *controller) Search(writer http.ResponseWriter, request *http.Request) {
 
 }
 
-func (c *controller) AssignmentLog(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) AssignmentLog(writer http.ResponseWriter, request *http.Request) {
 
 	rq := &pb.AssignmentLogRequest{
 		Paging:   &pb.PagingRequest{},
@@ -202,10 +189,7 @@ func (c *controller) AssignmentLog(writer http.ResponseWriter, request *http.Req
 		rq.Paging.Index = int32(index)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if rsPb, err := c.grpc.tasks.GetAssignmentLog(ctx, rq); err != nil {
+	if rsPb, err := c.taskService.GetAssignmentLog(rq); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.assLogRsFromPb(rsPb))
@@ -213,16 +197,11 @@ func (c *controller) AssignmentLog(writer http.ResponseWriter, request *http.Req
 
 }
 
-func (c *controller) GetHistory(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) GetHistory(writer http.ResponseWriter, request *http.Request) {
 
 	taskId := mux.Vars(request)["id"]
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if rsPb, err := c.grpc.tasks.GetHistory(ctx, &pb.GetHistoryRequest{
-		TaskId:       taskId,
-	}); err != nil {
+	if rsPb, err := c.taskService.GetHistory(taskId); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.histFromPb(rsPb))

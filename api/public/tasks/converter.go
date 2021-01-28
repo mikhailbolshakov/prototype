@@ -6,7 +6,7 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 )
 
-func (c *controller) toPb(request *NewTaskRequest) *pb.NewTaskRequest {
+func (c *ctrlImpl) toPb(request *NewTaskRequest) *pb.NewTaskRequest {
 
 	var details []byte
 	if request.Details != nil {
@@ -57,7 +57,7 @@ func (c *controller) toPb(request *NewTaskRequest) *pb.NewTaskRequest {
 	return t
 }
 
-func (s *controller) fromPb(response *pb.Task) *Task {
+func (s *ctrlImpl) fromPb(response *pb.Task) *Task {
 
 	details := map[string]interface{}{}
 
@@ -113,7 +113,7 @@ func (s *controller) fromPb(response *pb.Task) *Task {
 	return t
 }
 
-func (s *controller) searchRsFromPb(rs *pb.SearchResponse) *SearchResponse {
+func (s *ctrlImpl) searchRsFromPb(rs *pb.SearchResponse) *SearchResponse {
 	r := &SearchResponse{
 		Index: int(rs.Paging.Index),
 		Total: int(rs.Paging.Total),
@@ -127,7 +127,7 @@ func (s *controller) searchRsFromPb(rs *pb.SearchResponse) *SearchResponse {
 	return r
 }
 
-func (s *controller) assLogRsFromPb(rs *pb.AssignmentLogResponse) *AssignmentLogResponse {
+func (s *ctrlImpl) assLogRsFromPb(rs *pb.AssignmentLogResponse) *AssignmentLogResponse {
 	r := &AssignmentLogResponse{
 		Index: int(rs.Paging.Index),
 		Total: int(rs.Paging.Total),
@@ -152,7 +152,7 @@ func (s *controller) assLogRsFromPb(rs *pb.AssignmentLogResponse) *AssignmentLog
 	return r
 }
 
-func (s *controller) histFromPb(rs *pb.GetHistoryResponse) []*History {
+func (s *ctrlImpl) histFromPb(rs *pb.GetHistoryResponse) []*History {
 	var res []*History
 	for _, h := range rs.Items {
 		res = append(res, &History{

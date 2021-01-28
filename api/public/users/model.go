@@ -77,15 +77,3 @@ type SearchResponse struct {
 	Users []*User `json:"users"`
 }
 
-type LoginRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	AuthCode string `json:"authCode"`
-}
-
-type LoginResponse struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
-	ExpiresIn    int    `json:"expiresIn"`
-}

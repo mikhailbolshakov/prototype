@@ -176,7 +176,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	}
 
 	// create a task
-	task, err := bp.taskService.CreateTask(&pb.NewTaskRequest{
+	task, err := bp.taskService.New(&pb.NewTaskRequest{
 		Type: &pb.Type{
 			Type:    "client",
 			Subtype: "expert-consultation",
@@ -340,7 +340,7 @@ func (bp *bpImpl) clientFeedbackHandler(client worker.JobClient, job entities.Jo
 	dueDate := startTime.Add(time.Minute * 3)
 
 	// create a task
-	t, err := bp.taskService.CreateTask(&pb.NewTaskRequest{
+	t, err := bp.taskService.New(&pb.NewTaskRequest{
 		Type: &pb.Type{
 			Type:    "client",
 			Subtype: "client-feedback",

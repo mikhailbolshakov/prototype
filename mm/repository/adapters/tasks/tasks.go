@@ -9,7 +9,7 @@ import (
 
 type Service interface {
 	GetByChannelId(channelId string) []*pb.Task
-	CreateTask(rq *pb.NewTaskRequest) (*pb.Task, error)
+	New(rq *pb.NewTaskRequest) (*pb.Task, error)
 	MakeTransition(rq *pb.MakeTransitionRequest) error
 }
 
@@ -47,9 +47,9 @@ func (u *serviceImpl) MakeTransition(rq *pb.MakeTransitionRequest) error {
 	return nil
 }
 
-func (u *serviceImpl) CreateTask(rq *pb.NewTaskRequest) (*pb.Task, error) {
+func (u *serviceImpl) New(rq *pb.NewTaskRequest) (*pb.Task, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	return u.New(ctx, rq)
+	return u.TasksClient.New(ctx, rq)
 }
 
