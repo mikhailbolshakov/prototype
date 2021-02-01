@@ -132,12 +132,24 @@ func (s *taskStorageImpl) Search(cr *SearchCriteria) (*SearchResponse, error) {
 		query = query.Where(`t.substatus = ?`, cr.SubStatus)
 	}
 
-	if cr.AssigneeUser != "" {
-		query = query.Where(`t.assignee_user = ?`, cr.AssigneeUser)
+	if cr.AssigneeUserId != "" {
+		query = query.Where(`t.assignee_user_id = ?`, cr.AssigneeUserId)
+	}
+
+	if cr.AssigneeUsername != "" {
+		query = query.Where(`t.assignee_username = ?`, cr.AssigneeUsername)
+	}
+
+	if cr.AssigneeType != "" {
+		query = query.Where(`t.assignee_type = ?`, cr.AssigneeType)
 	}
 
 	if cr.AssigneeGroup != "" {
 		query = query.Where(`t.assignee_group = ?`, cr.AssigneeGroup)
+	}
+
+	if cr.ChannelId != "" {
+		query = query.Where(`t.channel_id = ?`, cr.ChannelId)
 	}
 
 	// paging

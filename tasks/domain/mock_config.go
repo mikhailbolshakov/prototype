@@ -10,7 +10,7 @@ func getMockConfig() []*Config {
 		Id: "1",
 		Type: &Type{
 			Type:    TT_CLIENT,
-			SubType: TST_MED_REQUEST,
+			SubType: TST_REQUEST,
 		},
 		NumGenRule: &NumGenerationRule{
 			Prefix:         "MOI-",
@@ -19,84 +19,70 @@ func getMockConfig() []*Config {
 		StatusModel: &StatusModel{
 			Transitions: []*Transition{
 				{
-					Id:                "1",
-					From:              &Status{TS_EMPTY, TSS_EMPTY},
-					To:                &Status{TS_OPEN, TSS_REPORTED},
-					AllowAssignGroups: []string{G_CONSULTANT},
-					AutoAssignGroup:   G_CONSULTANT,
-					Initial:           true,
+					Id:              "1",
+					From:            &Status{TS_EMPTY, TSS_EMPTY},
+					To:              &Status{TS_OPEN, TSS_REPORTED},
+					AutoAssignType:  USR_TYPE_CONSULTANT,
+					AutoAssignGroup: USR_GRP_CONSULTANT_COMMON,
+					Initial:         true,
 				},
 				{
-					Id:                "2",
-					From:              &Status{TS_OPEN, TSS_REPORTED},
-					To:                &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
-					AllowAssignGroups: []string{G_CONSULTANT},
+					Id:   "2",
+					From: &Status{TS_OPEN, TSS_REPORTED},
+					To:   &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
 				},
 				{
-					Id:                "3",
-					From:              &Status{TS_OPEN, TSS_REPORTED},
-					To:                &Status{TS_OPEN, TSS_ASSIGNED},
-					AllowAssignGroups: []string{G_CONSULTANT},
+					Id:   "3",
+					From: &Status{TS_OPEN, TSS_REPORTED},
+					To:   &Status{TS_OPEN, TSS_ASSIGNED},
 				},
 				{
-					Id:                "4",
-					From:              &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
-					To:                &Status{TS_OPEN, TSS_ASSIGNED},
-					AllowAssignGroups: []string{G_CONSULTANT},
-					QueueTopic:        "tasks.assigned",
+					Id:         "4",
+					From:       &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
+					To:         &Status{TS_OPEN, TSS_ASSIGNED},
+					QueueTopic: "tasks.assigned",
 				},
 				{
-					Id:                "5",
-					From:              &Status{TS_OPEN, TSS_REPORTED},
-					To:                &Status{TS_CLOSED, TSS_CANCELLED},
-					AllowAssignGroups: []string{G_CONSULTANT},
+					Id:   "5",
+					From: &Status{TS_OPEN, TSS_REPORTED},
+					To:   &Status{TS_CLOSED, TSS_CANCELLED},
 				},
 				{
-					Id:                "6",
-					From:              &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
-					To:                &Status{TS_CLOSED, TSS_CANCELLED},
-					AllowAssignGroups: []string{G_CONSULTANT},
+					Id:   "6",
+					From: &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
+					To:   &Status{TS_CLOSED, TSS_CANCELLED},
 				},
 				{
-					Id:                "7",
-					From:              &Status{TS_OPEN, TSS_ASSIGNED},
-					To:                &Status{TS_CLOSED, TSS_CANCELLED},
-					AllowAssignGroups: []string{G_CONSULTANT},
+					Id:   "7",
+					From: &Status{TS_OPEN, TSS_ASSIGNED},
+					To:   &Status{TS_CLOSED, TSS_CANCELLED},
 				},
 				{
-					Id:                "8",
-					From:              &Status{TS_OPEN, TSS_ASSIGNED},
-					To:                &Status{TS_OPEN, TSS_IN_PROGRESS},
-					AllowAssignGroups: []string{G_CONSULTANT},
+					Id:   "8",
+					From: &Status{TS_OPEN, TSS_ASSIGNED},
+					To:   &Status{TS_OPEN, TSS_IN_PROGRESS},
 				},
 				{
-					Id:                "9",
-					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
-					To:                &Status{TS_OPEN, TSS_ON_HOLD},
-					AllowAssignGroups: []string{G_CONSULTANT},
+					Id:   "10",
+					From: &Status{TS_OPEN, TSS_IN_PROGRESS},
+					To:   &Status{TS_CLOSED, TSS_CANCELLED},
 				},
 				{
-					Id:                "10",
-					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
-					To:                &Status{TS_CLOSED, TSS_CANCELLED},
-					AllowAssignGroups: []string{G_CONSULTANT},
-				},
-				{
-					Id:                "11",
-					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
-					To:                &Status{TS_CLOSED, TSS_SOLVED},
-					AllowAssignGroups: []string{G_CONSULTANT},
-					QueueTopic: 	   "tasks.clientrequest.solved",
+					Id:         "11",
+					From:       &Status{TS_OPEN, TSS_IN_PROGRESS},
+					To:         &Status{TS_CLOSED, TSS_SOLVED},
+					QueueTopic: "tasks.clientrequest.solved",
 				},
 			},
 		},
 		AssignmentRules: []*AssignmentRule{
 			{
-				Code:                  "client-med-request-assignment",
-				Description:           "Подбор Медконсультанта для обращения клиента",
+				Code:                  "client-common-request-assignment",
+				Description:           "Подбор Консультанта для обращения клиента",
 				DistributionAlgorithm: "first-available",
 				UserPool: &UserPool{
-					Group:    G_CONSULTANT,
+					Type:     USR_TYPE_CONSULTANT,
+					Group:    USR_GRP_CONSULTANT_COMMON,
 					Statuses: []string{"online"},
 				},
 				Source: &AssignmentSource{
@@ -105,7 +91,8 @@ func getMockConfig() []*Config {
 						SubStatus: TSS_ON_ASSIGNMENT,
 					},
 					Assignee: &Assignee{
-						Group: G_CONSULTANT,
+						Type:  USR_TYPE_CONSULTANT,
+						Group: USR_GRP_CONSULTANT_COMMON,
 					},
 				},
 				Target: &AssignmentTarget{
@@ -118,15 +105,15 @@ func getMockConfig() []*Config {
 		},
 	})
 
-	// консультация с экспертом
+	// консультация со стоматологом
 	r = append(r, &Config{
 		Id: "2",
 		Type: &Type{
 			Type:    TT_CLIENT,
-			SubType: TST_EXPERT_CONSULTATION,
+			SubType: TST_DENTIST_CONSULTATION,
 		},
 		NumGenRule: &NumGenerationRule{
-			Prefix:         "CONS-",
+			Prefix:         "DENT-",
 			GenerationType: NUM_GEN_TYPE_RANDOM,
 		},
 		StatusModel: &StatusModel{
@@ -135,35 +122,31 @@ func getMockConfig() []*Config {
 					Id:                    "1",
 					From:                  &Status{TS_EMPTY, TSS_EMPTY},
 					To:                    &Status{TS_OPEN, TSS_ASSIGNED},
-					AllowAssignGroups:     []string{G_EXPERT},
-					AutoAssignGroup:       G_EXPERT,
+					AutoAssignType:        USR_TYPE_EXPERT,
+					AutoAssignGroup:       USR_GRP_DOCTOR_DENTIST,
 					AssignedUserMandatory: true,
 					Initial:               true,
 				},
 				{
-					Id:                "2",
-					From:              &Status{TS_OPEN, TSS_ASSIGNED},
-					To:                &Status{TS_OPEN, TSS_IN_PROGRESS},
-					AllowAssignGroups: []string{G_EXPERT},
+					Id:   "2",
+					From: &Status{TS_OPEN, TSS_ASSIGNED},
+					To:   &Status{TS_OPEN, TSS_IN_PROGRESS},
 				},
 				{
-					Id:                "3",
-					From:              &Status{TS_OPEN, TSS_ASSIGNED},
-					To:                &Status{TS_OPEN, TSS_CANCELLED},
-					AllowAssignGroups: []string{G_EXPERT},
+					Id:   "3",
+					From: &Status{TS_OPEN, TSS_ASSIGNED},
+					To:   &Status{TS_OPEN, TSS_CANCELLED},
 				},
 				{
-					Id:                "4",
-					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
-					To:                &Status{TS_CLOSED, TSS_SOLVED},
-					AllowAssignGroups: []string{G_EXPERT},
-					QueueTopic:        "tasks.solved",
+					Id:         "4",
+					From:       &Status{TS_OPEN, TSS_IN_PROGRESS},
+					To:         &Status{TS_CLOSED, TSS_SOLVED},
+					QueueTopic: "tasks.solved",
 				},
 				{
-					Id:                "5",
-					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
-					To:                &Status{TS_CLOSED, TSS_CANCELLED},
-					AllowAssignGroups: []string{G_EXPERT},
+					Id:   "5",
+					From: &Status{TS_OPEN, TSS_IN_PROGRESS},
+					To:   &Status{TS_CLOSED, TSS_CANCELLED},
 				},
 			},
 		},
@@ -187,24 +170,233 @@ func getMockConfig() []*Config {
 					Id:                    "1",
 					From:                  &Status{TS_EMPTY, TSS_EMPTY},
 					To:                    &Status{TS_OPEN, TSS_ASSIGNED},
-					AllowAssignGroups:     []string{G_CLIENT},
-					AutoAssignGroup:       G_CLIENT,
+					AutoAssignGroup:       USR_TYPE_CLIENT,
 					AssignedUserMandatory: true,
 					Initial:               true,
 				},
 				{
-					Id:                "2",
-					From:              &Status{TS_OPEN, TSS_ASSIGNED},
-					To:                &Status{TS_CLOSED, TSS_SOLVED},
+					Id:   "2",
+					From: &Status{TS_OPEN, TSS_ASSIGNED},
+					To:   &Status{TS_CLOSED, TSS_SOLVED},
 				},
 				{
-					Id:                "3",
-					From:              &Status{TS_OPEN, TSS_ASSIGNED},
-					To:                &Status{TS_CLOSED, TSS_CANCELLED},
+					Id:   "3",
+					From: &Status{TS_OPEN, TSS_ASSIGNED},
+					To:   &Status{TS_CLOSED, TSS_CANCELLED},
 				},
 			},
 		},
 		AssignmentRules: []*AssignmentRule{},
+	})
+
+	// обращение клиента за медицинской консультацией
+	r = append(r, &Config{
+		Id: "4",
+		Type: &Type{
+			Type:    TT_CLIENT,
+			SubType: TST_MED_REQUEST,
+		},
+		NumGenRule: &NumGenerationRule{
+			Prefix:         "MED-",
+			GenerationType: NUM_GEN_TYPE_RANDOM,
+		},
+		StatusModel: &StatusModel{
+			Transitions: []*Transition{
+				{
+					Id:              "1",
+					From:            &Status{TS_EMPTY, TSS_EMPTY},
+					To:              &Status{TS_OPEN, TSS_REPORTED},
+					AutoAssignType:  USR_TYPE_CONSULTANT,
+					AutoAssignGroup: USR_GRP_CONSULTANT_MED,
+					Initial:         true,
+				},
+				{
+					Id:   "2",
+					From: &Status{TS_OPEN, TSS_REPORTED},
+					To:   &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
+				},
+				{
+					Id:   "3",
+					From: &Status{TS_OPEN, TSS_REPORTED},
+					To:   &Status{TS_OPEN, TSS_ASSIGNED},
+				},
+				{
+					Id:         "4",
+					From:       &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
+					To:         &Status{TS_OPEN, TSS_ASSIGNED},
+					QueueTopic: "tasks.assigned",
+				},
+				{
+					Id:   "5",
+					From: &Status{TS_OPEN, TSS_REPORTED},
+					To:   &Status{TS_CLOSED, TSS_CANCELLED},
+				},
+				{
+					Id:   "6",
+					From: &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
+					To:   &Status{TS_CLOSED, TSS_CANCELLED},
+				},
+				{
+					Id:   "7",
+					From: &Status{TS_OPEN, TSS_ASSIGNED},
+					To:   &Status{TS_CLOSED, TSS_CANCELLED},
+				},
+				{
+					Id:   "8",
+					From: &Status{TS_OPEN, TSS_ASSIGNED},
+					To:   &Status{TS_OPEN, TSS_IN_PROGRESS},
+				},
+				{
+					Id:   "9",
+					From: &Status{TS_OPEN, TSS_IN_PROGRESS},
+					To:   &Status{TS_OPEN, TSS_ON_HOLD},
+				},
+				{
+					Id:   "10",
+					From: &Status{TS_OPEN, TSS_IN_PROGRESS},
+					To:   &Status{TS_CLOSED, TSS_CANCELLED},
+				},
+				{
+					Id:         "11",
+					From:       &Status{TS_OPEN, TSS_IN_PROGRESS},
+					To:         &Status{TS_CLOSED, TSS_SOLVED},
+					QueueTopic: "tasks.clientrequest.solved",
+				},
+			},
+		},
+		AssignmentRules: []*AssignmentRule{
+			{
+				Code:                  "client-med-request-assignment",
+				Description:           "Подбор Консультанта для медицинского обращения клиента",
+				DistributionAlgorithm: "first-available",
+				UserPool: &UserPool{
+					Type:     USR_TYPE_CONSULTANT,
+					Group:    USR_GRP_CONSULTANT_MED,
+					Statuses: []string{"online"},
+				},
+				Source: &AssignmentSource{
+					Status: &Status{
+						Status:    TS_OPEN,
+						SubStatus: TSS_ON_ASSIGNMENT,
+					},
+					Assignee: &Assignee{
+						Type:  USR_TYPE_CONSULTANT,
+						Group: USR_GRP_CONSULTANT_MED,
+					},
+				},
+				Target: &AssignmentTarget{
+					Status: &Status{
+						Status:    TS_OPEN,
+						SubStatus: TSS_ASSIGNED,
+					},
+				},
+			},
+		},
+	})
+
+	// обращение клиента за юридической консультацией
+	r = append(r, &Config{
+		Id: "5",
+		Type: &Type{
+			Type:    TT_CLIENT,
+			SubType: TST_LAWYER_REQUEST,
+		},
+		NumGenRule: &NumGenerationRule{
+			Prefix:         "LWR-",
+			GenerationType: NUM_GEN_TYPE_RANDOM,
+		},
+		StatusModel: &StatusModel{
+			Transitions: []*Transition{
+				{
+					Id:              "1",
+					From:            &Status{TS_EMPTY, TSS_EMPTY},
+					To:              &Status{TS_OPEN, TSS_REPORTED},
+					AutoAssignType:  USR_TYPE_CONSULTANT,
+					AutoAssignGroup: USR_GRP_CONSULTANT_LAWYER,
+					Initial:         true,
+				},
+				{
+					Id:                "2",
+					From:              &Status{TS_OPEN, TSS_REPORTED},
+					To:                &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
+				},
+				{
+					Id:                "3",
+					From:              &Status{TS_OPEN, TSS_REPORTED},
+					To:                &Status{TS_OPEN, TSS_ASSIGNED},
+				},
+				{
+					Id:                "4",
+					From:              &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
+					To:                &Status{TS_OPEN, TSS_ASSIGNED},
+					QueueTopic:        "tasks.assigned",
+				},
+				{
+					Id:                "5",
+					From:              &Status{TS_OPEN, TSS_REPORTED},
+					To:                &Status{TS_CLOSED, TSS_CANCELLED},
+				},
+				{
+					Id:                "6",
+					From:              &Status{TS_OPEN, TSS_ON_ASSIGNMENT},
+					To:                &Status{TS_CLOSED, TSS_CANCELLED},
+				},
+				{
+					Id:                "7",
+					From:              &Status{TS_OPEN, TSS_ASSIGNED},
+					To:                &Status{TS_CLOSED, TSS_CANCELLED},
+				},
+				{
+					Id:                "8",
+					From:              &Status{TS_OPEN, TSS_ASSIGNED},
+					To:                &Status{TS_OPEN, TSS_IN_PROGRESS},
+				},
+				{
+					Id:                "9",
+					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
+					To:                &Status{TS_OPEN, TSS_ON_HOLD},
+				},
+				{
+					Id:                "10",
+					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
+					To:                &Status{TS_CLOSED, TSS_CANCELLED},
+				},
+				{
+					Id:                "11",
+					From:              &Status{TS_OPEN, TSS_IN_PROGRESS},
+					To:                &Status{TS_CLOSED, TSS_SOLVED},
+					QueueTopic:        "tasks.clientrequest.solved",
+				},
+			},
+		},
+		AssignmentRules: []*AssignmentRule{
+			{
+				Code:                  "client-law-request-assignment",
+				Description:           "Подбор Консультанта для юридического обращения клиента",
+				DistributionAlgorithm: "first-available",
+				UserPool: &UserPool{
+					Type:     USR_TYPE_CONSULTANT,
+					Group:    USR_GRP_CONSULTANT_LAWYER,
+					Statuses: []string{"online"},
+				},
+				Source: &AssignmentSource{
+					Status: &Status{
+						Status:    TS_OPEN,
+						SubStatus: TSS_ON_ASSIGNMENT,
+					},
+					Assignee: &Assignee{
+						Type:  USR_TYPE_CONSULTANT,
+						Group: USR_GRP_CONSULTANT_LAWYER,
+					},
+				},
+				Target: &AssignmentTarget{
+					Status: &Status{
+						Status:    TS_OPEN,
+						SubStatus: TSS_ASSIGNED,
+					},
+				},
+			},
+		},
 	})
 
 	return r

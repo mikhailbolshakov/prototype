@@ -9,19 +9,19 @@ type Adapter interface {
 	Init() error
 	GetBalanceService() BalanceService
 	GetDeliveryService() DeliveryService
+	Close()
 }
 
 type adapterImpl struct {
 	balanceServiceImpl  *balanceServiceImpl
 	deliveryServiceImpl *deliveryServiceImpl
-	initialized         bool
+	client              *kitGrpc.Client
 }
 
 func NewAdapter() Adapter {
 	a := &adapterImpl{
 		balanceServiceImpl:  newBalanceImpl(),
 		deliveryServiceImpl: newDeliveryImpl(),
-		initialized:         false,
 	}
 	return a
 }
@@ -31,6 +31,7 @@ func (a *adapterImpl) Init() error {
 	if err != nil {
 		return err
 	}
+	a.client = cl
 	a.balanceServiceImpl.BalanceServiceClient = pb.NewBalanceServiceClient(cl.Conn)
 	a.deliveryServiceImpl.DeliveryServiceClient = pb.NewDeliveryServiceClient(cl.Conn)
 	return nil
@@ -42,4 +43,8 @@ func (a *adapterImpl) GetBalanceService() BalanceService {
 
 func (a *adapterImpl) GetDeliveryService() DeliveryService {
 	return a.deliveryServiceImpl
+}
+
+func (a *adapterImpl) Close() {
+	_ = a.client.Conn.Close()
 }

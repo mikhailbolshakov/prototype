@@ -30,6 +30,15 @@ func toDto(domain *User) *storage.User {
 
 	dto.Details = string(detailsBytes)
 
+	dto.Groups = []*storage.UserGroup{}
+	for _, g := range domain.Groups {
+		dto.Groups = append(dto.Groups, &storage.UserGroup{
+			UserId: dto.Id,
+			Type:   dto.Type,
+			Group:  g,
+		})
+	}
+
 	return dto
 
 }
@@ -49,6 +58,7 @@ func fromDto(dto *storage.User) *User {
 		KKUserId:   dto.KKUserId,
 		ModifiedAt: dto.UpdatedAt,
 		DeletedAt:  dto.DeletedAt,
+		Groups:     []string{},
 	}
 
 	switch dto.Type {
@@ -65,6 +75,9 @@ func fromDto(dto *storage.User) *User {
 		_ = json.Unmarshal([]byte(dto.Details), &ed)
 		domain.ExpertDetails = ed
 	}
+	for _, g := range dto.Groups {
+		domain.Groups = append(domain.Groups, g.Group)
+	}
 
 	return domain
 
@@ -76,14 +89,17 @@ func criteriaToDto(c *SearchCriteria) *storage.SearchCriteria {
 	}
 
 	return &storage.SearchCriteria{
-		PagingRequest: c.PagingRequest,
-		UserType:      c.UserType,
-		Username:      c.Username,
-		Status:        c.Status,
-		Email:         c.Email,
-		Phone:         c.Phone,
-		MMId:          c.MMId,
-		MMChannelId:   c.MMChannelId,
+		PagingRequest:   c.PagingRequest,
+		UserType:        c.UserType,
+		Username:        c.Username,
+		UserGroup:       c.UserGroup,
+		Status:          c.Status,
+		Email:           c.Email,
+		Phone:           c.Phone,
+		MMId:            c.MMId,
+		CommonChannelId: c.CommonChannelId,
+		MedChannelId:    c.MedChannelId,
+		LawChannelId:    c.LawChannelId,
 	}
 }
 

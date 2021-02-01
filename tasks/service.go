@@ -8,6 +8,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
 	"gitlab.medzdrav.ru/prototype/tasks/grpc"
 	"gitlab.medzdrav.ru/prototype/tasks/infrastructure"
+	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/storage"
 	"math/rand"
@@ -21,6 +22,7 @@ type serviceImpl struct {
 	scheduler               domain.TaskScheduler
 	grpc                    *grpc.Server
 	usersAdapter            users.Adapter
+	chatAdapter             chat.Adapter
 	storage                 storage.TaskStorage
 	infr                    *infrastructure.Container
 	queue                   queue.Queue
@@ -33,13 +35,16 @@ func New() service.Service {
 	s.queue = &stan.Stan{}
 	s.infr = infrastructure.New()
 	s.storage = storage.NewStorage(s.infr)
-	s.usersAdapter = users.NewAdapter()
 	s.domainConfigService = domain.NewTaskConfigService()
 	s.scheduler = domain.NewScheduler(s.domainConfigService, s.storage)
 
+	s.usersAdapter = users.NewAdapter()
 	userService := s.usersAdapter.GetUserService()
 
-	s.domainTaskService = domain.NewTaskService(s.scheduler, s.storage, s.domainConfigService, userService, s.queue)
+	s.chatAdapter = chat.NewAdapter()
+	chatService := s.chatAdapter.GetService()
+
+	s.domainTaskService = domain.NewTaskService(s.scheduler, s.storage, s.domainConfigService, userService, s.queue, chatService)
 	s.domainTaskSearchService = domain.NewTaskSearchService(s.storage)
 
 	s.assignTasksDaemon = domain.NewAssignmentDaemon(s.domainConfigService,
@@ -63,23 +68,20 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
+	if err := s.chatAdapter.Init(); err != nil {
+		return err
+	}
+
 	if err := s.queue.Open(fmt.Sprintf("client_tasks_%d", rand.Intn(99999))); err != nil {
 		return err
 	}
 
-	if err := s.assignTasksDaemon.AddTaskType(&domain.Type{
-		Type:    domain.TT_CLIENT,
-		SubType: domain.TST_MED_REQUEST,
-	}); err != nil {
+	if err := s.assignTasksDaemon.Init(); err != nil {
 		return err
 	}
 
 	return nil
 
-}
-
-func (s *serviceImpl) Listen() error {
-	return nil
 }
 
 func (s *serviceImpl) ListenAsync() error {
@@ -89,4 +91,16 @@ func (s *serviceImpl) ListenAsync() error {
 	s.scheduler.StartAsync()
 
 	return nil
+}
+
+func (s *serviceImpl) Close() {
+
+	// TODO: if uncomment hangs on, has to be investigated
+	_ = s.assignTasksDaemon.Stop()
+	s.chatAdapter.Close()
+	s.usersAdapter.Close()
+
+	_ = s.queue.Close()
+	s.infr.Close()
+	s.grpc.Close()
 }

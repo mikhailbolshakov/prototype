@@ -20,7 +20,9 @@ func (s *Server) clientDetailsFromPb(c *pb.ClientDetails) *domain.ClientDetails 
 			GivenAt:   grpc.PbTSToTime(c.PersonalAgreement.GivenAt),
 			RevokedAt: grpc.PbTSToTime(c.PersonalAgreement.RevokedAt),
 		},
-		MMChannelId: c.MMChannelId,
+		CommonChannelId: c.CommonChannelId,
+		MedChannelId:    c.MedChannelId,
+		LawChannelId:    c.LawChannelId,
 	}
 }
 
@@ -36,19 +38,22 @@ func (s *Server) fromDomain(user *domain.User) *pb.User {
 		Username: user.Username,
 		Status:   user.Status,
 		MMId:     user.MMUserId,
+		Groups:   user.Groups,
 	}
 
 	switch user.Type {
 	case domain.USER_TYPE_CLIENT:
 		pu.ClientDetails = &pb.ClientDetails{
-			FirstName:   user.ClientDetails.FirstName,
-			MiddleName:  user.ClientDetails.MiddleName,
-			LastName:    user.ClientDetails.LastName,
-			Sex:         user.ClientDetails.Sex,
-			BirthDate:   grpc.TimeToPbTS(&user.ClientDetails.BirthDate),
-			Phone:       user.ClientDetails.Phone,
-			Email:       user.ClientDetails.Email,
-			MMChannelId: user.ClientDetails.MMChannelId,
+			FirstName:       user.ClientDetails.FirstName,
+			MiddleName:      user.ClientDetails.MiddleName,
+			LastName:        user.ClientDetails.LastName,
+			Sex:             user.ClientDetails.Sex,
+			BirthDate:       grpc.TimeToPbTS(&user.ClientDetails.BirthDate),
+			Phone:           user.ClientDetails.Phone,
+			Email:           user.ClientDetails.Email,
+			CommonChannelId: user.ClientDetails.CommonChannelId,
+			MedChannelId:    user.ClientDetails.MedChannelId,
+			LawChannelId:    user.ClientDetails.LawChannelId,
 			PersonalAgreement: &pb.PersonalAgreement{
 				GivenAt:   grpc.TimeToPbTS(user.ClientDetails.PersonalAgreement.GivenAt),
 				RevokedAt: grpc.TimeToPbTS(user.ClientDetails.PersonalAgreement.RevokedAt),
@@ -87,14 +92,17 @@ func (s *Server) searchRqFromPb(pb *pb.SearchRequest) *domain.SearchCriteria {
 			Size:  int(pb.Paging.Size),
 			Index: int(pb.Paging.Index),
 		},
-		UserType:       pb.UserType,
-		Username:       pb.Username,
-		Status:         pb.Status,
-		Email:          pb.Email,
-		Phone:          pb.Phone,
-		MMId:           pb.MMId,
-		MMChannelId:    pb.MMChannelId,
-		OnlineStatuses: pb.OnlineStatuses,
+		UserType:        pb.UserType,
+		Username:        pb.Username,
+		UserGroup:       pb.UserGroup,
+		Status:          pb.Status,
+		Email:           pb.Email,
+		Phone:           pb.Phone,
+		MMId:            pb.MMId,
+		CommonChannelId: pb.CommonChannelId,
+		MedChannelId:    pb.MedChannelId,
+		LawChannelId:    pb.LawChannelId,
+		OnlineStatuses:  pb.OnlineStatuses,
 	}
 
 }

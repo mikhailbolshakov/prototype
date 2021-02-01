@@ -15,13 +15,17 @@ type Type struct {
 }
 
 type Assignee struct {
-	Group string     `json:"group,omitempty"`
-	User  string     `json:"user,omitempty"`
-	At    *time.Time `json:"at,omitempty"`
+	Type     string     `json:"type,omitempty"`
+	Group    string     `json:"group,omitempty"`
+	UserId   string     `json:"userId,omitempty"`
+	Username string     `json:"username,omitempty"`
+	At       *time.Time `json:"at,omitempty"`
 }
 
 type Reported struct {
-	By string     `json:"by"`
+	Type     string     `json:"type,omitempty"`
+	UserId   string     `json:"userId,omitempty"`
+	Username string     `json:"username,omitempty"`
 	At *time.Time `json:"at"`
 }
 

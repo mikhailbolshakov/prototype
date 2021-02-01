@@ -13,18 +13,20 @@ type CreateClientRequest struct {
 }
 
 type CreateConsultantRequest struct {
-	FirstName  string `json:"firstName"`
-	MiddleName string `json:"middleName"`
-	LastName   string `json:"lastName"`
-	Email      string `json:"email"`
+	FirstName  string   `json:"firstName"`
+	MiddleName string   `json:"middleName"`
+	LastName   string   `json:"lastName"`
+	Email      string   `json:"email"`
+	Groups     []string `json:"groups"`
 }
 
 type CreateExpertRequest struct {
-	FirstName      string `json:"firstName"`
-	MiddleName     string `json:"middleName"`
-	LastName       string `json:"lastName"`
-	Email          string `json:"email"`
-	Specialization string `json:"specialization"`
+	FirstName      string   `json:"firstName"`
+	MiddleName     string   `json:"middleName"`
+	LastName       string   `json:"lastName"`
+	Email          string   `json:"email"`
+	Specialization string   `json:"specialization"`
+	Groups         []string `json:"groups"`
 }
 
 type User struct {
@@ -37,6 +39,7 @@ type User struct {
 	ClientDetails     *ClientDetails     `json:"clientDetails,omitempty"`
 	ConsultantDetails *ConsultantDetails `json:"consultantDetails,omitempty"`
 	ExpertDetails     *ExpertDetails     `json:"expertDetails,omitempty"`
+	Groups            []string           `json:"groups,omitempty"`
 }
 
 type PersonalAgreement struct {
@@ -53,7 +56,9 @@ type ClientDetails struct {
 	Phone             string             `json:"phone"`
 	Email             string             `json:"email"`
 	PersonalAgreement *PersonalAgreement `json:"personalAgreement"`
-	MMChannelId       string             `json:"mmChannelId,omitempty"`
+	CommonChannelId   string             `json:"commonChannelId,omitempty"`
+	MedChannelId      string             `json:"medChannelId,omitempty"`
+	LawChannelId      string             `json:"lawChannelId,omitempty"`
 }
 
 type ConsultantDetails struct {
@@ -76,4 +81,3 @@ type SearchResponse struct {
 	Total int     `json:"total"`
 	Users []*User `json:"users"`
 }
-

@@ -7,7 +7,7 @@ import (
 	"github.com/zeebe-io/zeebe/clients/go/pkg/entities"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
 	bpm2 "gitlab.medzdrav.ru/prototype/bp/bpm"
-	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/mattermost"
+	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/services"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/tasks"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/users"
@@ -16,7 +16,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/bpm/zeebe"
 	"gitlab.medzdrav.ru/prototype/kit/grpc"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
-	"gitlab.medzdrav.ru/prototype/proto/mm"
+	pbChat "gitlab.medzdrav.ru/prototype/proto/chat"
 	services2 "gitlab.medzdrav.ru/prototype/proto/services"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 	"gitlab.medzdrav.ru/prototype/queue_model"
@@ -29,7 +29,7 @@ type bpImpl struct {
 	taskService tasks.Service
 	userService users.Service
 	delivery    services.DeliveryService
-	mmService   mattermost.Service
+	mmService   chat.Service
 	bpm.BpBase
 }
 
@@ -37,7 +37,7 @@ func NewBp(balanceService services.BalanceService,
 	delivery services.DeliveryService,
 	taskService tasks.Service,
 	userService users.Service,
-	mmService mattermost.Service,
+	mmService chat.Service,
 	bpm bpm.Engine) bpm2.BusinessProcess {
 
 	bp := &bpImpl{
@@ -60,10 +60,6 @@ func (bp *bpImpl) Init() error {
 		return err
 	}
 
-	if err := bp.DeployBPMNs([]string{"../bp/bpm/expert_online_consultation/bp.bpmn"}); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -74,6 +70,10 @@ func (bp *bpImpl) SetQueueListeners(ql listener.QueueListener) {
 
 func (bp *bpImpl) GetId() string {
 	return "p-expert-online-consultation"
+}
+
+func (bp *bpImpl) GetBPMNPath() string {
+	return "../bp/bpm/expert_online_consultation/bp.bpmn"
 }
 
 func (bp *bpImpl) registerBpmHandlers() error {
@@ -107,7 +107,7 @@ func (bp *bpImpl) solvedTaskHandler(payload []byte) error {
 	vars["taskCompleted"] = true
 	_ = bp.SendMessage("msg-task-finished", ts.Id, vars)
 
-	user := bp.userService.Get(ts.Reported.By)
+	user := bp.userService.Get(ts.Reported.UserId)
 
 	if err := bp.mmService.SendTriggerPost("client.task-solved", user.MMId, ts.ChannelId, map[string]interface{}{
 		"task-num": ts.Num,
@@ -161,7 +161,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 		channelId = channels[0]
 	} else {
 		//create a channel
-		chRs, err := bp.mmService.CreateClientChannel(&mm.CreateClientChannelRequest{
+		chRs, err := bp.mmService.CreateClientChannel(&pbChat.CreateClientChannelRequest{
 			ClientUserId: user.MMId,
 			DisplayName:  "Клиент - эксперт",
 			Name:         kit.NewId(),
@@ -179,16 +179,17 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	task, err := bp.taskService.New(&pb.NewTaskRequest{
 		Type: &pb.Type{
 			Type:    "client",
-			Subtype: "expert-consultation",
+			Subtype: "dentist-consultation",
 		},
-		ReportedBy:  user.Username,
-		ReportedAt:  grpc.TimeToPbTS(startTime),
-		Description: "Консультация с экспертом",
-		Title:       "Консультация с экспертом",
+		Reported: &pb.Reported{
+			UserId:   user.Id,
+			At:       grpc.TimeToPbTS(startTime),
+		},
+		Description: "Консультация назначена при обращении к медконсультанту",
+		Title:       "Консультация со стоматологом",
 		DueDate:     grpc.TimeToPbTS(&consultationTime),
 		Assignee: &pb.Assignee{
-			Group: expert.Type,
-			User:  expert.Username,
+			UserId:  expert.Id,
 			At:    grpc.TimeToPbTS(startTime),
 		},
 		ChannelId: channelId,
@@ -345,17 +346,15 @@ func (bp *bpImpl) clientFeedbackHandler(client worker.JobClient, job entities.Jo
 			Type:    "client",
 			Subtype: "client-feedback",
 		},
-		ReportedBy:  expertUser.Username,
-		ReportedAt:  grpc.TimeToPbTS(&startTime),
+		Reported: &pb.Reported{UserId: expertUser.Id, At: grpc.TimeToPbTS(&startTime)},
 		Description: fmt.Sprintf("Добрый день %s %s, просим заполнить обратную связь о консультации с экспертом %s %s", user.ClientDetails.FirstName, user.ClientDetails.LastName, expertUser.ExpertDetails.FirstName, expertUser.ExpertDetails.LastName),
 		Title:       fmt.Sprintf("Обратная связь о консультации %s", deliveryTasks[0].(string)),
 		Assignee: &pb.Assignee{
-			Group: user.Type,
-			User:  user.Username,
+			UserId:  user.Id,
 			At:    grpc.TimeToPbTS(&startTime),
 		},
 		DueDate: grpc.TimeToPbTS(&dueDate),
-		ChannelId: user.ClientDetails.MMChannelId,
+		ChannelId: user.ClientDetails.CommonChannelId,
 		Reminders: []*pb.Reminder{
 			{
 				BeforeDueDate: &pb.BeforeDueDate{

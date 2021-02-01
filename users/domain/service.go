@@ -68,6 +68,10 @@ func (u *userServiceImpl) newClient(user *User) (*User, error) {
 
 	user.Username = user.ClientDetails.Phone
 
+	if user.Groups == nil || len(user.Groups) == 0 {
+		user.Groups = []string{USER_GRP_CLIENT}
+	}
+
 	return user, nil
 
 }
@@ -89,6 +93,10 @@ func (u *userServiceImpl) newConsultant(user *User) (*User, error) {
 
 	user.Username = strings.Split(user.ConsultantDetails.Email, "@")[0]
 
+	if user.Groups == nil || len(user.Groups) == 0 {
+		return nil, fmt.Errorf("groups aren't specified")
+	}
+
 	return user, nil
 
 }
@@ -109,6 +117,10 @@ func (u *userServiceImpl) newExpert(user *User) (*User, error) {
 	}
 
 	user.Username = strings.Split(user.ExpertDetails.Email, "@")[0]
+
+	if user.Groups == nil || len(user.Groups) == 0 {
+		return nil, fmt.Errorf("groups aren't specified")
+	}
 
 	return user, nil
 

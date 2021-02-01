@@ -12,6 +12,7 @@ type Service interface {
 	SetClientDetails(userId string, details *pb.ClientDetails) (*pb.User, error)
 	SetMMUserId(userId, mmId string) (*pb.User, error)
 	SetKKUserId(userId, kkId string) (*pb.User, error)
+	GetByMMId(mmUserId string) (*pb.User, error)
 }
 
 type serviceImpl struct {
@@ -50,3 +51,6 @@ func (u *serviceImpl) SetKKUserId(userId, kkId string) (*pb.User, error) {
 	return u.UsersClient.SetKKUserId(context.Background(), &pb.SetKKIdRequest{UserId: userId, KKId: kkId})
 }
 
+func (u *serviceImpl) GetByMMId(mmUserId string) (*pb.User, error) {
+	return u.UsersClient.GetByMMId(context.Background(), &pb.GetByMMIdRequest{MMId: mmUserId})
+}

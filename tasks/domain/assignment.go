@@ -1,8 +1,6 @@
 package domain
 
 import (
-	"context"
-	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/users"
@@ -14,13 +12,13 @@ import (
 type AssignmentDaemon interface {
 	Run()
 	Stop() error
-	AddTaskType(taskType *Type) error
+	Init() error
 }
 
 type assignmentTask struct {
-	taskType   *Type
-	cfg        *Config
-	cancelFunc context.CancelFunc
+	taskType *Type
+	cfg      *Config
+	quit     chan struct{}
 }
 
 func NewAssignmentDaemon(cfgService ConfigService,
@@ -85,7 +83,8 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 				Size:  100,
 				Index: 1,
 			},
-			UserType:       rule.UserPool.Group,
+			UserType:       rule.UserPool.Type,
+			UserGroup:      rule.UserPool.Group,
 			Status:         "active",
 			OnlineStatuses: rule.UserPool.Statuses,
 		})
@@ -148,7 +147,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 
 			// assign task to user
 			t, err = d.taskService.SetAssignee(t.Id, &Assignee{
-				User: userToAssign.Username,
+				UserId: userToAssign.Id,
 			})
 			if err != nil {
 				logFail(l, err)
@@ -189,9 +188,6 @@ func (d *daemonImpl) Run() {
 
 	for _, t := range d.taskTypes {
 
-		ctx, cancel := context.WithCancel(context.Background())
-		t.cancelFunc = cancel
-
 		go func(tt *assignmentTask) {
 
 			for {
@@ -201,7 +197,7 @@ func (d *daemonImpl) Run() {
 					if err := d.assign(tt); err != nil {
 						return
 					}
-				case <-ctx.Done():
+				case <-tt.quit:
 					log.Printf("assignment task of type %v is cancelled", tt.taskType)
 					return
 				}
@@ -217,33 +213,27 @@ func (d *daemonImpl) Run() {
 func (d *daemonImpl) Stop() error {
 
 	for _, t := range d.taskTypes {
-		t.cancelFunc()
+		t.quit <- struct{}{}
 	}
 
 	return nil
 }
 
-func (d *daemonImpl) AddTaskType(taskType *Type) error {
+func (d *daemonImpl) Init() error {
 
-	cfg, err := d.cfgService.Get(taskType)
-	if err != nil {
-		return err
-	}
+	d.taskTypes = []*assignmentTask{}
 
-	if cfg.AssignmentRules == nil || len(cfg.AssignmentRules) == 0 {
-		return fmt.Errorf("given task type doesn't have assignment rule configured")
-	}
+	for _, cfg := range d.cfgService.GetAll() {
 
-	for _, t := range d.taskTypes {
-		if t.taskType.equals(taskType) {
-			return fmt.Errorf("task type has been already added to daemon")
+		if cfg.AssignmentRules != nil && len(cfg.AssignmentRules) == 0 {
+			d.taskTypes = append(d.taskTypes, &assignmentTask{
+				taskType: cfg.Type,
+				cfg:      cfg,
+				quit:     make(chan struct{}),
+			})
 		}
-	}
 
-	d.taskTypes = append(d.taskTypes, &assignmentTask{
-		taskType: taskType,
-		cfg:      cfg,
-	})
+	}
 
 	return nil
 

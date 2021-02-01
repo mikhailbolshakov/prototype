@@ -57,3 +57,8 @@ func Open(params *Params) (*Storage, error) {
 
 }
 
+func (s *Storage) Close() {
+	db, _ := s.Instance.DB()
+	_ = db.Close()
+}
+

@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"github.com/google/uuid"
+	"gitlab.medzdrav.ru/prototype/kit"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/users/infrastructure"
 	"math"
@@ -19,6 +20,8 @@ type UserStorage interface {
 	UpdateDetails(userId string, details string) (*User, error)
 	UpdateMMId(userId, mmId string) (*User, error)
 	UpdateKKId(userId, kkId string) (*User, error)
+	AddGroups(groups ...*UserGroup) error
+	RevokeGroups(groups ...*UserGroup) error
 }
 
 type storageImpl struct {
@@ -43,7 +46,11 @@ func (s *storageImpl) CreateUser(user *User) (*User, error) {
 		return nil, result.Error
 	}
 
+	if err := s.AddGroups(user.Groups...); err != nil {
+		return nil, err
+	}
 	return user, nil
+
 }
 
 func (s *storageImpl) updateField(userId, fieldName string, value interface{}) error {
@@ -87,6 +94,15 @@ func (s *storageImpl) UpdateDetails(userId string, details string) (*User, error
 	return s.Get(userId), nil
 }
 
+func (s *storageImpl) getGroups(userId string) []*UserGroup {
+	var res []*UserGroup
+	if userId == "" {
+		return res
+	}
+	s.infr.Db.Instance.Where("user_id = ?::uuid", userId).Find(&res)
+	return res
+}
+
 func (s *storageImpl) Get(id string) *User{
 
 	_, err := uuid.Parse(id)
@@ -95,6 +111,7 @@ func (s *storageImpl) Get(id string) *User{
 	} else {
 		user := &User{Id: id}
 		s.infr.Db.Instance.First(user)
+		user.Groups = s.getGroups(user.Id)
 		return user
 	}
 
@@ -102,13 +119,15 @@ func (s *storageImpl) Get(id string) *User{
 
 func (s *storageImpl) GetByUsername(username string) *User {
 	user := &User{}
-	s.infr.Db.Instance.Where("username = ?", username).First(&user)
+	s.infr.Db.Instance.Where("username = ? and deleted_at is null", username).First(&user)
+	user.Groups = s.getGroups(user.Id)
 	return user
 }
 
 func (s *storageImpl) GetByMMId(mmId string) *User {
 	user := &User{}
-	s.infr.Db.Instance.Where("mm_id = ?", mmId).First(&user)
+	s.infr.Db.Instance.Where("mm_id = ? and deleted_at is null", mmId).First(&user)
+	user.Groups = s.getGroups(user.Id)
 	return user
 }
 
@@ -132,12 +151,24 @@ func (s *storageImpl) Search(cr *SearchCriteria) (*SearchResponse, error) {
 		query = query.Where(`u.username = ?`, cr.Username)
 	}
 
+	if cr.UserGroup != "" {
+		query = query.Where(`exists(select 1 from users.user_groups ug where ug.group_code = ? and ug.user_id = u.id and ug.deleted_at is null)`, cr.UserGroup)
+	}
+
 	if cr.Status != "" {
 		query = query.Where(`u.status = ?`, cr.Status)
 	}
 
-	if cr.MMChannelId != "" {
-		query = query.Where(`(u.details -> 'mmChannelId')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.MMChannelId))
+	if cr.CommonChannelId != "" {
+		query = query.Where(`(u.details -> 'commonChannelId')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.CommonChannelId))
+	}
+
+	if cr.MedChannelId != "" {
+		query = query.Where(`(u.details -> 'medChannelId')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.MedChannelId))
+	}
+
+	if cr.LawChannelId != "" {
+		query = query.Where(`(u.details -> 'lawChannelId')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.LawChannelId))
 	}
 
 	if cr.MMId != "" {
@@ -177,10 +208,29 @@ func (s *storageImpl) Search(cr *SearchCriteria) (*SearchResponse, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		task := &User{}
-		_ = s.infr.Db.Instance.ScanRows(rows, task)
-		response.Users = append(response.Users, task)
+		user := &User{Groups: []*UserGroup{}}
+		_ = s.infr.Db.Instance.ScanRows(rows, user)
+		response.Users = append(response.Users, user)
 	}
 
 	return response, nil
+}
+
+func (s *storageImpl) AddGroups(groups ...*UserGroup) error {
+	t := time.Now().UTC()
+	for _, g := range groups {
+		g.CreatedAt, g.UpdatedAt = t, t
+		if g.Id == "" {
+			g.Id = kit.NewId()
+		}
+	}
+	return s.infr.Db.Instance.Create(groups).Error
+}
+
+func (s *storageImpl) RevokeGroups(groups ...*UserGroup) error {
+	t := time.Now().UTC()
+	for _, g := range groups {
+		g.DeletedAt = &t
+	}
+	return s.infr.Db.Instance.Save(groups).Error
 }

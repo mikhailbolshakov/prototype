@@ -9,3 +9,8 @@
 9. Cache
 10. Error handling
 11. Check session expiration
+12. Transfer sessions between nodes
+13. Consts
+14. Api/Protobuf versioning
+15. Queue at Most Once/at least Once
+16. Task config: implement storage instead of mock

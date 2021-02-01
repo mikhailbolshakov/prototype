@@ -31,8 +31,9 @@ func (s *Stan) Open(clientId string) error {
 
 func (s *Stan) Close() error {
 	if s.conn != nil {
+		err := s.conn.Close()
 		s.conn = nil
-		return s.Close()
+		return err
 	}
 	return nil
 }

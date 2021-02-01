@@ -20,6 +20,7 @@ func (s *ctrlImpl) fromPb(r *pb.User) *User {
 		Status:   r.Status,
 		MMUserId: r.MMId,
 		KKUserId: r.KKId,
+		Groups:   r.Groups,
 	}
 
 	switch user.Type {
@@ -36,7 +37,9 @@ func (s *ctrlImpl) fromPb(r *pb.User) *User {
 				GivenAt:   grpc.PbTSToTime(r.ClientDetails.PersonalAgreement.GivenAt),
 				RevokedAt: grpc.PbTSToTime(r.ClientDetails.PersonalAgreement.RevokedAt),
 			},
-			MMChannelId: r.ClientDetails.MMChannelId,
+			CommonChannelId: r.ClientDetails.CommonChannelId,
+			MedChannelId:    r.ClientDetails.MedChannelId,
+			LawChannelId:    r.ClientDetails.LawChannelId,
 		}
 	case USER_TYPE_CONSULTANT:
 		user.ConsultantDetails = &ConsultantDetails{

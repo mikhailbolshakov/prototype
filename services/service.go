@@ -61,11 +61,14 @@ func (s *serviceImpl) Init() error {
 
 }
 
-func (s *serviceImpl) Listen() error {
-	return nil
-}
-
 func (s *serviceImpl) ListenAsync() error {
 	s.grpc.ListenAsync()
 	return nil
+}
+
+func (s *serviceImpl) Close() {
+	s.userServiceAdapter.Close()
+	s.grpc.Close()
+	s.infr.Close()
+	_ = s.queue.Close()
 }

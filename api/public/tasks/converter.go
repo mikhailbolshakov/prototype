@@ -6,17 +6,17 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 )
 
-func (c *ctrlImpl) toPb(request *NewTaskRequest) *pb.NewTaskRequest {
+func (c *ctrlImpl) toPb(r *NewTaskRequest) *pb.NewTaskRequest {
 
 	var details []byte
-	if request.Details != nil {
-		details, _ = json.Marshal(request.Details)
+	if r.Details != nil {
+		details, _ = json.Marshal(r.Details)
 	}
 
 	var reminders []*pb.Reminder
-	if request.Reminders != nil {
+	if r.Reminders != nil {
 
-		for _, r := range request.Reminders {
+		for _, r := range r.Reminders {
 			rpb := &pb.Reminder{}
 
 			if r.SpecificTime != nil {
@@ -37,18 +37,24 @@ func (c *ctrlImpl) toPb(request *NewTaskRequest) *pb.NewTaskRequest {
 
 	t := &pb.NewTaskRequest{
 		Type: &pb.Type{
-			Type:    request.Type.Type,
-			Subtype: request.Type.SubType,
+			Type:    r.Type.Type,
+			Subtype: r.Type.SubType,
 		},
-		ReportedBy:  request.Reported.By,
-		ReportedAt:  grpc.TimeToPbTS(request.Reported.At),
-		Description: request.Description,
-		Title:       request.Title,
-		DueDate:     grpc.TimeToPbTS(request.DueDate),
+		Reported: &pb.Reported{
+			Type:     r.Reported.Type,
+			UserId:   r.Reported.UserId,
+			Username: r.Reported.Username,
+			At:       grpc.TimeToPbTS(r.Reported.At),
+		},
+		Description: r.Description,
+		Title:       r.Title,
+		DueDate:     grpc.TimeToPbTS(r.DueDate),
 		Assignee: &pb.Assignee{
-			Group: request.Assignee.Group,
-			User:  request.Assignee.User,
-			At:    grpc.TimeToPbTS(request.Assignee.At),
+			Type:     r.Assignee.Type,
+			Group:    r.Assignee.Group,
+			UserId:   r.Assignee.UserId,
+			Username: r.Assignee.Username,
+			At:       grpc.TimeToPbTS(r.Assignee.At),
 		},
 		Reminders: reminders,
 		Details:   details,
@@ -57,42 +63,46 @@ func (c *ctrlImpl) toPb(request *NewTaskRequest) *pb.NewTaskRequest {
 	return t
 }
 
-func (s *ctrlImpl) fromPb(response *pb.Task) *Task {
+func (s *ctrlImpl) fromPb(r *pb.Task) *Task {
 
 	details := map[string]interface{}{}
 
-	if response.Details != nil {
-		_ = json.Unmarshal(response.Details, &details)
+	if r.Details != nil {
+		_ = json.Unmarshal(r.Details, &details)
 	}
 
 	t := &Task{
-		Id:  response.Id,
-		Num: response.Num,
+		Id:  r.Id,
+		Num: r.Num,
 		Type: &Type{
-			Type:    response.Type.Type,
-			SubType: response.Type.Subtype,
+			Type:    r.Type.Type,
+			SubType: r.Type.Subtype,
 		},
 		Status: &Status{
-			Status:    response.Status.Status,
-			SubStatus: response.Status.Substatus,
+			Status:    r.Status.Status,
+			SubStatus: r.Status.Substatus,
 		},
 		Reported: &Reported{
-			By: response.ReportedBy,
-			At: grpc.PbTSToTime(response.ReportedAt),
+			Type:     r.Reported.Type,
+			UserId:   r.Reported.UserId,
+			Username: r.Reported.Username,
+			At:       grpc.PbTSToTime(r.Reported.At),
 		},
-		DueDate: grpc.PbTSToTime(response.DueDate),
+		DueDate: grpc.PbTSToTime(r.DueDate),
 		Assignee: &Assignee{
-			Group: response.Assignee.Group,
-			User:  response.Assignee.User,
-			At:    grpc.PbTSToTime(response.Assignee.At),
+			Type:     r.Assignee.Type,
+			Group:    r.Assignee.Group,
+			UserId:   r.Assignee.UserId,
+			Username: r.Assignee.Username,
+			At:       grpc.PbTSToTime(r.Assignee.At),
 		},
-		Description: response.Description,
-		Title:       response.Title,
+		Description: r.Description,
+		Title:       r.Title,
 		Details:     details,
 		Reminders:   []*Reminder{},
 	}
 
-	for _, r := range response.Reminders {
+	for _, r := range r.Reminders {
 
 		dr := &Reminder{}
 
@@ -161,9 +171,11 @@ func (s *ctrlImpl) histFromPb(rs *pb.GetHistoryResponse) []*History {
 				SubStatus: h.Status.Substatus,
 			},
 			Assignee:  &Assignee{
-				Group: h.Assignee.Group,
-				User:  h.Assignee.User,
-				At:    grpc.PbTSToTime(h.Assignee.At),
+				Type:     h.Assignee.Type,
+				Group:    h.Assignee.Group,
+				UserId:   h.Assignee.UserId,
+				Username: h.Assignee.Username,
+				At:       grpc.PbTSToTime(h.Assignee.At),
 			},
 			ChangedBy: h.ChangedBy,
 			ChangedAt: *grpc.PbTSToTime(h.ChangedAt),

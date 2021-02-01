@@ -10,6 +10,13 @@ const (
 	USER_TYPE_CONSULTANT = "consultant"
 	USER_TYPE_EXPERT     = "expert"
 	USER_TYPE_SUPERVISOR = "supervisor"
+
+	USER_GRP_CLIENT             = "client"
+	USER_GRP_CONSULTANT_LAWYER  = "consultant-lawyer"
+	USER_GRP_CONSULTANT_DOCTOR  = "medconsultant"
+	USER_GRP_DOCTOR_DENTIST     = "doctor-dentist"
+	USER_GRP_DOCTOR_PRTHOPEDIST = "doctor-orthopedist"
+	USER_GRP_SUPERVIZOR_RGS     = "supervisor-rgs"
 )
 
 const (
@@ -18,26 +25,6 @@ const (
 	USER_STATUS_LOCKED  = "locked"
 	USER_STATUS_DELETED = "deleted"
 )
-
-var statusMap = map[string]struct{}{
-	USER_STATUS_DRAFT:  {},
-	USER_STATUS_ACTIVE: {},
-	USER_STATUS_LOCKED: {},
-}
-
-type User struct {
-	Id                string             `json:"id"`
-	Username          string             `json:"username"`
-	Type              string             `json:"type"`
-	Status            string             `json:"status"`
-	MMUserId          string             `json:"mmId"`
-	KKUserId          string             `json:"kkId"`
-	ClientDetails     *ClientDetails     `json:"clientDetails"`
-	ConsultantDetails *ConsultantDetails `json:"consultantDetails"`
-	ExpertDetails     *ExpertDetails     `json:"expertDetails"`
-	ModifiedAt        time.Time          `json:"modifiedAt"`
-	DeletedAt         *time.Time         `json:"deletedAt,omitempty"`
-}
 
 type PersonalAgreement struct {
 	GivenAt   *time.Time `json:"givenAt"`
@@ -53,7 +40,9 @@ type ClientDetails struct {
 	Phone             string             `json:"phone"`
 	Email             string             `json:"email"`
 	PersonalAgreement *PersonalAgreement `json:"personalAgreement"`
-	MMChannelId       string             `json:"mmChannelId"`
+	CommonChannelId   string             `json:"commonChannelId"`
+	MedChannelId      string             `json:"medChannelId"`
+	LawChannelId      string             `json:"lawChannelId"`
 }
 
 type ConsultantDetails struct {
@@ -71,16 +60,35 @@ type ExpertDetails struct {
 	Specialization string `json:"specialization"`
 }
 
+type User struct {
+	Id                string             `json:"id"`
+	Username          string             `json:"username"`
+	Type              string             `json:"type"`
+	Status            string             `json:"status"`
+	MMUserId          string             `json:"mmId"`
+	KKUserId          string             `json:"kkId"`
+	ClientDetails     *ClientDetails     `json:"clientDetails,omitempty"`
+	ConsultantDetails *ConsultantDetails `json:"consultantDetails,omitempty"`
+	ExpertDetails     *ExpertDetails     `json:"expertDetails,omitempty"`
+	Groups            []string           `json:"groups"`
+	CreatedAt         time.Time          `json:"createdAt"`
+	ModifiedAt        time.Time          `json:"modifiedAt"`
+	DeletedAt         *time.Time         `json:"deletedAt,omitempty"`
+}
+
 type SearchCriteria struct {
 	*common.PagingRequest
-	UserType       string
-	Username       string
-	Status         string
-	Email          string
-	Phone          string
-	MMId           string
-	MMChannelId    string
-	OnlineStatuses []string
+	UserType        string
+	Username        string
+	UserGroup       string
+	Status          string
+	Email           string
+	Phone           string
+	MMId            string
+	CommonChannelId string
+	MedChannelId    string
+	LawChannelId    string
+	OnlineStatuses  []string
 }
 
 type SearchResponse struct {

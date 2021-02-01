@@ -55,10 +55,10 @@ func (s *sessionImpl) listenMMSocket() {
 			case response := <-s.mmClient.WsApi.ResponseChannel:
 				s, _ := json.MarshalIndent(response, "", "\t")
 				log.Printf("[WS response]. %s", s)
-			case <-s.mmClient.Quit:
-				log.Printf("[WS closing]. Closing request for user %s", s.mmClient.User.Email)
-				s.mmClient.WsApi.Close()
-				return
+			//case <-s.mmClient.Quit:
+			//	log.Printf("[WS closing]. Closing request for user %s", s.mmClient.User.Email)
+			//	s.mmClient.WsApi.Close()
+			//	return
 			}
 		}
 	}()
@@ -114,7 +114,7 @@ func (s *sessionImpl) close() {
 	if s.mmClient != nil {
 		s.mmClient.WsApi.Close()
 		s.mmClient.RestApi.ClearOAuthToken()
-		s.mmClient.Quit <- struct{}{}
+		//s.mmClient.Quit <- struct{}{}
 	}
 
 	if s.ws != nil {

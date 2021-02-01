@@ -8,7 +8,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/users/domain"
 	"gitlab.medzdrav.ru/prototype/users/grpc"
 	"gitlab.medzdrav.ru/prototype/users/infrastructure"
-	"gitlab.medzdrav.ru/prototype/users/repository/adapters/mattermost"
+	"gitlab.medzdrav.ru/prototype/users/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/users/repository/storage"
 	"math/rand"
 )
@@ -17,7 +17,7 @@ type serviceImpl struct {
 	domain    domain.UserService
 	search    domain.UserSearchService
 	grpc      *grpc.Server
-	mmAdapter mattermost.Adapter
+	mmAdapter chat.Adapter
 	storage   storage.UserStorage
 	infr      *infrastructure.Container
 	queue     queue.Queue
@@ -30,7 +30,7 @@ func New() service.Service {
 	s.queue = &stan.Stan{}
 	s.infr = infrastructure.New()
 	s.storage = storage.NewStorage(s.infr)
-	s.mmAdapter = mattermost.NewAdapter()
+	s.mmAdapter = chat.NewAdapter()
 
 	mmService := s.mmAdapter.GetService()
 
@@ -59,13 +59,14 @@ func (s *serviceImpl) Init() error {
 
 }
 
-func (s *serviceImpl) Listen() error {
+func (s *serviceImpl) ListenAsync() error {
+	s.grpc.ListenAsync()
 	return nil
 }
 
-func (s *serviceImpl) ListenAsync() error {
-
-	s.grpc.ListenAsync()
-
-	return nil
+func (s *serviceImpl) Close() {
+	s.mmAdapter.Close()
+	_ = s.queue.Close()
+	s.infr.Close()
+	s.grpc.Close()
 }

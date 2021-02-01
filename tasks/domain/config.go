@@ -5,6 +5,7 @@ import (
 )
 
 type ConfigService interface {
+	GetAll() []*Config
 	// get whole configuration
 	Get(t *Type) (*Config, error)
 	// if status is final
@@ -22,6 +23,10 @@ func NewTaskConfigService() ConfigService {
 }
 
 type taskConfigServiceImpl struct{}
+
+func (c *taskConfigServiceImpl) GetAll() []*Config {
+	return mockConfigs
+}
 
 func (c *taskConfigServiceImpl) Get(t *Type) (*Config, error) {
 
@@ -91,11 +96,3 @@ func (c *taskConfigServiceImpl) InitialTransition(t *Type) (*Transition, error) 
 
 }
 
-func (tr *Transition) checkGroup(group string) bool {
-	for _, g := range tr.AllowAssignGroups {
-		if g == group {
-			return true
-		}
-	}
-	return false
-}

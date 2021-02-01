@@ -8,30 +8,30 @@ import (
 	"github.com/zeebe-io/zeebe/clients/go/pkg/entities"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
 	bpm2 "gitlab.medzdrav.ru/prototype/bp/bpm"
-	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/mattermost"
+	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/kit/bpm"
 	"gitlab.medzdrav.ru/prototype/kit/bpm/zeebe"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
-	"gitlab.medzdrav.ru/prototype/proto/mm"
+	pbChat "gitlab.medzdrav.ru/prototype/proto/chat"
 	"log"
 )
 
 type bpImpl struct {
 	userService users.Service
-	mmService   mattermost.Service
+	chatService chat.Service
 	keycloak    gocloak.GoCloak
 	bpm.BpBase
 }
 
 func NewBp(userService users.Service,
-	mmService mattermost.Service,
+	chatService chat.Service,
 	bpm bpm.Engine,
 	keycloak gocloak.GoCloak) bpm2.BusinessProcess {
 
 	bp := &bpImpl{
 		userService: userService,
-		mmService:   mmService,
+		chatService: chatService,
 		keycloak:    keycloak,
 	}
 	bp.Engine = bpm
@@ -46,11 +46,6 @@ func (bp *bpImpl) Init() error {
 	if err != nil {
 		return err
 	}
-
-	if err := bp.DeployBPMNs([]string{"../bp/bpm/create_user/bp.bpmn"}); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -60,6 +55,10 @@ func (bp *bpImpl) SetQueueListeners(ql listener.QueueListener) {
 
 func (bp *bpImpl) GetId() string {
 	return "p-create-user"
+}
+
+func (bp *bpImpl) GetBPMNPath() string {
+	return "../bp/bpm/create_user/bp.bpmn"
 }
 
 func (bp *bpImpl) registerBpmHandlers() error {
@@ -116,7 +115,7 @@ func (bp *bpImpl) createMMUser(client worker.JobClient, job entities.Job) {
 	}
 
 	//create a new user in MM
-	mmRs, err := bp.mmService.CreateUser(&mm.CreateUserRequest{
+	mmRs, err := bp.chatService.CreateUser(&pbChat.CreateUserRequest{
 		Username: user.Username,
 		Email:    email,
 	})
@@ -164,10 +163,10 @@ func (bp *bpImpl) createMMChannel(client worker.JobClient, job entities.Job) {
 		firstName := user.ClientDetails.FirstName
 		lastName := user.ClientDetails.LastName
 
-		chRs, err := bp.mmService.CreateClientChannel(&mm.CreateClientChannelRequest{
+		chRs, err := bp.chatService.CreateClientChannel(&pbChat.CreateClientChannelRequest{
 			ClientUserId: user.MMId,
 			Name:         user.MMId,
-			DisplayName:  fmt.Sprintf("Клиент %s %s - консультант", firstName, lastName),
+			DisplayName:  fmt.Sprintf("Общие вопросы (клиент %s %s)", firstName, lastName),
 		})
 		if err != nil {
 			err = bp.SendError(job.GetKey(), "err-create-mm-channel", err.Error())
@@ -178,7 +177,7 @@ func (bp *bpImpl) createMMChannel(client worker.JobClient, job entities.Job) {
 		}
 
 		variables["mmChannelId"] = chRs.ChannelId
-		user.ClientDetails.MMChannelId = chRs.ChannelId
+		user.ClientDetails.CommonChannelId = chRs.ChannelId
 
 		_, err = bp.userService.SetClientDetails(userId, user.ClientDetails)
 		if err != nil {
@@ -336,7 +335,7 @@ func (bp *bpImpl) deleteMMUser(client worker.JobClient, job entities.Job) {
 		return
 	}
 
-	err = bp.mmService.DeleteUser(variables["mmId"].(string))
+	err = bp.chatService.DeleteUser(variables["mmId"].(string))
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return

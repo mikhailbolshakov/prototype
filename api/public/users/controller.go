@@ -32,7 +32,7 @@ type ctrlImpl struct {
 func NewController(auth auth.Service, userService users.Service) Controller {
 
 	return &ctrlImpl{
-		auth: auth,
+		auth:        auth,
 		userService: userService,
 	}
 }
@@ -78,6 +78,7 @@ func (c *ctrlImpl) CreateConsultant(writer http.ResponseWriter, request *http.Re
 		MiddleName: rq.MiddleName,
 		LastName:   rq.LastName,
 		Email:      rq.Email,
+		Groups:     rq.Groups,
 	}
 
 	if rsPb, err := c.userService.CreateConsultant(p); err != nil {
@@ -103,6 +104,7 @@ func (c *ctrlImpl) CreateExpert(writer http.ResponseWriter, request *http.Reques
 		LastName:       rq.LastName,
 		Email:          rq.Email,
 		Specialization: rq.Specialization,
+		Groups:         rq.Groups,
 	}
 
 	if rsPb, err := c.userService.CreateExpert(p); err != nil {
@@ -132,13 +134,16 @@ func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 			Size:  0,
 			Index: 0,
 		},
-		UserType:       request.FormValue("type"),
-		Username:       request.FormValue("username"),
-		Email:          request.FormValue("email"),
-		Phone:          request.FormValue("phone"),
-		MMId:           request.FormValue("mmId"),
-		MMChannelId:    request.FormValue("channel"),
-		OnlineStatuses: []string{},
+		UserType:        request.FormValue("type"),
+		Username:        request.FormValue("username"),
+		Email:           request.FormValue("email"),
+		Phone:           request.FormValue("phone"),
+		MMId:            request.FormValue("mmId"),
+		CommonChannelId: request.FormValue("commonChannel"),
+		MedChannelId:    request.FormValue("medChannel"),
+		LawChannelId:    request.FormValue("lawChannel"),
+		UserGroup:       request.FormValue("group"),
+		OnlineStatuses:  []string{},
 	}
 
 	if onlineStatusesTxt := request.FormValue("statuses"); onlineStatusesTxt != "" {
@@ -170,4 +175,3 @@ func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 	}
 
 }
-

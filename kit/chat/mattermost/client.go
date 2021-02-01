@@ -9,11 +9,12 @@ import (
 )
 
 type Params struct {
-	Url     string
-	WsUrl   string
-	Account string
-	Pwd     string
-	OpenWS  bool
+	Url         string
+	WsUrl       string
+	Account     string
+	Pwd         string
+	AccessToken string
+	OpenWS      bool
 }
 
 type Client struct {
@@ -21,7 +22,6 @@ type Client struct {
 	WsApi   *model.WebSocketClient
 	Token   string
 	User    *model.User
-	Quit    chan interface{}
 	Params  *Params
 }
 
@@ -46,18 +46,28 @@ func handleResponse(rs *model.Response) error {
 
 func Login(p *Params) (*Client, error) {
 
-	cl := &Client{
-		Quit: make(chan interface{}),
-	}
+	cl := &Client{}
 
 	cl.RestApi = model.NewAPIv4Client(p.Url)
-	user, resp := cl.RestApi.Login(p.Account, p.Pwd)
-	if err := handleResponse(resp); err != nil {
-		return nil, err
-	}
-	cl.User = user
-	cl.Token = resp.Header.Get("Token")
 
+	var user *model.User
+	var rs *model.Response
+	if p.AccessToken != "" {
+		cl.RestApi.SetOAuthToken(p.AccessToken)
+		user, rs = cl.RestApi.GetUserByUsername(p.Account, "")
+		if err := handleResponse(rs); err != nil {
+			return nil, err
+		}
+		cl.Token = p.AccessToken
+	} else {
+		user, rs = cl.RestApi.Login(p.Account, p.Pwd)
+		if err := handleResponse(rs); err != nil {
+			return nil, err
+		}
+		cl.Token = rs.Header.Get("Token")
+	}
+
+	cl.User = user
 	log.Printf("muttermost connected. user: %s", cl.User.Email)
 
 	if p.OpenWS {
@@ -231,7 +241,7 @@ func (c *Client) GetChannelsForUserAndMembers(userId, teamName string, memberUse
 		return nil, err
 	}
 
-	channels, rs := c.RestApi.GetChannelsForTeamForUser(team.Id, userId,false, "")
+	channels, rs := c.RestApi.GetChannelsForTeamForUser(team.Id, userId, false, "")
 	if err := handleResponse(rs); err != nil {
 		return nil, err
 	}
@@ -275,4 +285,30 @@ func (c *Client) GetChannelsForUserAndMembers(userId, teamName string, memberUse
 
 	return res, nil
 
+}
+
+func (c *Client) CreateBotIfNotExists(username, displayName, description, ownerId string) (string, error) {
+
+	bots, rs := c.RestApi.GetBots(0, 1000, "")
+	if err := handleResponse(rs); err != nil {
+		return "", err
+	}
+
+	for _, b := range bots {
+		if b.Username == username {
+			return b.UserId, nil
+		}
+	}
+
+	b, rs := c.RestApi.CreateBot(&model.Bot{
+		Username:    username,
+		DisplayName: displayName,
+		Description: description,
+		OwnerId:     ownerId,
+	})
+	if err := handleResponse(rs); err != nil {
+		return "", err
+	}
+
+	return b.UserId, nil
 }

@@ -45,4 +45,7 @@ func (c *Container) Init() error {
 	return nil
 }
 
-func Close() {}
+func(c *Container) Close() {
+	c.Db.Close()
+	_ = c.Cache.Instance.Close()
+}

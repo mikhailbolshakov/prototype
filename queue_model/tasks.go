@@ -2,6 +2,8 @@ package queue_model
 
 import "time"
 
+// TODO: remove this file
+
 type Status struct {
 	Status    string
 	SubStatus string
@@ -13,14 +15,18 @@ type Type struct {
 }
 
 type Assignee struct {
+	Type     string
 	Group    string
-	User     string
+	UserId   string
+	Username string
 	At       *time.Time
 }
 
 type Reported struct {
-	By string
-	At *time.Time
+	Type     string
+	UserId   string
+	Username string
+	At       *time.Time
 }
 
 type Task struct {

@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1wv0v00" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Zeebe Modeler" exporterVersion="0.11.0">
+  <bpmn:process id="p-client-med-request" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1he8q0h</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="st-check-client-med-channel" name="Проверить наличие канала">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="st-check-client-med-channel" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1he8q0h</bpmn:incoming>
+      <bpmn:outgoing>Flow_051q3om</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_0tgdyqx">
+      <bpmn:incoming>Flow_1uv2qyy</bpmn:incoming>
+      <bpmn:outgoing>Flow_0qd39fd</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1wkn04d</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_051q3om" sourceRef="st-check-client-med-channel" targetRef="Gateway_1pw72gj" />
+    <bpmn:endEvent id="Event_0nt97ic">
+      <bpmn:incoming>Flow_0qd39fd</bpmn:incoming>
+      <bpmn:incoming>Flow_0j7kin3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0qd39fd" name="да" sourceRef="Gateway_0tgdyqx" targetRef="Event_0nt97ic">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=taskExists</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1wkn04d" name="нет" sourceRef="Gateway_0tgdyqx" targetRef="st-create-client-med-req-task">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=not(taskExists)</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="st-create-client-med-req-task" name="Создать задачу на группу &#34;мед-консультанты&#34;">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="st-create-client-med-req-task" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1wkn04d</bpmn:incoming>
+      <bpmn:outgoing>Flow_1k09qyv</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1k09qyv" sourceRef="st-create-client-med-req-task" targetRef="Gateway_1bn03vg" />
+    <bpmn:eventBasedGateway id="Gateway_1bn03vg">
+      <bpmn:incoming>Flow_1k09qyv</bpmn:incoming>
+      <bpmn:incoming>Flow_0ndug38</bpmn:incoming>
+      <bpmn:outgoing>Flow_0mzvs9v</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0kjg2ws</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="Event_1wo5grk">
+      <bpmn:incoming>Flow_0mzvs9v</bpmn:incoming>
+      <bpmn:outgoing>Flow_0yciid4</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_0e4j0gr" messageRef="Message_054kfbb" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_0mzvs9v" sourceRef="Gateway_1bn03vg" targetRef="Event_1wo5grk" />
+    <bpmn:intermediateCatchEvent id="Event_0d5td7d">
+      <bpmn:incoming>Flow_0kjg2ws</bpmn:incoming>
+      <bpmn:outgoing>Flow_0kv71wg</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_0ahnsud">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT30S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_0yciid4" sourceRef="Event_1wo5grk" targetRef="st-subscribe-med-consultant" />
+    <bpmn:serviceTask id="st-msg-med-task-assigned" name="Триггерное сообщение &#34;Консультант подобран&#34;">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="st-msg-med-task-assigned" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0388xwi</bpmn:incoming>
+      <bpmn:outgoing>Flow_0j7kin3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="st-msg-no-available-med-consultant" name="Триггерное сообщение &#34;Все операторы заняты&#34;">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="st-msg-no-available-med-consultant" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0kv71wg</bpmn:incoming>
+      <bpmn:outgoing>Flow_0ndug38</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0j7kin3" sourceRef="st-msg-med-task-assigned" targetRef="Event_0nt97ic" />
+    <bpmn:sequenceFlow id="Flow_0kjg2ws" sourceRef="Gateway_1bn03vg" targetRef="Event_0d5td7d" />
+    <bpmn:sequenceFlow id="Flow_0kv71wg" sourceRef="Event_0d5td7d" targetRef="st-msg-no-available-med-consultant" />
+    <bpmn:sequenceFlow id="Flow_0ndug38" sourceRef="st-msg-no-available-med-consultant" targetRef="Gateway_1bn03vg" />
+    <bpmn:sequenceFlow id="Flow_0388xwi" sourceRef="st-subscribe-med-consultant" targetRef="st-msg-med-task-assigned" />
+    <bpmn:serviceTask id="st-subscribe-med-consultant" name="Подписать консультанта на канал">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="st-subscribe-med-consultant" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0yciid4</bpmn:incoming>
+      <bpmn:outgoing>Flow_0388xwi</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1he8q0h" sourceRef="StartEvent_1" targetRef="st-check-client-med-channel" />
+    <bpmn:exclusiveGateway id="Gateway_1pw72gj" name="канал существует?">
+      <bpmn:incoming>Flow_051q3om</bpmn:incoming>
+      <bpmn:outgoing>Flow_1rbk2n4</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0znl36l</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_1rbk2n4" name="да" sourceRef="Gateway_1pw72gj" targetRef="Gateway_06iodre">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=channelId != ""</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0znl36l" name="нет" sourceRef="Gateway_1pw72gj" targetRef="Activity_0aft7cc">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=channelId = ""</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:exclusiveGateway id="Gateway_06iodre">
+      <bpmn:incoming>Flow_1rbk2n4</bpmn:incoming>
+      <bpmn:incoming>Flow_1py0quc</bpmn:incoming>
+      <bpmn:outgoing>Flow_0enhayt</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0enhayt" sourceRef="Gateway_06iodre" targetRef="st-check-client-open-med-task" />
+    <bpmn:sequenceFlow id="Flow_1py0quc" sourceRef="Activity_0aft7cc" targetRef="Gateway_06iodre" />
+    <bpmn:serviceTask id="Activity_0aft7cc" name="создать канал">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="st-create-client-med-channel" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0znl36l</bpmn:incoming>
+      <bpmn:outgoing>Flow_1py0quc</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1uv2qyy" sourceRef="st-check-client-open-med-task" targetRef="Gateway_0tgdyqx" />
+    <bpmn:serviceTask id="st-check-client-open-med-task" name="Проверить наличие задачи">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="st-check-client-open-med-task" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0enhayt</bpmn:incoming>
+      <bpmn:outgoing>Flow_1uv2qyy</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:textAnnotation id="TextAnnotation_1ohkc10">
+      <bpmn:text>открытая задача найдена ?</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1jinim8" sourceRef="Gateway_0tgdyqx" targetRef="TextAnnotation_1ohkc10" />
+    <bpmn:textAnnotation id="TextAnnotation_17wbtu3">
+      <bpmn:text>Алгоритм автоподбора запускается автоматически</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_0gwdebz" sourceRef="st-create-client-med-req-task" targetRef="TextAnnotation_17wbtu3" />
+    <bpmn:textAnnotation id="TextAnnotation_18qlkkt">
+      <bpmn:text>консультант подобран</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_17ezq3u" sourceRef="Event_1wo5grk" targetRef="TextAnnotation_18qlkkt" />
+    <bpmn:textAnnotation id="TextAnnotation_1r6nn13">
+      <bpmn:text>истекло время ожидания</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_17ky9b5" sourceRef="Event_0d5td7d" targetRef="TextAnnotation_1r6nn13" />
+  </bpmn:process>
+  <bpmn:message id="Message_1mcu9yo" name="msg-client-task-assigned">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=taskId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_054kfbb" name="msg-client-med-task-assigned">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=taskId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="p-client-med-request">
+      <bpmndi:BPMNShape id="TextAnnotation_17wbtu3_di" bpmnElement="TextAnnotation_17wbtu3">
+        <dc:Bounds x="1010" y="420" width="100" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_18qlkkt_di" bpmnElement="TextAnnotation_18qlkkt">
+        <dc:Bounds x="1240" y="140" width="100" height="40" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_1r6nn13_di" bpmnElement="TextAnnotation_1r6nn13">
+        <dc:Bounds x="1250" y="350" width="100" height="40" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_1ohkc10_di" bpmnElement="TextAnnotation_1ohkc10">
+        <dc:Bounds x="700" y="140" width="100" height="54" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1he8q0h_di" bpmnElement="Flow_1he8q0h">
+        <di:waypoint x="158" y="310" />
+        <di:waypoint x="210" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_051q3om_di" bpmnElement="Flow_051q3om">
+        <di:waypoint x="310" y="310" />
+        <di:waypoint x="355" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0qd39fd_di" bpmnElement="Flow_0qd39fd">
+        <di:waypoint x="840" y="285" />
+        <di:waypoint x="840" y="110" />
+        <di:waypoint x="1830" y="110" />
+        <di:waypoint x="1830" y="212" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1145" y="92" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1wkn04d_di" bpmnElement="Flow_1wkn04d">
+        <di:waypoint x="865" y="310" />
+        <di:waypoint x="1030" y="310" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="939" y="292" width="17" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0j7kin3_di" bpmnElement="Flow_0j7kin3">
+        <di:waypoint x="1750" y="230" />
+        <di:waypoint x="1812" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1k09qyv_di" bpmnElement="Flow_1k09qyv">
+        <di:waypoint x="1130" y="310" />
+        <di:waypoint x="1195" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ndug38_di" bpmnElement="Flow_0ndug38">
+        <di:waypoint x="1329" y="470" />
+        <di:waypoint x="1220" y="470" />
+        <di:waypoint x="1220" y="335" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0mzvs9v_di" bpmnElement="Flow_0mzvs9v">
+        <di:waypoint x="1220" y="285" />
+        <di:waypoint x="1220" y="230" />
+        <di:waypoint x="1292" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0kjg2ws_di" bpmnElement="Flow_0kjg2ws">
+        <di:waypoint x="1245" y="310" />
+        <di:waypoint x="1302" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0yciid4_di" bpmnElement="Flow_0yciid4">
+        <di:waypoint x="1328" y="230" />
+        <di:waypoint x="1470" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0kv71wg_di" bpmnElement="Flow_0kv71wg">
+        <di:waypoint x="1338" y="310" />
+        <di:waypoint x="1379" y="310" />
+        <di:waypoint x="1379" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0388xwi_di" bpmnElement="Flow_0388xwi">
+        <di:waypoint x="1570" y="230" />
+        <di:waypoint x="1650" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1rbk2n4_di" bpmnElement="Flow_1rbk2n4">
+        <di:waypoint x="405" y="310" />
+        <di:waypoint x="555" y="310" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="457" y="292" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0znl36l_di" bpmnElement="Flow_0znl36l">
+        <di:waypoint x="380" y="285" />
+        <di:waypoint x="380" y="210" />
+        <di:waypoint x="430" y="210" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="387" y="245" width="17" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0enhayt_di" bpmnElement="Flow_0enhayt">
+        <di:waypoint x="605" y="310" />
+        <di:waypoint x="660" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1py0quc_di" bpmnElement="Flow_1py0quc">
+        <di:waypoint x="530" y="210" />
+        <di:waypoint x="580" y="210" />
+        <di:waypoint x="580" y="285" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1uv2qyy_di" bpmnElement="Flow_1uv2qyy">
+        <di:waypoint x="760" y="310" />
+        <di:waypoint x="815" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="122" y="292" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0s3wfsg_di" bpmnElement="st-check-client-med-channel">
+        <dc:Bounds x="210" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0tgdyqx_di" bpmnElement="Gateway_0tgdyqx" isMarkerVisible="true">
+        <dc:Bounds x="815" y="285" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0nt97ic_di" bpmnElement="Event_0nt97ic">
+        <dc:Bounds x="1812" y="212" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_027tcr3_di" bpmnElement="Gateway_1bn03vg">
+        <dc:Bounds x="1195" y="285" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1wo5grk_di" bpmnElement="Event_1wo5grk">
+        <dc:Bounds x="1292" y="212" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0d5td7d_di" bpmnElement="Event_0d5td7d">
+        <dc:Bounds x="1302" y="292" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_18xbaez_di" bpmnElement="st-create-client-med-req-task">
+        <dc:Bounds x="1030" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_05rzf5a_di" bpmnElement="st-msg-no-available-med-consultant">
+        <dc:Bounds x="1329" y="430" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1orpgfk_di" bpmnElement="st-subscribe-med-consultant">
+        <dc:Bounds x="1470" y="190" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0ctzmw7_di" bpmnElement="st-msg-med-task-assigned">
+        <dc:Bounds x="1650" y="190" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1pw72gj_di" bpmnElement="Gateway_1pw72gj" isMarkerVisible="true">
+        <dc:Bounds x="355" y="285" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="349" y="342" width="65" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_06iodre_di" bpmnElement="Gateway_06iodre" isMarkerVisible="true">
+        <dc:Bounds x="555" y="285" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_178td5b_di" bpmnElement="Activity_0aft7cc">
+        <dc:Bounds x="430" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_181gry5_di" bpmnElement="st-check-client-open-med-task">
+        <dc:Bounds x="660" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_17ezq3u_di" bpmnElement="Association_17ezq3u">
+        <di:waypoint x="1304" y="213" />
+        <di:waypoint x="1293" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_17ky9b5_di" bpmnElement="Association_17ky9b5">
+        <di:waypoint x="1314" y="327" />
+        <di:waypoint x="1305" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_0gwdebz_di" bpmnElement="Association_0gwdebz">
+        <di:waypoint x="1072" y="350" />
+        <di:waypoint x="1057" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_1jinim8_di" bpmnElement="Association_1jinim8">
+        <di:waypoint x="831" y="294" />
+        <di:waypoint x="775" y="194" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -11,7 +11,7 @@ type Server struct {
 	Srv *grpc.Server
 }
 
-func NewGrpcServer() (*Server, error) {
+func NewServer() (*Server, error) {
 
 	var opts []grpc.ServerOption
 
@@ -38,4 +38,8 @@ func (s *Server) Listen(host, port string) error {
 
 	return nil
 
+}
+
+func (s *Server) Close() {
+	s.Srv.Stop()
 }

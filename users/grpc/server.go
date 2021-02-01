@@ -20,7 +20,7 @@ func New(domain domain.UserService, search domain.UserSearchService) *Server {
 	s := &Server{domain: domain, search: search}
 
 	// grpc server
-	gs, err := kitGrpc.NewGrpcServer()
+	gs, err := kitGrpc.NewServer()
 	if err != nil {
 		panic(err)
 	}
@@ -72,7 +72,9 @@ func (s *Server) CreateConsultant(ctx context.Context, rq *pb.CreateConsultantRe
 			LastName:   rq.LastName,
 			Email:      rq.Email,
 		},
+		Groups: rq.Groups,
 	}
+
 	user, err := s.domain.Create(consultant)
 	if err != nil {
 		return nil, err
@@ -90,7 +92,9 @@ func (s *Server) CreateExpert(ctx context.Context, rq *pb.CreateExpertRequest) (
 			Email:          rq.Email,
 			Specialization: rq.Specialization,
 		},
+		Groups: rq.Groups,
 	}
+
 	user, err := s.domain.Create(expert)
 	if err != nil {
 		return nil, err

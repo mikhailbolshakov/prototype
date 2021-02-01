@@ -6,10 +6,12 @@ import (
 )
 
 const (
-	TT_CLIENT               = "client"
-	TST_MED_REQUEST         = "medical-request"
-	TST_EXPERT_CONSULTATION = "expert-consultation"
-	TST_CLIENT_FEEDBACK     = "client-feedback"
+	TT_CLIENT                = "client"
+	TST_REQUEST              = "common-request"
+	TST_DENTIST_CONSULTATION = "dentist-consultation"
+	TST_CLIENT_FEEDBACK      = "client-feedback"
+	TST_MED_REQUEST          = "med-request"
+	TST_LAWYER_REQUEST       = "lawyer-request"
 
 	TS_EMPTY  = "#"
 	TS_OPEN   = "open"
@@ -24,9 +26,14 @@ const (
 	TSS_CANCELLED     = "cancelled"
 	TSS_SOLVED        = "solved"
 
-	G_CLIENT     = "client"
-	G_CONSULTANT = "consultant"
-	G_EXPERT     = "expert"
+	USR_TYPE_CLIENT     = "client"
+	USR_TYPE_CONSULTANT = "consultant"
+	USR_TYPE_EXPERT     = "expert"
+
+	USR_GRP_CONSULTANT_LAWYER = "consultant-lawyer"
+	USR_GRP_CONSULTANT_MED    = "consultant-med"
+	USR_GRP_CONSULTANT_COMMON = "consultant"
+	USR_GRP_DOCTOR_DENTIST    = "doctor-dentist"
 
 	NUM_GEN_TYPE_RANDOM = "random"
 	NUM_GEN_TYPE_SEQ    = "sequence"
@@ -43,14 +50,18 @@ type Type struct {
 }
 
 type Assignee struct {
-	Group string
-	User  string
-	At    *time.Time
+	Type     string
+	Group    string
+	UserId   string
+	Username string
+	At       *time.Time
 }
 
 type Reported struct {
-	By string
-	At *time.Time
+	Type     string
+	UserId   string
+	Username string
+	At       *time.Time
 }
 
 type Transition struct {
@@ -63,8 +74,8 @@ type Transition struct {
 	From *Status
 	// target status
 	To *Status
-	// for those groups the transition is allowed
-	AllowAssignGroups []string
+	// if not empty the task is assigned onto the group once transition happens
+	AutoAssignType string
 	// if not empty the task is assigned onto the group once transition happens
 	AutoAssignGroup string
 	// on making a transition if an assigned user isn't set, error occurs
@@ -97,6 +108,7 @@ type AssignmentTarget struct {
 }
 
 type UserPool struct {
+	Type     string
 	Group    string
 	Statuses []string
 }
@@ -167,10 +179,11 @@ type History struct {
 
 type SearchCriteria struct {
 	*common.PagingRequest
-	Status   *Status
-	Assignee *Assignee
-	Type     *Type
-	Num      string
+	Status    *Status
+	Assignee  *Assignee
+	Type      *Type
+	Num       string
+	ChannelId string
 }
 
 type SearchResponse struct {

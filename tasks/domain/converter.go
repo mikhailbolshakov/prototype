@@ -17,24 +17,28 @@ func toDto(domain *Task) *storage.Task {
 	remindersB, _ := json.Marshal(domain.Reminders)
 
 	return &storage.Task{
-		BaseDto:       kit.BaseDto{},
-		Id:            domain.Id,
-		Num:           domain.Num,
-		Type:          domain.Type.Type,
-		SubType:       domain.Type.SubType,
-		Status:        domain.Status.Status,
-		SubStatus:     domain.Status.SubStatus,
-		ReportedBy:    domain.Reported.By,
-		ReportedAt:    *domain.Reported.At,
-		DueDate:       domain.DueDate,
-		AssigneeGroup: domain.Assignee.Group,
-		AssigneeUser:  domain.Assignee.User,
-		AssigneeAt:    domain.Assignee.At,
-		Description:   domain.Description,
-		Title:         domain.Title,
-		Details:       string(detailsB),
-		Reminders:     string(remindersB),
-		ChannelId:     domain.ChannelId,
+		BaseDto:          kit.BaseDto{},
+		Id:               domain.Id,
+		Num:              domain.Num,
+		Type:             domain.Type.Type,
+		SubType:          domain.Type.SubType,
+		Status:           domain.Status.Status,
+		SubStatus:        domain.Status.SubStatus,
+		ReportedType:     domain.Reported.Type,
+		ReportedUserId:   domain.Reported.UserId,
+		ReportedUsername: domain.Reported.Username,
+		ReportedAt:       *domain.Reported.At,
+		DueDate:          domain.DueDate,
+		AssigneeType:     domain.Assignee.Type,
+		AssigneeGroup:    domain.Assignee.Group,
+		AssigneeUserId:   domain.Assignee.UserId,
+		AssigneeUsername: domain.Assignee.Username,
+		AssigneeAt:       domain.Assignee.At,
+		Description:      domain.Description,
+		Title:            domain.Title,
+		Details:          string(detailsB),
+		Reminders:        string(remindersB),
+		ChannelId:        domain.ChannelId,
 	}
 }
 
@@ -62,14 +66,18 @@ func fromDto(dto *storage.Task) *Task {
 			SubStatus: dto.SubStatus,
 		},
 		Reported: &Reported{
-			By: dto.ReportedBy,
-			At: &dto.ReportedAt,
+			Type:     dto.ReportedType,
+			UserId:   dto.ReportedUserId,
+			Username: dto.ReportedUsername,
+			At:       &dto.ReportedAt,
 		},
 		DueDate: dto.DueDate,
 		Assignee: &Assignee{
-			Group: dto.AssigneeGroup,
-			User:  dto.AssigneeUser,
-			At:    dto.AssigneeAt,
+			Type:     dto.AssigneeType,
+			Group:    dto.AssigneeGroup,
+			UserId:   dto.AssigneeUserId,
+			Username: dto.AssigneeUsername,
+			At:       dto.AssigneeAt,
 		},
 		Description: dto.Description,
 		Title:       dto.Title,
@@ -86,15 +94,17 @@ func histToDto(h *History) *storage.History {
 	}
 
 	return &storage.History{
-		Id:            h.Id,
-		TaskId:        h.TaskId,
-		Status:        h.Status.Status,
-		SubStatus:     h.Status.SubStatus,
-		AssigneeGroup: h.Assignee.Group,
-		AssigneeUser:  h.Assignee.User,
-		AssigneeAt:    h.Assignee.At,
-		ChangedBy:     h.ChangedBy,
-		ChangedAt:     h.ChangedAt,
+		Id:               h.Id,
+		TaskId:           h.TaskId,
+		Status:           h.Status.Status,
+		SubStatus:        h.Status.SubStatus,
+		AssigneeType:     h.Assignee.Type,
+		AssigneeGroup:    h.Assignee.Group,
+		AssigneeUserId:   h.Assignee.UserId,
+		AssigneeUsername: h.Assignee.Username,
+		AssigneeAt:       h.Assignee.At,
+		ChangedBy:        h.ChangedBy,
+		ChangedAt:        h.ChangedAt,
 	}
 }
 
@@ -112,9 +122,11 @@ func histFromDto(h *storage.History) *History {
 			SubStatus: h.SubStatus,
 		},
 		Assignee: &Assignee{
-			Group: h.AssigneeGroup,
-			User:  h.AssigneeUser,
-			At:    h.AssigneeAt,
+			Type:     h.AssigneeType,
+			Group:    h.AssigneeGroup,
+			UserId:   h.AssigneeUserId,
+			Username: h.AssigneeUsername,
+			At:       h.AssigneeAt,
 		},
 		ChangedBy: h.ChangedBy,
 		ChangedAt: h.ChangedAt,
@@ -127,14 +139,17 @@ func criteriaToDto(c *SearchCriteria) *storage.SearchCriteria {
 	}
 
 	return &storage.SearchCriteria{
-		PagingRequest: c.PagingRequest,
-		Num:           c.Num,
-		Status:        c.Status.Status,
-		SubStatus:     c.Status.SubStatus,
-		AssigneeGroup: c.Assignee.Group,
-		AssigneeUser:  c.Assignee.User,
-		Type:          c.Type.Type,
-		SubType:       c.Type.SubType,
+		PagingRequest:    c.PagingRequest,
+		Num:              c.Num,
+		Status:           c.Status.Status,
+		SubStatus:        c.Status.SubStatus,
+		AssigneeType:     c.Assignee.Type,
+		AssigneeGroup:    c.Assignee.Group,
+		AssigneeUserId:   c.Assignee.UserId,
+		AssigneeUsername: c.Assignee.Username,
+		Type:             c.Type.Type,
+		SubType:          c.Type.SubType,
+		ChannelId:        c.ChannelId,
 	}
 }
 
@@ -170,14 +185,18 @@ func (ts *serviceImpl) taskToQueue(t *Task) *queue_model.Task {
 			SubStatus: t.Status.SubStatus,
 		},
 		Reported: &queue_model.Reported{
-			By: t.Reported.By,
-			At: t.Reported.At,
+			Type:     t.Reported.Type,
+			UserId:   t.Reported.UserId,
+			Username: t.Reported.Username,
+			At:       t.Reported.At,
 		},
 		DueDate: t.DueDate,
 		Assignee: &queue_model.Assignee{
-			Group: t.Assignee.Group,
-			User:  t.Assignee.User,
-			At:    t.Assignee.At,
+			Type:     t.Assignee.Type,
+			Group:    t.Assignee.Group,
+			UserId:   t.Assignee.UserId,
+			Username: t.Assignee.Username,
+			At:       t.Assignee.At,
 		},
 		Description: t.Description,
 		Title:       t.Title,
@@ -185,21 +204,6 @@ func (ts *serviceImpl) taskToQueue(t *Task) *queue_model.Task {
 	}
 
 	return res
-}
-
-func assignmentLogToDto(s *AssignmentLog) *storage.AssignmentLog {
-	return &storage.AssignmentLog{
-		Id:              s.Id,
-		StartTime:       s.StartTime,
-		FinishTime:      s.FinishTime,
-		Status:          s.Status,
-		RuleCode:        s.RuleCode,
-		RuleDescription: s.RuleDescription,
-		UsersInPool:     s.UsersInPool,
-		TasksToAssign:   s.TasksToAssign,
-		Assigned:        s.Assigned,
-		Error:           s.Error,
-	}
 }
 
 func assignmentLogFromDto(s *storage.AssignmentLog) *AssignmentLog {

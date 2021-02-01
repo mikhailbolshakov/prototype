@@ -18,8 +18,10 @@ message ClientDetails {
   google.protobuf.Timestamp BirthDate = 5;
   string Phone = 6;
   string Email = 7;
-  string MMChannelId = 8;
-  PersonalAgreement PersonalAgreement = 9;
+  string CommonChannelId = 8;
+  string MedChannelId = 9;
+  string LawChannelId = 10;
+  PersonalAgreement PersonalAgreement = 11;
 }
 
 message ConsultantDetails {
@@ -47,6 +49,7 @@ message User {
   ClientDetails ClientDetails = 7;
   ConsultantDetails ConsultantDetails = 8;
   ExpertDetails ExpertDetails = 9;
+  repeated string Groups = 10;
 }
 
 message GetByUsernameRequest {
@@ -79,8 +82,11 @@ message SearchRequest {
   string Email = 5;
   string Phone = 6;
   string MMId = 7;
-  string MMChannelId = 8;
-  repeated string OnlineStatuses = 9;
+  string CommonChannelId = 8;
+  string MedChannelId = 9;
+  string LawChannelId = 10;
+  repeated string OnlineStatuses = 11;
+  string UserGroup = 12;
 }
 
 message SearchResponse {
@@ -103,6 +109,7 @@ message CreateConsultantRequest {
   string MiddleName = 2;
   string LastName = 3;
   string Email = 4;
+  repeated string Groups = 5;
 }
 
 message CreateExpertRequest {
@@ -111,6 +118,7 @@ message CreateExpertRequest {
   string LastName = 3;
   string Email = 4;
   string Specialization = 5;
+  repeated string Groups = 6;
 }
 
 message ActivateRequest {

@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package chat;
+option go_package = "proto/chat";
+
+message CreateUserRequest {
+  string Username = 1;
+  string Email = 2;
+}
+message CreateUserResponse {
+  string Id = 1;
+}
+
+message UserStatus {
+  string Status = 1;
+  string MMUserId = 2;
+}
+
+message GetUsersStatusesRequest {
+  repeated string MMUserIds = 1;
+}
+
+message GetUserStatusesResponse {
+  repeated UserStatus Statuses = 1;
+}
+
+message DeleteUserRequest {
+  string MMUserId = 1;
+}
+
+message DeleteUserResponse {}
+
+service Users {
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+  rpc GetUsersStatuses(GetUsersStatusesRequest) returns (GetUserStatusesResponse) {}
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
+}
+
+message CreateClientChannelRequest {
+  string ClientUserId = 1;
+  string Name = 2;
+  string DisplayName = 3;
+  repeated string Subscribers = 4;
+}
+message CreateClientChannelResponse {
+  string ChannelId = 2;
+}
+
+message GetChannelsForUserAndMembersRequest {
+  string UserId = 1;
+  string TeamName = 2;
+  repeated string MemberUserIds = 3;
+}
+
+message GetChannelsForUserAndMembersResponse {
+  repeated string ChannelIds = 1;
+}
+
+message SubscribeRequest {
+  string UserId = 1;
+  string ChannelId = 2;
+}
+
+message SubscribeResponse {}
+
+service Channels {
+  rpc CreateClientChannel(CreateClientChannelRequest) returns (CreateClientChannelResponse) {}
+  rpc GetChannelsForUserAndMembers(GetChannelsForUserAndMembersRequest) returns(GetChannelsForUserAndMembersResponse) {}
+  rpc Subscribe(SubscribeRequest) returns (SubscribeResponse) {}
+}
+
+message SendTriggerPostRequest {
+  string PostCode = 1;
+  string UserId = 2;
+  string ChannelId = 3;
+  bytes Params = 4;
+}
+
+message SendTriggerPostResponse {}
+
+message AskBotRequest {
+  string Message = 1;
+  string From = 2;
+}
+
+message AskBotResponse {
+  bool Found = 1;
+  string Answer = 2;
+}
+
+message SendPostFromBotRequest {
+    string Message = 1;
+    string UserId = 2;
+    string ChannelId = 3;
+    bool Ephemeral = 4;
+}
+
+message SendPostFromBotResponse {}
+
+service Posts {
+  rpc SendTriggerPost(SendTriggerPostRequest) returns (SendTriggerPostResponse) {}
+  rpc SendPostFromBot(SendPostFromBotRequest) returns (SendPostFromBotResponse) {}
+  rpc AskBot(AskBotRequest) returns (AskBotResponse) {}
+}

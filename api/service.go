@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"github.com/Nerzal/gocloak/v7"
+	"gitlab.medzdrav.ru/prototype/api/public/bp"
 	servRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/services"
 	tasksRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/tasks"
 	usersRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/users"
@@ -10,6 +11,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/api/session"
 	"gitlab.medzdrav.ru/prototype/api/public/tasks"
 	"gitlab.medzdrav.ru/prototype/api/public/users"
+	bpRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/bp"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	"gitlab.medzdrav.ru/prototype/kit/service"
@@ -24,6 +26,7 @@ type serviceImpl struct {
 	userAdapter usersRep.Adapter
 	taskAdapter tasksRep.Adapter
 	servAdapter servRep.Adapter
+	bpAdapter   bpRep.Adapter
 }
 
 func New() service.Service {
@@ -58,7 +61,11 @@ func New() service.Service {
 	balanceService := s.servAdapter.GetBalanceService()
 	servController := services.NewController(balanceService, deliveryService)
 
-	s.Server.SetRouters(users.NewRouter(userController), tasks.NewRouter(taskController), services.NewRouter(servController))
+	s.bpAdapter = bpRep.NewAdapter()
+	bpService := s.bpAdapter.GetService()
+	bpController := bp.NewController(bpService)
+
+	s.Server.SetRouters(users.NewRouter(userController), tasks.NewRouter(taskController), services.NewRouter(servController), bp.NewRouter(bpController))
 
 	// session HUB
 	s.hub = session.NewHub(s.Server, authService, userService)
@@ -68,7 +75,7 @@ func New() service.Service {
 	// the first middleware checks session by X-SESSION-ID header and if correct sets Authorization Bearer with Access Token
 	// then the mdw which checks standard Bearer token takes its action
 	// TODO: currently if a token expires we don't remove session immediately, but we must
-	s.Server.SetAuthMiddleware(s.hub.SessionMiddleware, s.mdw.CheckToken)
+	//s.Server.SetAuthMiddleware(s.hub.SessionMiddleware, s.mdw.CheckToken)
 
 	return s
 }
@@ -87,10 +94,10 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
-	return nil
-}
+	if err := s.bpAdapter.Init(); err != nil {
+		return err
+	}
 
-func (u *serviceImpl) Listen() error {
 	return nil
 }
 
@@ -101,4 +108,7 @@ func (u *serviceImpl) ListenAsync() error {
 	}()
 
 	return nil
+}
+
+func (s *serviceImpl) Close() {
 }

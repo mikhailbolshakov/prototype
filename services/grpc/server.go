@@ -26,7 +26,7 @@ func New(balanceService domain.UserBalanceService,
 	}
 
 	// grpc server
-	gs, err := kitGrpc.NewGrpcServer()
+	gs, err := kitGrpc.NewServer()
 	if err != nil {
 		panic(err)
 	}

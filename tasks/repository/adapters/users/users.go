@@ -6,7 +6,7 @@ import (
 )
 
 type Service interface {
-	GetByUserName(username string) *pb.User
+	Get(id, username string) *pb.User
 	Search(request *pb.SearchRequest) (*pb.SearchResponse, error)
 }
 
@@ -19,11 +19,16 @@ func newImpl() *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) GetByUserName(username string) *pb.User {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	user, _ := u.GetByUsername(ctx, &pb.GetByUsernameRequest{Username: username})
-	return user
+func (u *serviceImpl) Get(id, username string) *pb.User {
+
+	if id != "" {
+		user, _ := u.UsersClient.Get(context.Background(), &pb.GetByIdRequest{Id: id})
+		return user
+	} else if username != "" {
+		user, _ := u.UsersClient.Get(context.Background(), &pb.GetByIdRequest{Id: username})
+		return user
+	}
+	return nil
 }
 
 func (u *serviceImpl) Search(rq *pb.SearchRequest) (*pb.SearchResponse, error) {

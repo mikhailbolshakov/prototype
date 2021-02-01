@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package bp;
+option go_package = "proto/bp";
+
+message StartProcessRequest {
+  string ProcessId = 1;
+  bytes Vars = 2;
+}
+
+message StartProcessResponse {
+  string Id = 1;
+}
+
+service Process {
+  rpc StartProcess(StartProcessRequest) returns (StartProcessResponse) {}
+}

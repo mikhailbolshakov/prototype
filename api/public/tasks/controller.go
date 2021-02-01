@@ -40,7 +40,7 @@ func (c *ctrlImpl) New(writer http.ResponseWriter, request *http.Request) {
 	rq := &NewTaskRequest{}
 	decoder := json.NewDecoder(request.Body)
 	if err := decoder.Decode(rq); err != nil {
-		c.RespondError(writer,  http.StatusBadRequest, errors.New("invalid request"))
+		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
 		return
 	}
 
@@ -85,16 +85,18 @@ func (c *ctrlImpl) SetAssignee(writer http.ResponseWriter, request *http.Request
 	rq := &Assignee{}
 	decoder := json.NewDecoder(request.Body)
 	if err := decoder.Decode(rq); err != nil {
-		c.RespondError(writer,  http.StatusBadRequest, errors.New("invalid request"))
+		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
 		return
 	}
 
 	if rsPb, err := c.taskService.SetAssignee(&pb.SetAssigneeRequest{
-		TaskId:   taskId,
+		TaskId: taskId,
 		Assignee: &pb.Assignee{
-			Group: rq.Group,
-			User:  rq.User,
-			At:    grpc.TimeToPbTS(rq.At),
+			Type:     rq.Type,
+			Group:    rq.Group,
+			UserId:   rq.UserId,
+			Username: rq.Username,
+			At:       grpc.TimeToPbTS(rq.At),
 		},
 	}); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
@@ -106,16 +108,17 @@ func (c *ctrlImpl) SetAssignee(writer http.ResponseWriter, request *http.Request
 func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 
 	rq := &pb.SearchRequest{
-		Paging:   &pb.PagingRequest{},
-		Status:   &pb.Status{
+		Paging: &pb.PagingRequest{},
+		Status: &pb.Status{
 			Status:    request.FormValue("status"),
 			Substatus: request.FormValue("substatus"),
 		},
 		Assignee: &pb.Assignee{
-			Group: request.FormValue("group"),
-			User:  request.FormValue("user"),
+			Group:    request.FormValue("group"),
+			Username: request.FormValue("username"),
+			UserId:   request.FormValue("userId"),
 		},
-		Type:     &pb.Type{
+		Type: &pb.Type{
 			Type:    request.FormValue("type"),
 			Subtype: request.FormValue("subtype"),
 		},
@@ -124,7 +127,7 @@ func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 	if sizeTxt := request.FormValue("limit"); sizeTxt != "" {
 		size, e := strconv.Atoi(sizeTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("limit: " + e.Error()))
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("limit: "+e.Error()))
 			return
 		}
 		rq.Paging.Size = int32(size)
@@ -133,7 +136,7 @@ func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 	if indexTxt := request.FormValue("offset"); indexTxt != "" {
 		index, e := strconv.Atoi(indexTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("offset: " + e.Error()))
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("offset: "+e.Error()))
 			return
 		}
 		rq.Paging.Index = int32(index)
@@ -150,13 +153,13 @@ func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 func (c *ctrlImpl) AssignmentLog(writer http.ResponseWriter, request *http.Request) {
 
 	rq := &pb.AssignmentLogRequest{
-		Paging:   &pb.PagingRequest{},
+		Paging: &pb.PagingRequest{},
 	}
 
 	if startBeforeTxt := request.FormValue("startBefore"); startBeforeTxt != "" {
 		startBefore, e := time.Parse(time.RFC3339, startBeforeTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("startBefore: " + e.Error()))
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("startBefore: "+e.Error()))
 			return
 		}
 		rq.StartTimeBefore = grpc.TimeToPbTS(&startBefore)
@@ -165,7 +168,7 @@ func (c *ctrlImpl) AssignmentLog(writer http.ResponseWriter, request *http.Reque
 	if startAfterTxt := request.FormValue("startAfter"); startAfterTxt != "" {
 		startAfter, e := time.Parse(time.RFC3339, startAfterTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("startAfter: " + e.Error()))
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("startAfter: "+e.Error()))
 			return
 		}
 		rq.StartTimeAfter = grpc.TimeToPbTS(&startAfter)
@@ -174,7 +177,7 @@ func (c *ctrlImpl) AssignmentLog(writer http.ResponseWriter, request *http.Reque
 	if sizeTxt := request.FormValue("limit"); sizeTxt != "" {
 		size, e := strconv.Atoi(sizeTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("limit: " + e.Error()))
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("limit: "+e.Error()))
 			return
 		}
 		rq.Paging.Size = int32(size)
@@ -183,7 +186,7 @@ func (c *ctrlImpl) AssignmentLog(writer http.ResponseWriter, request *http.Reque
 	if indexTxt := request.FormValue("offset"); indexTxt != "" {
 		index, e := strconv.Atoi(indexTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("offset: " + e.Error()))
+			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("offset: "+e.Error()))
 			return
 		}
 		rq.Paging.Index = int32(index)

@@ -7,6 +7,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
+	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/storage"
 	"log"
@@ -39,6 +40,7 @@ type serviceImpl struct {
 	config       ConfigService
 	usersService users.Service
 	queue        queue.Queue
+	chatService  chat.Service
 }
 
 func NewTaskService(
@@ -47,6 +49,7 @@ func NewTaskService(
 	config ConfigService,
 	usersAdapter users.Service,
 	queue queue.Queue,
+	chatService chat.Service,
 ) TaskService {
 
 	s := &serviceImpl{
@@ -55,6 +58,7 @@ func NewTaskService(
 		config:       config,
 		usersService: usersAdapter,
 		queue:        queue,
+		chatService:  chatService,
 	}
 
 	s.scheduler.SetDueDateHandler(s.dueDateSchedulerHandler)
@@ -80,15 +84,56 @@ func (s *Status) equals(another *Status) bool {
 }
 
 func (t *serviceImpl) remindsSchedulerHandler(taskId string) {
+
 	log.Println("reminder fired")
-	task := fromDto(t.storage.Get(taskId))
-	t.publish(task, "tasks.remind")
+
+	task := t.Get(taskId)
+
+	reportedUser := t.usersService.Get(task.Reported.UserId, "")
+	assigneeUser := t.usersService.Get(task.Assignee.UserId, "")
+
+	params := map[string]interface{}{
+		"task-num": task.Num,
+		"due-date": task.DueDate,
+	}
+	if err := t.chatService.SendTriggerPost("task-reminder", assigneeUser.MMId, task.ChannelId, params); err != nil {
+		log.Println("ERROR!!!", err)
+		return
+	}
+
+	if err := t.chatService.SendTriggerPost("task-reminder", reportedUser.MMId, task.ChannelId, params); err != nil {
+		log.Println("ERROR!!!", err)
+		return
+	}
+
 }
 
 func (t *serviceImpl) dueDateSchedulerHandler(taskId string) {
 	log.Println("due date fired")
-	task := fromDto(t.storage.Get(taskId))
-	t.publish(task, "tasks.duedate")
+
+	task := t.Get(taskId)
+
+	reportedUser := t.usersService.Get(task.Reported.UserId, "")
+	assigneeUser := t.usersService.Get(task.Assignee.UserId, "")
+
+	dueDateStr := ""
+	if task.DueDate != nil {
+		dueDateStr = task.DueDate.Format("2006-01-02 15:04:05")
+	}
+
+	params := map[string]interface{}{
+		"task-num": task.Num,
+		"due-date": dueDateStr,
+	}
+	if err := t.chatService.SendTriggerPost("task-duedate", assigneeUser.MMId, task.ChannelId, params); err != nil {
+		log.Println("ERROR!!!", err)
+		return
+	}
+	if err := t.chatService.SendTriggerPost("task-duedate", reportedUser.MMId, task.ChannelId, params); err != nil {
+		log.Println("ERROR!!!", err)
+		return
+	}
+
 }
 
 func (t *serviceImpl) New(task *Task) (*Task, error) {
@@ -116,17 +161,25 @@ func (t *serviceImpl) New(task *Task) (*Task, error) {
 		task.Reported.At = &tm
 	}
 
-	reportedByUser := t.usersService.GetByUserName(task.Reported.By)
+	reportedByUser := t.usersService.Get(task.Reported.UserId, task.Reported.Username)
 	if reportedByUser == nil || reportedByUser.Id == "" {
-		return nil, fmt.Errorf("cannot find reporter username %s", task.Reported.By)
+		return nil, fmt.Errorf("cannot find reporter user")
+	} else {
+		task.Reported.UserId = reportedByUser.Id
+		task.Reported.Username = reportedByUser.Username
+		task.Reported.Type = reportedByUser.Type
 	}
 
-	if task.Assignee.User != "" {
-		assigneeUser := t.usersService.GetByUserName(task.Assignee.User)
-		if assigneeUser == nil || assigneeUser.Id == "" {
-			return nil, fmt.Errorf("cannot find asignee username %s", task.Assignee.User)
-		}
-		task.Assignee.Group = assigneeUser.Type
+	assigneeUser := t.usersService.Get(task.Assignee.UserId, task.Assignee.Username)
+
+	if assigneeUser != nil && assigneeUser.Id != "" {
+		task.Assignee.Type = assigneeUser.Type
+		task.Assignee.Username = assigneeUser.Username
+		task.Assignee.UserId = assigneeUser.Id
+
+		// TODO:
+		task.Assignee.Group = assigneeUser.Groups[0]
+
 	} else {
 
 		// if assigned user is mandatory for the transition, then throw
@@ -134,16 +187,15 @@ func (t *serviceImpl) New(task *Task) (*Task, error) {
 			return nil, fmt.Errorf("task transition is disallowed due to it's configured as assigned user is manadatory")
 		}
 
-		// if assignee user isn't passed, then check groups
-		// if group passed check if it's allowed in transition
-		if task.Assignee.Group != "" && !tr.checkGroup(task.Assignee.Group) {
-			return nil, fmt.Errorf("task cannot be assigned on the group %s", task.Assignee.Group)
-		} else {
-			// otherwise take auto group if specified in transition
-			task.Assignee = &Assignee{Group: tr.AutoAssignGroup}
-			if task.Assignee.Group == "" {
-				return nil, errors.New("no group specified for the task")
-			}
+		task.Assignee.Type = tr.AutoAssignType
+		task.Assignee.Group = tr.AutoAssignGroup
+
+		if task.Assignee.Type == "" {
+			return nil, errors.New("no user type specified for the task")
+		}
+
+		if task.Assignee.Group == "" {
+			return nil, errors.New("no user group specified for the task")
 		}
 
 	}
@@ -201,7 +253,7 @@ func (t *serviceImpl) putHistory(task *Task) {
 	}()
 }
 
-func (t *serviceImpl) GetHistory(taskId string) []*History{
+func (t *serviceImpl) GetHistory(taskId string) []*History {
 
 	dto := t.storage.Get(taskId)
 
@@ -247,14 +299,22 @@ func (t *serviceImpl) MakeTransition(taskId, transitionId string) (*Task, error)
 	task.Status = targetTr.To
 
 	// check mandatory assigned user
-	if targetTr.AssignedUserMandatory && task.Assignee.User == "" {
+	if targetTr.AssignedUserMandatory && task.Assignee.UserId == "" {
 		return nil, fmt.Errorf("task transition is disallowed due to it's configured as assigned user is manadatory")
 	}
 
-	// check assignee group
-	if !targetTr.checkGroup(task.Assignee.Group) {
-		task.Assignee.Group = targetTr.AutoAssignGroup
+	if targetTr.AutoAssignType != "" {
 		task.Assignee.At = &tm
+		task.Assignee.Type = targetTr.AutoAssignType
+	}
+
+	if targetTr.AutoAssignGroup != "" {
+		task.Assignee.At = &tm
+		task.Assignee.Group = targetTr.AutoAssignGroup
+	}
+
+	if task.Assignee.Type == "" {
+		return nil, errors.New(fmt.Sprintf("task cannot be assigned on the type %s", task.Assignee.Type))
 	}
 
 	if task.Assignee.Group == "" {
@@ -297,19 +357,24 @@ func (t *serviceImpl) publish(task *Task, topic string) {
 
 func (t *serviceImpl) setAssignee(task *Task, assignee *Assignee) error {
 
-	if assignee.User != "" {
-		assigneeUser := t.usersService.GetByUserName(assignee.User)
+	if assignee.UserId != "" || assignee.Username != "" {
+		assigneeUser := t.usersService.Get(assignee.UserId, assignee.Username)
 		if assigneeUser == nil || assigneeUser.Id == "" {
-			return fmt.Errorf("cannot find asignee username %s", assignee.User)
+			return fmt.Errorf("cannot find asignee")
 		}
 		task.Assignee.Group = assigneeUser.Type
-		task.Assignee.User = assigneeUser.Username
+		task.Assignee.Username = assigneeUser.Username
+		task.Assignee.UserId = assigneeUser.Id
+		task.Assignee.Type = assigneeUser.Type
 	} else {
 		// if assignee user isn't passed, then check groups
 		// if group passed check if it's allowed in transition
-		if assignee.Group != "" {
-			task.Assignee.Group = assignee.Group
-			task.Assignee.User = ""
+		task.Assignee.Username = ""
+		task.Assignee.UserId = ""
+		task.Assignee.Group = assignee.Group
+		task.Assignee.Type = assignee.Type
+		if task.Assignee.Group == "" || task.Assignee.Type == "" {
+			return fmt.Errorf("empty assigned group or type")
 		}
 	}
 	tm := time.Now().UTC()

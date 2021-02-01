@@ -23,4 +23,6 @@ func (c *Container) Init() error {
 	return c.Bpm.Open()
 }
 
-func Close() {}
+func (c *Container) Close() {
+	_ = c.Bpm.Close()
+}

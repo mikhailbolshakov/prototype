@@ -22,7 +22,7 @@ func New(domain domain.TaskService, search domain.TaskSearchService) *Server {
 	s := &Server{domain: domain, search: search}
 
 	// grpc server
-	gs, err := kitGrpc.NewGrpcServer()
+	gs, err := kitGrpc.NewServer()
 	if err != nil {
 		panic(err)
 	}
@@ -123,3 +123,4 @@ func (s *Server) GetHistory(ctx context.Context, rq *pb.GetHistoryRequest) (*pb.
 
 	return rs, nil
 }
+

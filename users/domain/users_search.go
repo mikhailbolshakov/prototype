@@ -2,8 +2,8 @@ package domain
 
 import (
 	"gitlab.medzdrav.ru/prototype/kit/common"
-	pb "gitlab.medzdrav.ru/prototype/proto/mm"
-	"gitlab.medzdrav.ru/prototype/users/repository/adapters/mattermost"
+	pb "gitlab.medzdrav.ru/prototype/proto/chat"
+	"gitlab.medzdrav.ru/prototype/users/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/users/repository/storage"
 )
 
@@ -11,16 +11,16 @@ type UserSearchService interface {
 	Search(criteria *SearchCriteria) (*SearchResponse, error)
 }
 
-func NewUserSearchService(storage storage.UserStorage, mmService mattermost.Service) UserSearchService {
+func NewUserSearchService(storage storage.UserStorage, chatService chat.Service) UserSearchService {
 	return &searchImpl{
-		storage: storage,
-		mmService: mmService,
+		storage:     storage,
+		chatService: chatService,
 	}
 }
 
 type searchImpl struct {
-	storage storage.UserStorage
-	mmService mattermost.Service
+	storage     storage.UserStorage
+	chatService chat.Service
 }
 
 func (s *searchImpl) Search(cr *SearchCriteria) (*SearchResponse, error) {
@@ -53,7 +53,7 @@ func (s *searchImpl) Search(cr *SearchCriteria) (*SearchResponse, error) {
 			mmUserIds = append(mmUserIds, u.MMUserId)
 		}
 
-		if mmStatuses, err := s.mmService.GetUsersStatuses(&pb.GetUsersStatusesRequest{MMUserIds: mmUserIds}); err == nil {
+		if mmStatuses, err := s.chatService.GetUsersStatuses(&pb.GetUsersStatusesRequest{MMUserIds: mmUserIds}); err == nil {
 
 			for _, user := range response.Users {
 

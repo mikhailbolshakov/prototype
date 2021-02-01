@@ -15,10 +15,19 @@ message Status {
   string Substatus = 2;
 }
 
+message Reported {
+  string Type = 1;
+  string UserId = 2;
+  string Username = 3;
+  google.protobuf.Timestamp At = 4;
+}
+
 message Assignee {
-  string Group = 1;
-  string User = 2;
-  google.protobuf.Timestamp At = 3;
+  string Type = 1;
+  string Group = 2;
+  string UserId = 3;
+  string Username = 4;
+  google.protobuf.Timestamp At = 5;
 }
 
 message BeforeDueDate {
@@ -41,28 +50,26 @@ message Task {
   string Num = 2;
   Type Type = 3;
   Status Status = 4;
-  string ReportedBy = 5;
-  google.protobuf.Timestamp DueDate = 6;
-  google.protobuf.Timestamp ReportedAt = 7;
-  Assignee Assignee = 8;
-  string Description = 9;
-  string Title = 10;
-  bytes Details = 11;
-  string ChannelId = 12;
-  repeated Reminder Reminders = 13;
+  Reported Reported = 5;
+  Assignee Assignee = 6;
+  google.protobuf.Timestamp DueDate = 7;
+  string Description = 8;
+  string Title = 9;
+  bytes Details = 10;
+  string ChannelId = 11;
+  repeated Reminder Reminders = 12;
 }
 
 message NewTaskRequest {
   Type Type = 1;
-  string ReportedBy = 2;
-  google.protobuf.Timestamp ReportedAt = 3;
+  Reported Reported = 2;
+  Assignee Assignee = 3;
   string Description = 4;
   string Title = 5;
   google.protobuf.Timestamp DueDate = 6;
-  Assignee Assignee = 7;
-  string ChannelId = 8;
-  bytes Details = 9;
-  repeated Reminder Reminders = 10;
+  string ChannelId = 7;
+  bytes Details = 8;
+  repeated Reminder Reminders = 9;
 }
 
 message MakeTransitionRequest {
@@ -107,6 +114,7 @@ message SearchRequest {
   Assignee Assignee = 3;
   Type Type = 4;
   string Num = 5;
+  string ChannelId = 6;
 }
 
 message SearchResponse {

@@ -9,17 +9,17 @@ import (
 type Adapter interface {
 	Init() error
 	GetService() Service
+	Close()
 }
 
 type adapterImpl struct {
 	taskServiceImpl *serviceImpl
-	initialized bool
+	client          *kitGrpc.Client
 }
 
 func NewAdapter(queue queue.Queue) Adapter {
 	a := &adapterImpl{
 		taskServiceImpl: newImpl(),
-		initialized: false,
 	}
 	return a
 }
@@ -29,6 +29,7 @@ func (a *adapterImpl) Init() error {
 	if err != nil {
 		return err
 	}
+	a.client = cl
 	a.taskServiceImpl.TasksClient = pb.NewTasksClient(cl.Conn)
 	return nil
 }
@@ -37,4 +38,6 @@ func (a *adapterImpl) GetService() Service {
 	return a.taskServiceImpl
 }
 
-
+func (a *adapterImpl) Close() {
+	_ = a.client.Conn.Close()
+}

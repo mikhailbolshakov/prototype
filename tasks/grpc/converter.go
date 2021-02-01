@@ -10,44 +10,50 @@ import (
 
 func (s *Server) assigneeFromPb(assignee *pb.Assignee) *domain.Assignee {
 	return &domain.Assignee{
-		Group: assignee.Group,
-		User:  assignee.User,
-		At:    grpc.PbTSToTime(assignee.At),
+		Type:     assignee.Type,
+		Group:    assignee.Group,
+		UserId:   assignee.UserId,
+		Username: assignee.Username,
+		At:       grpc.PbTSToTime(assignee.At),
 	}
 }
 
-func (s *Server) fromPb(request *pb.NewTaskRequest) *domain.Task {
+func (s *Server) fromPb(r *pb.NewTaskRequest) *domain.Task {
 
 	details := map[string]interface{}{}
 
-	if request.Details != nil {
-		_ = json.Unmarshal(request.Details, &details)
+	if r.Details != nil {
+		_ = json.Unmarshal(r.Details, &details)
 	}
 
 	t := &domain.Task{
 		Type: &domain.Type{
-			Type:    request.Type.Type,
-			SubType: request.Type.Subtype,
+			Type:    r.Type.Type,
+			SubType: r.Type.Subtype,
 		},
 		Status: &domain.Status{},
 		Reported: &domain.Reported{
-			By: request.ReportedBy,
-			At: grpc.PbTSToTime(request.ReportedAt),
+			Type:     r.Reported.Type,
+			UserId:   r.Reported.UserId,
+			Username: r.Reported.Username,
+			At:       grpc.PbTSToTime(r.Reported.At),
 		},
-		DueDate: grpc.PbTSToTime(request.DueDate),
+		DueDate: grpc.PbTSToTime(r.DueDate),
 		Assignee: &domain.Assignee{
-			Group: request.Assignee.Group,
-			User:  request.Assignee.User,
-			At:    grpc.PbTSToTime(request.Assignee.At),
+			Type:     r.Assignee.Type,
+			Group:    r.Assignee.Group,
+			UserId:   r.Assignee.UserId,
+			Username: r.Assignee.Username,
+			At:       grpc.PbTSToTime(r.Assignee.At),
 		},
-		Description: request.Description,
-		Title:       request.Title,
-		ChannelId:   request.ChannelId,
+		Description: r.Description,
+		Title:       r.Title,
+		ChannelId:   r.ChannelId,
 		Reminders:   []*domain.Reminder{},
 		Details:     details,
 	}
 
-	for _, r := range request.Reminders {
+	for _, r := range r.Reminders {
 
 		dr := &domain.Reminder{}
 
@@ -108,13 +114,19 @@ func (s *Server) fromDomain(task *domain.Task) *pb.Task {
 			Status:    task.Status.Status,
 			Substatus: task.Status.SubStatus,
 		},
-		ReportedBy: task.Reported.By,
-		ReportedAt: grpc.TimeToPbTS(task.Reported.At),
-		DueDate:    grpc.TimeToPbTS(task.DueDate),
+		Reported: &pb.Reported{
+			Type:     task.Reported.Type,
+			UserId:   task.Reported.UserId,
+			Username: task.Reported.Username,
+			At:       grpc.TimeToPbTS(task.Reported.At),
+		},
+		DueDate: grpc.TimeToPbTS(task.DueDate),
 		Assignee: &pb.Assignee{
-			Group: task.Assignee.Group,
-			User:  task.Assignee.User,
-			At:    grpc.TimeToPbTS(task.Assignee.At),
+			Type:     task.Assignee.Type,
+			Group:    task.Assignee.Group,
+			UserId:   task.Assignee.UserId,
+			Username: task.Assignee.Username,
+			At:       grpc.TimeToPbTS(task.Assignee.At),
 		},
 		Description: task.Description,
 		Title:       task.Title,
@@ -142,14 +154,18 @@ func (s *Server) searchRqFromPb(pb *pb.SearchRequest) *domain.SearchCriteria {
 			SubStatus: pb.Status.Substatus,
 		},
 		Assignee: &domain.Assignee{
-			Group: pb.Assignee.Group,
-			User:  pb.Assignee.User,
+			Type:     pb.Assignee.Type,
+			Group:    pb.Assignee.Group,
+			UserId:   pb.Assignee.UserId,
+			Username: pb.Assignee.Username,
+			At:       grpc.PbTSToTime(pb.Assignee.At),
 		},
 		Type: &domain.Type{
 			Type:    pb.Type.Type,
 			SubType: pb.Type.Subtype,
 		},
-		Num: pb.Num,
+		Num:       pb.Num,
+		ChannelId: pb.ChannelId,
 	}
 
 }
@@ -218,16 +234,18 @@ func (s *Server) assLogRsFromDomain(d *domain.AssignmentLogResponse) *pb.Assignm
 
 func (s *Server) histToPb(src *domain.History) *pb.History {
 	return &pb.History{
-		Id:        src.Id,
-		TaskId:    src.TaskId,
-		Status:    &pb.Status{
+		Id:     src.Id,
+		TaskId: src.TaskId,
+		Status: &pb.Status{
 			Status:    src.Status.Status,
 			Substatus: src.Status.SubStatus,
 		},
-		Assignee:  &pb.Assignee{
-			Group: src.Assignee.Group,
-			User:  src.Assignee.User,
-			At:    grpc.TimeToPbTS(src.Assignee.At),
+		Assignee: &pb.Assignee{
+			Type:     src.Assignee.Type,
+			Group:    src.Assignee.Group,
+			UserId:   src.Assignee.UserId,
+			Username: src.Assignee.Username,
+			At:       grpc.TimeToPbTS(src.Assignee.At),
 		},
 		ChangedBy: src.ChangedBy,
 		ChangedAt: grpc.TimeToPbTS(&src.ChangedAt),
@@ -236,16 +254,18 @@ func (s *Server) histToPb(src *domain.History) *pb.History {
 
 func (s *Server) histFromPb(src *pb.History) *domain.History {
 	return &domain.History{
-		Id:        src.Id,
-		TaskId:    src.TaskId,
-		Status:    &domain.Status{
+		Id:     src.Id,
+		TaskId: src.TaskId,
+		Status: &domain.Status{
 			Status:    src.Status.Status,
 			SubStatus: src.Status.Substatus,
 		},
-		Assignee:  &domain.Assignee{
-			Group: src.Assignee.Group,
-			User:  src.Assignee.User,
-			At:    grpc.PbTSToTime(src.Assignee.At),
+		Assignee: &domain.Assignee{
+			Type:     src.Assignee.Type,
+			Group:    src.Assignee.Group,
+			UserId:   src.Assignee.UserId,
+			Username: src.Assignee.Username,
+			At:       grpc.PbTSToTime(src.Assignee.At),
 		},
 		ChangedBy: src.ChangedBy,
 		ChangedAt: *grpc.PbTSToTime(src.ChangedAt),
