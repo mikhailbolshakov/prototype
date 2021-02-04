@@ -2,45 +2,46 @@ package mattermost
 
 import (
 	"gitlab.medzdrav.ru/prototype/kit/chat/mattermost"
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 )
 
 type Adapter interface {
-	Init() error
+	Init(cfg *kitConfig.Config) error
 	GetService() Service
 	Close()
 }
 
 type adapterImpl struct {
 	mmServiceImpl *serviceImpl
-	initialized   bool
 }
 
 func NewAdapter(queue queue.Queue) Adapter {
 	a := &adapterImpl{
 		mmServiceImpl: newImpl(queue),
-		initialized:   false,
 	}
 	return a
 }
 
-func (a *adapterImpl) Init() error {
+func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
+
+	a.mmServiceImpl.setConfig(cfg)
 
 	var err error
 	a.mmServiceImpl.adminClient, err = mattermost.Login(&mattermost.Params{
-		Url:     MM_REST_URL,
-		WsUrl:   MM_WS_URL,
-		Account: ADMIN_USERNAME,
-		Pwd:     ADMIN_PASSWORD,
+		Url:     cfg.Mattermost.Url,
+		WsUrl:   cfg.Mattermost.Ws,
+		Account: cfg.Mattermost.AdminUsername,
+		Pwd:     cfg.Mattermost.AdminPassword,
 	})
 	if err != nil {
 		return err
 	}
 
 	a.mmServiceImpl.botClient, err = mattermost.Login(&mattermost.Params{
-		Account:     RGS_BOT_USERNAME,
-		Url:         MM_REST_URL,
-		AccessToken: RGS_BOT_ACCESS_TOKEN,
+		Account:     cfg.Mattermost.BotUsername,
+		Url:         cfg.Mattermost.Url,
+		AccessToken: cfg.Mattermost.BotAccessToken,
 	})
 	return err
 

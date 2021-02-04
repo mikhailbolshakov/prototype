@@ -1,12 +1,13 @@
 package chat
 
 import (
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/chat"
 )
 
 type Adapter interface {
-	Init() error
+	Init(c *kitConfig.Config) error
 	GetService() Service
 	Close()
 }
@@ -23,9 +24,10 @@ func NewAdapter() Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init() error {
+func (a *adapterImpl) Init(c *kitConfig.Config) error {
 
-	cl, err := kitGrpc.NewClient("localhost", "50053")
+	chatCfg := c.Services["chat"]
+	cl, err := kitGrpc.NewClient(chatCfg.Grpc.Hosts[0], chatCfg.Grpc.Port)
 	if err != nil {
 		return err
 	}

@@ -3,17 +3,8 @@ package mattermost
 import (
 	"github.com/adacta-ru/mattermost-server/v6/model"
 	"gitlab.medzdrav.ru/prototype/kit/chat/mattermost"
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
-)
-
-// TODO: env
-const (
-	RGS_BOT_USERNAME     = "bot.rgs"
-	RGS_BOT_ACCESS_TOKEN = "jg88x5sb63yk8ng6kcfkb37iho"
-	MM_REST_URL          = "http://localhost:8065"
-	MM_WS_URL            = "ws://localhost:8065"
-	ADMIN_USERNAME       = "admin"
-	ADMIN_PASSWORD       = "admin"
 )
 
 type NewPostMessageHandler func(post *Post)
@@ -22,15 +13,12 @@ type Service interface {
 	CreateUser(user *CreateUserRequest) (*CreateUserResponse, error)
 	CreateClientChannel(rq *CreateClientChannelRequest) (*CreateChannelResponse, error)
 	SubscribeUser(rq *SubscribeUserRequest) (*SubscribeUserResponse, error)
-	EphemeralPost(p *EphemeralPost) error
-	Post(p *Post) error
+	Post(channelId, message, toUserId string, ephemeral, fromBot bool, attachments []*PostAttachment) error
 	GetUserStatuses(rq *GetUsersStatusesRequest) (*GetUsersStatusesResponse, error)
-	CreateDirectChannel(rq *CreateDirectChannelRequest) (*CreateChannelResponse, error)
+	CreateDirectChannel(userId1, userId2 string) (string, error)
 	// returns list of user's channels which have given active members (there might be more members and it's OK)
 	GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMembersRequest) ([]string, error)
 	DeleteUser(userId string) error
-	PostFromBot(p *Post) error
-	EphemeralPostFromBot(p *EphemeralPost) error
 }
 
 type serviceImpl struct {
@@ -38,6 +26,7 @@ type serviceImpl struct {
 	queue           queue.Queue
 	newPostsHandler NewPostMessageHandler
 	botClient       *mattermost.Client
+	cfg             *kitConfig.Config
 }
 
 func newImpl(queue queue.Queue) *serviceImpl {
@@ -47,14 +36,19 @@ func newImpl(queue queue.Queue) *serviceImpl {
 	return m
 }
 
+// TODO: I don't like. We have to pass config on new somehow
+func (s *serviceImpl) setConfig(cfg *kitConfig.Config) {
+	s.cfg = cfg
+}
+
 func (s *serviceImpl) CreateUser(rq *CreateUserRequest) (*CreateUserResponse, error) {
 
 	if rq.TeamName == "" {
-		rq.TeamName = "rgs"
+		rq.TeamName = s.cfg.Mattermost.Team
 	}
 
 	if rq.Password == "" {
-		rq.Password = "12345"
+		rq.Password = s.cfg.Mattermost.DefaultPassword
 	}
 
 	userId, err := s.adminClient.CreateUser(rq.TeamName, rq.Username, rq.Password, rq.Email)
@@ -68,7 +62,7 @@ func (s *serviceImpl) CreateUser(rq *CreateUserRequest) (*CreateUserResponse, er
 func (s *serviceImpl) CreateClientChannel(rq *CreateClientChannelRequest) (*CreateChannelResponse, error) {
 
 	if rq.TeamName == "" {
-		rq.TeamName = "rgs"
+		rq.TeamName = s.cfg.Mattermost.Team
 	}
 
 	chId, err := s.adminClient.CreateUserChannel("P", rq.TeamName, rq.ClientUserId, rq.DisplayName, rq.Name)
@@ -92,18 +86,26 @@ func (s *serviceImpl) SubscribeUser(rq *SubscribeUserRequest) (*SubscribeUserRes
 	return &SubscribeUserResponse{}, nil
 }
 
-func (s *serviceImpl) EphemeralPost(p *EphemeralPost) error {
-	if p.Attachments == nil {
-		p.Attachments = []*PostAttachment{}
-	}
-	return s.adminClient.CreateEphemeralPost(p.ChannelId, p.UserId, p.Message, s.convertAttachments(p.Attachments))
-}
+func (s *serviceImpl) Post(channelId, message, toUserId string, ephemeral, fromBot bool, attachments []*PostAttachment) error {
 
-func (s *serviceImpl) Post(p *Post) error {
-	if p.Attachments == nil {
-		p.Attachments = []*PostAttachment{}
+	var client *mattermost.Client
+	if fromBot {
+		client = s.botClient
+	} else {
+		client = s.adminClient
 	}
-	return s.adminClient.CreatePost(p.ChannelId, p.Message, s.convertAttachments(p.Attachments))
+
+	if attachments == nil {
+		attachments = []*PostAttachment{}
+	}
+	att := s.convertAttachments(attachments)
+
+	if ephemeral {
+		return client.CreateEphemeralPost(channelId, toUserId, message, att)
+	} else {
+		return client.CreatePost(channelId, message, att)
+	}
+
 }
 
 func (s *serviceImpl) GetUserStatuses(rq *GetUsersStatusesRequest) (*GetUsersStatusesResponse, error) {
@@ -127,17 +129,17 @@ func (s *serviceImpl) GetUserStatuses(rq *GetUsersStatusesRequest) (*GetUsersSta
 	return rs, nil
 }
 
-func (s *serviceImpl) CreateDirectChannel(rq *CreateDirectChannelRequest) (*CreateChannelResponse, error) {
-	chId, err := s.adminClient.CreateDirectChannel(rq.UserId1, rq.UserId2)
+func (s *serviceImpl) CreateDirectChannel(userId1, userId2 string) (string, error) {
+	chId, err := s.adminClient.CreateDirectChannel(userId1, userId2)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return &CreateChannelResponse{chId}, nil
+	return chId, nil
 }
 
 func (s *serviceImpl) GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMembersRequest) ([]string, error) {
 
-	teamName := "rgs"
+	teamName := s.cfg.Mattermost.Team
 	if rq.TeamName != "" {
 		teamName = rq.TeamName
 	}
@@ -185,23 +187,44 @@ func (s *serviceImpl) convertAttachments(attachments []*PostAttachment) []*model
 			}
 		}
 
+		if a.Actions != nil && len(a.Actions) > 0 {
+			sa.Actions = []*model.PostAction{}
+			for _, act := range a.Actions {
+				sAct := &model.PostAction{
+					Id:            act.Id,
+					Type:          act.Type,
+					Name:          act.Name,
+					Disabled:      act.Disabled,
+					Style:         act.Style,
+					DataSource:    act.DataSource,
+					Options:       []*model.PostActionOptions{},
+					DefaultOption: act.DefaultOption,
+					Integration:   &model.PostActionIntegration{},
+					Cookie:        act.Cookie,
+				}
+
+				if act.Integration != nil {
+					sAct.Integration.URL = act.Integration.URL
+					sAct.Integration.Context = act.Integration.Context
+				}
+
+				if act.Options != nil && len(act.Options) > 0 {
+					for _, o := range act.Options {
+						sAct.Options = append(sAct.Options, &model.PostActionOptions{
+							Text:  o.Text,
+							Value: o.Value,
+						})
+					}
+				}
+
+				sa.Actions = append(sa.Actions, sAct)
+			}
+
+		}
+
 		slackAttachments = append(slackAttachments, sa)
 
 	}
 
 	return slackAttachments
-}
-
-func (s *serviceImpl) PostFromBot(p *Post) error {
-	if p.Attachments == nil {
-		p.Attachments = []*PostAttachment{}
-	}
-	return s.botClient.CreatePost(p.ChannelId, p.Message, s.convertAttachments(p.Attachments))
-}
-
-func (s *serviceImpl) EphemeralPostFromBot(p *EphemeralPost) error {
-	if p.Attachments == nil {
-		p.Attachments = []*PostAttachment{}
-	}
-	return s.botClient.CreateEphemeralPost(p.ChannelId, p.UserId, p.Message, s.convertAttachments(p.Attachments))
 }

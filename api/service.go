@@ -4,14 +4,15 @@ import (
 	"context"
 	"github.com/Nerzal/gocloak/v7"
 	"gitlab.medzdrav.ru/prototype/api/public/bp"
-	servRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/services"
-	tasksRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/tasks"
-	usersRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/api/public/services"
-	"gitlab.medzdrav.ru/prototype/api/session"
 	"gitlab.medzdrav.ru/prototype/api/public/tasks"
 	"gitlab.medzdrav.ru/prototype/api/public/users"
 	bpRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/bp"
+	"gitlab.medzdrav.ru/prototype/api/repository/adapters/config"
+	servRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/services"
+	tasksRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/tasks"
+	usersRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/users"
+	"gitlab.medzdrav.ru/prototype/api/session"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	"gitlab.medzdrav.ru/prototype/kit/service"
@@ -20,55 +21,80 @@ import (
 
 type serviceImpl struct {
 	*kitHttp.Server
-	keycloak    gocloak.GoCloak
-	mdw         auth.Middleware
-	hub         session.Hub
-	userAdapter usersRep.Adapter
-	taskAdapter tasksRep.Adapter
-	servAdapter servRep.Adapter
-	bpAdapter   bpRep.Adapter
+	keycloak        gocloak.GoCloak
+	mdw             auth.Middleware
+	hub             session.Hub
+	userAdapter     usersRep.Adapter
+	userService     usersRep.Service
+	taskAdapter     tasksRep.Adapter
+	taskService     tasksRep.Service
+	servAdapter     servRep.Adapter
+	balanceService  servRep.BalanceService
+	deliveryService servRep.DeliveryService
+	bpAdapter       bpRep.Adapter
+	bpService       bpRep.Service
+	configAdapter   config.Adapter
+	configService   config.Service
 }
 
 func New() service.Service {
 	s := &serviceImpl{}
 
+	s.configAdapter = config.NewAdapter()
+	s.configService = s.configAdapter.GetService()
+
+	s.userAdapter = usersRep.NewAdapter()
+	s.userService = s.userAdapter.GetService()
+
+	s.taskAdapter = tasksRep.NewAdapter()
+	s.taskService = s.taskAdapter.GetService()
+
+	s.servAdapter = servRep.NewAdapter()
+	s.deliveryService = s.servAdapter.GetDeliveryService()
+	s.balanceService = s.servAdapter.GetBalanceService()
+
+	s.bpAdapter = bpRep.NewAdapter()
+	s.bpService = s.bpAdapter.GetService()
+
+	return s
+}
+
+func (s *serviceImpl) Init() error {
+
 	ctx := context.Background()
 
-	authClient := &auth.ClientSecurityInfo{
-		ID:     "app",
-		Secret: "d6dbae97-8570-4758-a081-9077b7899a7d",
-		Realm:  "prototype",
+	if err := s.configAdapter.Init(); err != nil {
+		return err
 	}
 
-	s.keycloak = gocloak.NewClient("http://localhost:8086")
+	c, err := s.configService.Get()
+	if err != nil {
+		return err
+	}
+
+	authClient := &auth.ClientSecurityInfo{
+		ID:     c.Keycloak.ClientId,
+		Secret: c.Keycloak.ClientSecret,
+		Realm:  c.Keycloak.ClientRealm,
+	}
+
+	s.keycloak = gocloak.NewClient(c.Keycloak.Url)
 	s.mdw = auth.NewMdw(ctx, s.keycloak, authClient, "", "")
 
 	authService := auth.New(ctx, s.keycloak, authClient)
 
 	// HTTP server
-	s.Server = kitHttp.NewHttpServer("localhost", "8000")
+	s.Server = kitHttp.NewHttpServer(c.Http.Host, c.Http.Port)
 
-	s.userAdapter = usersRep.NewAdapter()
-	userService := s.userAdapter.GetService()
-	userController := users.NewController(authService, userService)
-
-	s.taskAdapter = tasksRep.NewAdapter()
-	taskService := s.taskAdapter.GetService()
-	taskController := tasks.NewController(taskService)
-
-	s.servAdapter = servRep.NewAdapter()
-	deliveryService := s.servAdapter.GetDeliveryService()
-	balanceService := s.servAdapter.GetBalanceService()
-	servController := services.NewController(balanceService, deliveryService)
-
-	s.bpAdapter = bpRep.NewAdapter()
-	bpService := s.bpAdapter.GetService()
-	bpController := bp.NewController(bpService)
+	userController := users.NewController(authService, s.userService)
+	taskController := tasks.NewController(s.taskService)
+	servController := services.NewController(s.balanceService, s.deliveryService)
+	bpController := bp.NewController(s.bpService)
 
 	s.Server.SetRouters(users.NewRouter(userController), tasks.NewRouter(taskController), services.NewRouter(servController), bp.NewRouter(bpController))
 
 	// session HUB
-	s.hub = session.NewHub(s.Server, authService, userService)
+	s.hub = session.NewHub(s.Server, authService, s.userService)
 	s.Server.SetRouters(s.hub.GetLoginRouteSetter())
 
 	// set auth middlewares
@@ -77,38 +103,39 @@ func New() service.Service {
 	// TODO: currently if a token expires we don't remove session immediately, but we must
 	//s.Server.SetAuthMiddleware(s.hub.SessionMiddleware, s.mdw.CheckToken)
 
-	return s
-}
-
-func (s *serviceImpl) Init() error {
-
-	if err := s.userAdapter.Init(); err != nil {
+	if err := s.userAdapter.Init(c); err != nil {
 		return err
 	}
 
-	if err := s.taskAdapter.Init(); err != nil {
+	if err := s.taskAdapter.Init(c); err != nil {
 		return err
 	}
 
-	if err := s.servAdapter.Init(); err != nil {
+	if err := s.servAdapter.Init(c); err != nil {
 		return err
 	}
 
-	if err := s.bpAdapter.Init(); err != nil {
+	if err := s.bpAdapter.Init(c); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (u *serviceImpl) ListenAsync() error {
+func (s *serviceImpl) ListenAsync() error {
 
 	go func() {
-		log.Fatal(u.Open())
+		log.Fatal(s.Open())
 	}()
 
 	return nil
 }
 
 func (s *serviceImpl) Close() {
+	s.bpAdapter.Close()
+	s.servAdapter.Close()
+	s.userAdapter.Close()
+	s.taskAdapter.Close()
+	s.configAdapter.Close()
+	_ = s.Srv.Close()
 }

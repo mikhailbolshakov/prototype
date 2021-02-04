@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"gitlab.medzdrav.ru/prototype/kit"
-	"gitlab.medzdrav.ru/prototype/kit/bpm"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
+	"gitlab.medzdrav.ru/prototype/services/repository/adapters/bp"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/services/repository/storage"
 	"time"
@@ -24,16 +24,16 @@ type DeliveryService interface {
 
 func NewDeliveryService(balanceService UserBalanceService,
 	userService users.Service,
+	bpService bp.Service,
 	storage storage.Storage,
-	queue queue.Queue,
-	bpm bpm.Engine) DeliveryService {
+	queue queue.Queue) DeliveryService {
 
 	d := &deliveryServiceImpl{
 		balance:     balanceService,
 		userService: userService,
 		storage:     storage,
 		queue:       queue,
-		bpm:         bpm,
+		bpService:   bpService,
 	}
 
 	return d
@@ -44,7 +44,7 @@ type deliveryServiceImpl struct {
 	userService users.Service
 	queue       queue.Queue
 	storage     storage.Storage
-	bpm         bpm.Engine
+	bpService   bp.Service
 }
 
 func (s *deliveryServiceImpl) userIdName(input string) string {
@@ -115,7 +115,7 @@ func (d *deliveryServiceImpl) Delivery(rq *DeliveryRequest) (*Delivery, error) {
 			// start WF
 			variables := make(map[string]interface{})
 			variables["deliveryId"] = delivery.Id
-			_, err := d.bpm.StartProcess(st.DeliveryWfId, variables)
+			_, err := d.bpService.StartProcess(st.DeliveryWfId, variables)
 			if err != nil {
 				return nil, err
 			}
@@ -136,7 +136,7 @@ func (d *deliveryServiceImpl) Delivery(rq *DeliveryRequest) (*Delivery, error) {
 	return delivery, nil
 }
 
-func (d *deliveryServiceImpl) Get(deliveryId string) *Delivery{
+func (d *deliveryServiceImpl) Get(deliveryId string) *Delivery {
 	dto := d.storage.GetDelivery(deliveryId)
 	return d.deliveryFromDto(dto)
 }
@@ -204,4 +204,3 @@ func (d *deliveryServiceImpl) UpdateDetails(deliveryId string, details map[strin
 
 	return d.deliveryFromDto(dto), nil
 }
-

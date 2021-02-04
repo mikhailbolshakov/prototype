@@ -2,10 +2,7 @@ package domain
 
 import (
 	"fmt"
-	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/bp"
 	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/mattermost"
-	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/tasks"
-	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/users"
 )
 
 type Service interface {
@@ -13,56 +10,23 @@ type Service interface {
 	CreateUser(rq *CreateUserRequest) (*CreateUserResponse, error)
 	CreateClientChannel(rq *CreateClientChannelRequest) (*CreateClientChannelResponse, error)
 	GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMembersRequest) ([]string, error)
-	SendTriggerPost(rq *SendTriggerPostRequest) error
-	SendPostFromBot(rq *SendPostRequest) error
 	SubscribeUser(rq *SubscribeUserRequest) error
 	DeleteUser(userId string) error
 	AskBot(request *AskBotRequest) (*AskBotResponse, error)
+	Posts(posts []*Post) error
 }
 
 type serviceImpl struct {
 	mmService    mattermost.Service
-	usersService users.Service
-	tasksService tasks.Service
-	bpService    bp.Service
 }
 
-func NewService(mmService mattermost.Service, usersService users.Service, tasksService tasks.Service, bpService bp.Service) Service {
+func NewService(mmService mattermost.Service) Service {
 
 	s := &serviceImpl{
 		mmService:    mmService,
-		usersService: usersService,
-		tasksService: tasksService,
-		bpService:    bpService,
 	}
 
 	return s
-}
-
-func (s *serviceImpl) SendPostFromBot(rq *SendPostRequest) error {
-
-	post := &mattermost.Post{
-		ChannelId:   rq.ChannelId,
-		Message:     rq.Message,
-	}
-
-	if rq.Ephemeral {
-		if rq.UserId == "" {
-			return fmt.Errorf("user isn't specified for ephemeral post")
-		}
-		if err := s.mmService.EphemeralPostFromBot(&mattermost.EphemeralPost{
-			Post:   post,
-			UserId: rq.UserId,
-		}); err != nil {
-			return err
-		}
-	} else {
-		if err := s.mmService.PostFromBot(post); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (s *serviceImpl) GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMembersRequest) ([]string, error) {
@@ -145,4 +109,29 @@ func (s *serviceImpl) SubscribeUser(rq *SubscribeUserRequest) error {
 
 func (s *serviceImpl) DeleteUser(userId string) error {
 	return s.mmService.DeleteUser(userId)
+}
+
+func (s *serviceImpl) Posts(posts []*Post) error {
+
+	var err error
+	for _, post := range posts {
+
+		if post.Ephemeral && post.ToUserId == "" {
+			return fmt.Errorf("recipient user id must be specified for an ephemeral post")
+		}
+
+		if post.PredefinedPost != nil && post.PredefinedPost.Code != "" {
+			post, err = s.predefinedPost(post)
+			if err != nil {
+				return err
+			}
+		}
+
+		if err := s.mmService.Post(post.ChannelId, post.Message, post.ToUserId, post.Ephemeral, post.FromBot, s.convertAttachments(post.Attachments)); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
 }

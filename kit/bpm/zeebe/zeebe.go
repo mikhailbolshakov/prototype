@@ -10,7 +10,11 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/bpm"
 	"log"
 	"path/filepath"
+	"strings"
+	"time"
 )
+
+const ERR_EXHAUSTED_RESOURCES_MAX_RETRY = 10
 
 type engineImpl struct {
 	params *Params
@@ -75,17 +79,30 @@ func (z *engineImpl) Close() error {
 
 func (z *engineImpl) DeployBPMNs(paths []string) error {
 
-	ctx := context.Background()
-
 	for _, p := range paths {
 
 		absPath, _ := filepath.Abs(p)
-		rs, err := z.client.NewDeployWorkflowCommand().AddResourceFile(absPath).Send(ctx)
-		if err != nil {
-			return err
-		}
 
-		log.Printf("zeebe: %s deployed. details: %v", p, rs)
+		go func(path string){
+
+			errRetryCount := 0
+
+			for {
+				rs, err := z.client.NewDeployWorkflowCommand().AddResourceFile(path).Send(context.Background())
+				if err != nil {
+					if strings.Contains(err.Error(), "ResourceExhausted") && errRetryCount <= ERR_EXHAUSTED_RESOURCES_MAX_RETRY {
+						time.Sleep(time.Millisecond * 100)
+						errRetryCount++
+					} else {
+						log.Printf("ERROR!!! zeebe deployment %s. err: %v", path, rs)
+						return
+					}
+				} else {
+					log.Printf("zeebe: %s deployed. details: %v", path, rs)
+					return
+				}
+			}
+		}(absPath)
 
 	}
 

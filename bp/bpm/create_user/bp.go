@@ -214,6 +214,22 @@ func (bp *bpImpl) sendHello(client worker.JobClient, job entities.Job) {
 		return
 	}
 
+	id := variables["id"].(string)
+	channelId := variables["mmChannelId"].(string)
+
+	if channelId != "" {
+		user := bp.userService.Get(id)
+
+		if user.ClientDetails != nil {
+			msg := fmt.Sprintf("Добрый день, **%s %s**\nДобро пожаловать!!!", user.ClientDetails.FirstName, user.ClientDetails.MiddleName)
+			if err := bp.chatService.Post(msg, channelId, "", false, true); err != nil {
+				zeebe.FailJob(client, job, err)
+				return
+			}
+		}
+
+	}
+
 	err = zeebe.CompleteJob(client, job, variables)
 	if err != nil {
 		zeebe.FailJob(client, job, err)

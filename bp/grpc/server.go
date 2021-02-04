@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	bpmKit "gitlab.medzdrav.ru/prototype/kit/bpm"
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/bp"
 	"log"
 )
 
 type Server struct {
+	host, port string
 	*kitGrpc.Server
 	bpm bpmKit.Engine
 	pb.UnimplementedProcessServer
@@ -30,6 +32,14 @@ func New(bpm bpmKit.Engine) *Server {
 	return s
 }
 
+func  (s *Server) Init(c *kitConfig.Config) error {
+	cfg := c.Services["bp"]
+	s.host = cfg.Grpc.Hosts[0]
+	s.port = cfg.Grpc.Port
+	return nil
+}
+
+
 func (s *Server) StartProcess(ctx context.Context, rq *pb.StartProcessRequest) (*pb.StartProcessResponse, error) {
 
 	vars := map[string]interface{}{}
@@ -48,7 +58,7 @@ func (s *Server) StartProcess(ctx context.Context, rq *pb.StartProcessRequest) (
 func (s *Server) ListenAsync() {
 
 	go func() {
-		err := s.Server.Listen("localhost", "50055")
+		err := s.Server.Listen(s.host, s.port)
 		if err != nil {
 			log.Fatal(err)
 		}

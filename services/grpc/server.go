@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"encoding/json"
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/services"
 	"gitlab.medzdrav.ru/prototype/services/domain"
@@ -10,6 +11,7 @@ import (
 )
 
 type Server struct {
+	host, port string
 	*kitGrpc.Server
 	balanceService domain.UserBalanceService
 	deliveryService domain.DeliveryService
@@ -36,6 +38,14 @@ func New(balanceService domain.UserBalanceService,
 
 	return s
 }
+
+func  (s *Server) Init(c *kitConfig.Config) error {
+	usersCfg := c.Services["services"]
+	s.host = usersCfg.Grpc.Hosts[0]
+	s.port = usersCfg.Grpc.Port
+	return nil
+}
+
 
 func (s *Server) ListenAsync() {
 

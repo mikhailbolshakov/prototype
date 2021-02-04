@@ -61,7 +61,7 @@ func (bp *bpImpl) Init() error {
 
 func (bp *bpImpl) SetQueueListeners(ql listener.QueueListener) {
 	ql.Add("tasks.assigned", bp.TaskAssignedMessageHandler)
-	ql.Add("tasks.clientrequest.solved", bp.TaskSolvedMessageHandler)
+	ql.Add("tasks.solved", bp.TaskSolvedMessageHandler)
 }
 
 func (bp *bpImpl) GetId() string {
@@ -130,6 +130,8 @@ func (bp *bpImpl) createClientMedChannelHandler(client worker.JobClient, job ent
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	time.Sleep(time.Second)
 
 	user.ClientDetails.MedChannelId = chRs.ChannelId
 	user, err = bp.userService.SetClientDetails(user.Id, user.ClientDetails)
@@ -224,7 +226,7 @@ func (bp *bpImpl) createClientMedRequestTaskHandler(client worker.JobClient, job
 		return
 	}
 
-	if err := bp.chatService.SendTriggerPost("client.new-request", user.MMId, channelId, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(channelId, user.MMId, "client.new-med-request", true, true, map[string]interface{}{
 		"client.name": fmt.Sprintf("%s", user.ClientDetails.FirstName),
 	}); err != nil {
 		zeebe.FailJob(client, job, err)
@@ -259,6 +261,7 @@ func (bp *bpImpl) subscribeConsultantHandler(client worker.JobClient, job entiti
 		zeebe.FailJob(client, job, err)
 		return
 	}
+	time.Sleep(time.Second)
 
 	err = zeebe.CompleteJob(client, job, nil)
 	if err != nil {
@@ -283,23 +286,23 @@ func (bp *bpImpl) sendMessageTaskAssignedHandler(client worker.JobClient, job en
 	user := bp.userService.Get(userId)
 	assignee := bp.userService.Get(assigneeUsername)
 
-	if err := bp.chatService.SendTriggerPost("client.request-assigned", user.MMId, channelId, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(channelId, user.MMId, "client.request-assigned", true, true, map[string]interface{}{
 		"consultant.first-name": assignee.ConsultantDetails.FirstName,
 		"consultant.last-name":  assignee.ConsultantDetails.LastName,
-		"consultant.url":        "https://prodoctorov.ru/media/photo/tula/doctorimage/589564/432638-589564-ezhikov_l.jpg",
+		"consultant.url":        assignee.ConsultantDetails.PhotoUrl,
 	}); err != nil {
-		log.Println(err)
+		zeebe.FailJob(client, job, err)
 		return
 	}
 
-	if err := bp.chatService.SendTriggerPost("consultant.request-assigned", assignee.MMId, channelId, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(channelId, assignee.MMId, "consultant.request-assigned", true, true, map[string]interface{}{
 		"client.first-name": user.ClientDetails.FirstName,
 		"client.last-name":  user.ClientDetails.LastName,
 		"client.phone":      user.ClientDetails.Phone,
-		"client.url":        "https://www.kinonews.ru/insimgs/persimg/persimg3150.jpg",
+		"client.url":        user.ClientDetails.PhotoUrl,
 		"client.med-card":   "https://pmed.moi-service.ru/profile/medcard",
 	}); err != nil {
-		log.Println(err)
+		zeebe.FailJob(client, job, err)
 		return
 	}
 
@@ -324,8 +327,8 @@ func (bp *bpImpl) sendMessageNoAvailableConsultantHandler(client worker.JobClien
 	channelId := variables["channelId"].(string)
 	user := bp.userService.Get(userId)
 
-	if err := bp.chatService.SendTriggerPost("client.no-consultant-available", user.MMId, channelId, nil); err != nil {
-		log.Println(err)
+	if err := bp.chatService.PredefinedPost(channelId, user.MMId, "client.no-consultant-available", true, true, nil); err != nil {
+		zeebe.FailJob(client, job, err)
 		return
 	}
 
@@ -343,10 +346,12 @@ func (bp *bpImpl) TaskAssignedMessageHandler(payload []byte) error {
 		return err
 	}
 
+	log.Println("task %s assigned (client_med_request handler)")
+
 	if task.Type.Type == TASK_TYPE_CLIENT && task.Type.SubType == TASK_SUBTYPE_MED_REQUEST && task.Assignee.UserId != "" {
 		variables := map[string]interface{}{}
 		variables["assignee"] = task.Assignee.UserId
-		_ = bp.SendMessage("msg-client-med-task-assigned", task.Id, variables)
+		return bp.SendMessage("msg-client-med-task-assigned", task.Id, variables)
 	}
 
 	return nil
@@ -362,11 +367,8 @@ func (bp *bpImpl) TaskSolvedMessageHandler(payload []byte) error {
 
 	if task.Type.Type == TASK_TYPE_CLIENT && task.Type.SubType == TASK_SUBTYPE_MED_REQUEST {
 
-		user := bp.userService.Get(task.Reported.UserId)
-
-		if err := bp.chatService.SendTriggerPost("client.task-solved", user.MMId, task.ChannelId, map[string]interface{}{
-			"task-num": task.Num,
-		}); err != nil {
+		msg := fmt.Sprintf("Консультация %s завершена", task.Num)
+		if err := bp.chatService.Post(msg, task.ChannelId, "", false, true); err != nil {
 			log.Println(err)
 			return err
 		}

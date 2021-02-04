@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 	domain "gitlab.medzdrav.ru/prototype/tasks/domain"
@@ -11,6 +12,7 @@ import (
 )
 
 type Server struct {
+	host, port string
 	*kitGrpc.Server
 	domain domain.TaskService
 	search domain.TaskSearchService
@@ -32,10 +34,17 @@ func New(domain domain.TaskService, search domain.TaskSearchService) *Server {
 	return s
 }
 
+func  (s *Server) Init(c *kitConfig.Config) error {
+	usersCfg := c.Services["tasks"]
+	s.host = usersCfg.Grpc.Hosts[0]
+	s.port = usersCfg.Grpc.Port
+	return nil
+}
+
 func (s *Server) ListenAsync() {
 
 	go func () {
-		err := s.Server.Listen("localhost", "50052")
+		err := s.Server.Listen(s.host, s.port)
 		if err != nil {
 			log.Fatal(err)
 		}

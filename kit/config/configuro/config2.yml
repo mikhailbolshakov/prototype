@@ -1,0 +1,21 @@
+redis:
+  port: 6379
+  host: localhost
+  password: ${REDIS_PASSWORD|}
+  ttl: 7200
+
+services:
+  chat:
+    database:
+      dbname: mattermost
+      user: chat
+      password: chat
+      port: 5432
+      # read-write host
+      host-rw: localhost
+      # read-only host
+      host-ro: localhost
+    grpc:
+      port: 50053
+      hosts:
+        - localhost

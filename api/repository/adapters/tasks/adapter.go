@@ -1,39 +1,46 @@
 package tasks
 
 import (
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 )
 
 type Adapter interface {
-	Init() error
+	Init(c *kitConfig.Config) error
 	GetService() Service
+	Close()
 }
 
 type adapterImpl struct {
 	taskServiceImpl *serviceImpl
-	initialized bool
+	client *kitGrpc.Client
 }
 
 func NewAdapter() Adapter {
 	a := &adapterImpl{
 		taskServiceImpl: newImpl(),
-		initialized: false,
 	}
 	return a
 }
 
-func (a *adapterImpl) Init() error {
-	cl, err := kitGrpc.NewClient("localhost", "50052")
+func (a *adapterImpl) Init(c *kitConfig.Config) error {
+	cfg := c.Services["tasks"]
+	cl, err := kitGrpc.NewClient(cfg.Grpc.Hosts[0], cfg.Grpc.Port)
 	if err != nil {
 		return err
 	}
+	a.client = cl
 	a.taskServiceImpl.TasksClient = pb.NewTasksClient(cl.Conn)
 	return nil
 }
 
 func (a *adapterImpl) GetService() Service {
 	return a.taskServiceImpl
+}
+
+func (a *adapterImpl) Close() {
+	_ = a.client.Conn.Close()
 }
 
 

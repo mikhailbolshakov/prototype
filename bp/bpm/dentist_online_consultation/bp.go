@@ -1,4 +1,4 @@
-package expert_online_consultation
+package dentist_online_consultation
 
 import (
 	"context"
@@ -24,12 +24,17 @@ import (
 	"time"
 )
 
+const (
+	TT_CLIENT                = "client"
+	TST_DENTIST_CONSULTATION = "dentist-consultation"
+)
+
 type bpImpl struct {
 	balance     services.BalanceService
 	taskService tasks.Service
 	userService users.Service
 	delivery    services.DeliveryService
-	mmService   chat.Service
+	chatService chat.Service
 	bpm.BpBase
 }
 
@@ -45,7 +50,7 @@ func NewBp(balanceService services.BalanceService,
 		balance:     balanceService,
 		taskService: taskService,
 		userService: userService,
-		mmService:   mmService,
+		chatService: mmService,
 	}
 	bp.Engine = bpm
 
@@ -73,7 +78,7 @@ func (bp *bpImpl) GetId() string {
 }
 
 func (bp *bpImpl) GetBPMNPath() string {
-	return "../bp/bpm/expert_online_consultation/bp.bpmn"
+	return "../bp/bpm/dentist_online_consultation/bp.bpmn"
 }
 
 func (bp *bpImpl) registerBpmHandlers() error {
@@ -98,22 +103,25 @@ func (bp *bpImpl) dueDateTaskHandler(payload []byte) error {
 }
 
 func (bp *bpImpl) solvedTaskHandler(payload []byte) error {
+
 	ts := &queue_model.Task{}
 	if err := json.Unmarshal(payload, ts); err != nil {
 		return err
 	}
 	log.Printf("solved task message received %v", ts)
-	vars := map[string]interface{}{}
-	vars["taskCompleted"] = true
-	_ = bp.SendMessage("msg-task-finished", ts.Id, vars)
 
-	user := bp.userService.Get(ts.Reported.UserId)
+	if ts.Type.Type == TT_CLIENT && ts.Type.SubType == TST_DENTIST_CONSULTATION {
 
-	if err := bp.mmService.SendTriggerPost("client.task-solved", user.MMId, ts.ChannelId, map[string]interface{}{
-		"task-num": ts.Num,
-	}); err != nil {
-		log.Println(err)
-		return err
+		vars := map[string]interface{}{}
+		vars["taskCompleted"] = true
+		_ = bp.SendMessage("msg-task-finished", ts.Id, vars)
+
+		msg := fmt.Sprintf("Консультация %s завершена", ts.Num)
+		if err := bp.chatService.Post(msg, ts.ChannelId, "", false, true); err != nil {
+			log.Println(err)
+			return err
+		}
+
 	}
 
 	return nil
@@ -150,7 +158,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	expert := bp.userService.Get(expertUserId)
 
 	// check if a channel with this expert already exists
-	channels, err := bp.mmService.GetChannelsForUserAndExpert(user.MMId, expert.MMId)
+	channels, err := bp.chatService.GetChannelsForUserAndExpert(user.MMId, expert.MMId)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
@@ -161,9 +169,9 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 		channelId = channels[0]
 	} else {
 		//create a channel
-		chRs, err := bp.mmService.CreateClientChannel(&pbChat.CreateClientChannelRequest{
+		chRs, err := bp.chatService.CreateClientChannel(&pbChat.CreateClientChannelRequest{
 			ClientUserId: user.MMId,
-			DisplayName:  "Клиент - эксперт",
+			DisplayName:  "Консультация стоматолога",
 			Name:         kit.NewId(),
 			Subscribers:  []string{expert.MMId},
 		})
@@ -225,26 +233,26 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 		dueDateStr = dueDate.Format("2006-01-02 15:04:05")
 	}
 
-	if err := bp.mmService.SendTriggerPost("client.new-expert-consultation", user.MMId, task.ChannelId, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(task.ChannelId, user.MMId, "client.new-expert-consultation", true, true, map[string]interface{}{
 		"expert.first-name": expert.ExpertDetails.FirstName,
 		"expert.last-name":  expert.ExpertDetails.LastName,
 		"due-date":          dueDateStr,
-		"expert.url":        "https://prodoctorov.ru/tula/vrach/182956-kasatkin/",
-		"expert.photo-url":  "https://prodoctorov.ru/media/photo/tula/doctorimage/182956/323195-182956-kasatkin_l.jpg",
+		"expert.url":        expert.ExpertDetails.PhotoUrl,
+		"expert.photo-url":  expert.ExpertDetails.PhotoUrl,
 	}); err != nil {
-		log.Println(err)
+		zeebe.FailJob(client, job, err)
 		return
 	}
 
-	if err := bp.mmService.SendTriggerPost("expert.new-expert-consultation", expert.MMId, task.ChannelId, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(task.ChannelId, expert.MMId, "expert.new-expert-consultation", true, true, map[string]interface{}{
 		"client.first-name": user.ClientDetails.FirstName,
 		"client.last-name":  user.ClientDetails.LastName,
 		"client.phone":      user.ClientDetails.Phone,
-		"client.url":        "https://www.kinonews.ru/insimgs/persimg/persimg3150.jpg",
+		"client.url":        user.ClientDetails.PhotoUrl,
 		"client.med-card":   "https://pmed.moi-service.ru/profile/medcard",
 		"due-date":          dueDateStr,
 	}); err != nil {
-		log.Println(err)
+		zeebe.FailJob(client, job, err)
 		return
 	}
 

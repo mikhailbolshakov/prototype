@@ -54,6 +54,7 @@ func (c *ctrlImpl) CreateClient(writer http.ResponseWriter, request *http.Reques
 		BirthDate:  grpc.TimeToPbTS(&rq.BirthDate),
 		Phone:      rq.Phone,
 		Email:      rq.Email,
+		PhotoUrl:   rq.PhotoUrl,
 	}
 
 	if rsPb, err := c.userService.CreateClient(p); err != nil {
@@ -79,6 +80,7 @@ func (c *ctrlImpl) CreateConsultant(writer http.ResponseWriter, request *http.Re
 		LastName:   rq.LastName,
 		Email:      rq.Email,
 		Groups:     rq.Groups,
+		PhotoUrl:   rq.PhotoUrl,
 	}
 
 	if rsPb, err := c.userService.CreateConsultant(p); err != nil {
@@ -99,12 +101,12 @@ func (c *ctrlImpl) CreateExpert(writer http.ResponseWriter, request *http.Reques
 	}
 
 	p := &pb.CreateExpertRequest{
-		FirstName:      rq.FirstName,
-		MiddleName:     rq.MiddleName,
-		LastName:       rq.LastName,
-		Email:          rq.Email,
-		Specialization: rq.Specialization,
-		Groups:         rq.Groups,
+		FirstName:  rq.FirstName,
+		MiddleName: rq.MiddleName,
+		LastName:   rq.LastName,
+		Email:      rq.Email,
+		PhotoUrl:   rq.PhotoUrl,
+		Groups:     rq.Groups,
 	}
 
 	if rsPb, err := c.userService.CreateExpert(p); err != nil {

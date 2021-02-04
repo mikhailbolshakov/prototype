@@ -8,10 +8,11 @@ import (
 	"gitlab.medzdrav.ru/prototype/bp/bpm/client_med_request"
 	"gitlab.medzdrav.ru/prototype/bp/bpm/client_request"
 	"gitlab.medzdrav.ru/prototype/bp/bpm/create_user"
-	"gitlab.medzdrav.ru/prototype/bp/bpm/expert_online_consultation"
+	"gitlab.medzdrav.ru/prototype/bp/bpm/dentist_online_consultation"
 	"gitlab.medzdrav.ru/prototype/bp/grpc"
 	"gitlab.medzdrav.ru/prototype/bp/infrastructure"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/chat"
+	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/services"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/tasks"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/users"
@@ -26,9 +27,14 @@ import (
 
 type serviceImpl struct {
 	tasksAdapter    tasks.Adapter
+	taskService     tasks.Service
 	usersAdapter    users.Adapter
+	usersService    users.Service
 	servicesAdapter services.Adapter
 	chatAdapter     chat.Adapter
+	chatService     chat.Service
+	configAdapter   config.Adapter
+	configService   config.Service
 	bps             []bpm.BusinessProcess
 	infr            *infrastructure.Container
 	queue           queue.Queue
@@ -43,34 +49,20 @@ func New() service.Service {
 	s := &serviceImpl{}
 	s.infr = infrastructure.New()
 
+	s.configAdapter = config.NewAdapter()
+	s.configService = s.configAdapter.GetService()
+
 	s.queue = &stan.Stan{}
 	s.queueListener = listener.NewQueueListener(s.queue)
-
-	s.keycloak = gocloak.NewClient("http://localhost:8086")
-
-	s.bpm = s.infr.Bpm
 
 	s.servicesAdapter = services.NewAdapter()
 
 	s.tasksAdapter = tasks.NewAdapter(s.queue)
-	taskService := s.tasksAdapter.GetService()
-
 	s.usersAdapter = users.NewAdapter()
-	userService := s.usersAdapter.GetService()
-
 	s.chatAdapter = chat.NewAdapter()
-	chatService := s.chatAdapter.GetService()
-
-	s.grpc = grpc.New(s.bpm)
-
-	// register business processes
-	s.bps = append([]bpm.BusinessProcess{}, expert_online_consultation.NewBp(s.servicesAdapter.GetBalanceService(),
-		s.servicesAdapter.GetDeliveryService(),
-		taskService, userService, chatService, s.bpm))
-	s.bps = append(s.bps, client_request.NewBp(taskService, userService, chatService, s.bpm))
-	s.bps = append(s.bps, create_user.NewBp(userService, chatService, s.bpm, s.keycloak))
-	s.bps = append(s.bps, client_med_request.NewBp(taskService, userService, chatService, s.bpm))
-	s.bps = append(s.bps, client_law_request.NewBp(taskService, userService, chatService, s.bpm))
+	s.taskService = s.tasksAdapter.GetService()
+	s.usersService = s.usersAdapter.GetService()
+	s.chatService = s.chatAdapter.GetService()
 
 	return s
 }
@@ -88,12 +80,6 @@ func (s *serviceImpl) initBPM() error {
 	}
 
 	if len(BPMNs) > 0 {
-		//go func(){
-		//	if err := s.bpm.DeployBPMNs(BPMNs); err != nil {
-		//		log.Println("ERROR!!!", "BPMN deploy", err.Error())
-		//	}
-		//}()
-
 		if err := s.bpm.DeployBPMNs(BPMNs); err != nil {
 			log.Println("ERROR!!!", "BPMN deploy", err.Error())
 		}
@@ -105,23 +91,51 @@ func (s *serviceImpl) initBPM() error {
 
 func (s *serviceImpl) Init() error {
 
-	if err := s.infr.Init(); err != nil {
+	if err := s.configAdapter.Init(); err != nil {
 		return err
 	}
 
-	if err := s.tasksAdapter.Init(); err != nil {
+	c, err := s.configService.Get()
+	if err != nil {
 		return err
 	}
 
-	if err := s.usersAdapter.Init(); err != nil {
+	s.keycloak = gocloak.NewClient(c.Keycloak.Url)
+
+	if err := s.infr.Init(c); err != nil {
 		return err
 	}
 
-	if err := s.chatAdapter.Init(); err != nil {
+	s.bpm = s.infr.Bpm
+
+	s.grpc = grpc.New(s.bpm)
+
+	// register business processes
+	s.bps = append([]bpm.BusinessProcess{}, dentist_online_consultation.NewBp(s.servicesAdapter.GetBalanceService(),
+		s.servicesAdapter.GetDeliveryService(),
+		s.taskService, s.usersService, s.chatService, s.bpm))
+	s.bps = append(s.bps, client_request.NewBp(s.taskService, s.usersService, s.chatService, s.bpm))
+	s.bps = append(s.bps, create_user.NewBp(s.usersService, s.chatService, s.bpm, s.keycloak))
+	s.bps = append(s.bps, client_med_request.NewBp(s.taskService, s.usersService, s.chatService, s.bpm))
+	s.bps = append(s.bps, client_law_request.NewBp(s.taskService, s.usersService, s.chatService, s.bpm))
+
+	if err := s.grpc.Init(c); err != nil {
 		return err
 	}
 
-	if err := s.servicesAdapter.Init(); err != nil {
+	if err := s.tasksAdapter.Init(c); err != nil {
+		return err
+	}
+
+	if err := s.usersAdapter.Init(c); err != nil {
+		return err
+	}
+
+	if err := s.chatAdapter.Init(c); err != nil {
+		return err
+	}
+
+	if err := s.servicesAdapter.Init(c); err != nil {
 		return err
 	}
 
@@ -145,7 +159,7 @@ func (s *serviceImpl) ListenAsync() error {
 }
 
 func (s *serviceImpl) Close() {
-
+	s.configAdapter.Close()
 	s.usersAdapter.Close()
 	s.chatAdapter.Close()
 	s.tasksAdapter.Close()

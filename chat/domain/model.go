@@ -42,18 +42,59 @@ type GetChannelsForUserAndMembersRequest struct {
 	MemberUserIds []string
 }
 
-type SendTriggerPostRequest struct {
-	TriggerPostCode string
-	UserId          string
-	ChannelId       string
-	Params          map[string]interface{}
+type PredefinedPost struct {
+	Code   string
+	Params map[string]interface{}
 }
 
-type SendPostRequest struct {
-	Message   string
-	UserId    string
-	ChannelId string
-	Ephemeral bool
+type PostActionOptions struct {
+	Text  string `json:"text"`
+	Value string `json:"value"`
+}
+
+type PostActionIntegration struct {
+	URL     string                 `json:"url,omitempty"`
+	Context map[string]interface{} `json:"context,omitempty"`
+}
+
+type PostAction struct {
+	Id            string                 `json:"id,omitempty"`
+	Type          string                 `json:"type,omitempty"`
+	Name          string                 `json:"name,omitempty"`
+	Disabled      bool                   `json:"disabled,omitempty"`
+	Style         string                 `json:"style,omitempty"`
+	DataSource    string                 `json:"data_source,omitempty"`
+	Options       []*PostActionOptions   `json:"options,omitempty"`
+	DefaultOption string                 `json:"default_option,omitempty"`
+	Integration   *PostActionIntegration `json:"integration,omitempty"`
+	Cookie        string                 `json:"cookie,omitempty" db:"-"`
+}
+
+type PostAttachment struct {
+	Fallback   string
+	Color      string
+	Pretext    string
+	AuthorName string
+	AuthorLink string
+	AuthorIcon string
+	Title      string
+	TitleLink  string
+	Text       string
+	ImageURL   string
+	ThumbURL   string
+	Footer     string
+	FooterIcon string
+	Actions    []*PostAction
+}
+
+type Post struct {
+	Message        string
+	ToUserId       string
+	ChannelId      string
+	Ephemeral      bool
+	FromBot        bool
+	Attachments    []*PostAttachment
+	PredefinedPost *PredefinedPost
 }
 
 type SubscribeUserRequest struct {

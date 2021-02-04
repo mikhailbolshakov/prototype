@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"gitlab.medzdrav.ru/prototype/users/domain"
@@ -9,6 +10,7 @@ import (
 )
 
 type Server struct {
+	port, host string
 	*kitGrpc.Server
 	domain domain.UserService
 	search domain.UserSearchService
@@ -31,10 +33,17 @@ func New(domain domain.UserService, search domain.UserSearchService) *Server {
 
 }
 
+func  (s *Server) Init(c *kitConfig.Config) error {
+	usersCfg := c.Services["users"]
+	s.host = usersCfg.Grpc.Hosts[0]
+	s.port = usersCfg.Grpc.Port
+	return nil
+}
+
 func (s *Server) ListenAsync() {
 
 	go func() {
-		err := s.Server.Listen("localhost", "50051")
+		err := s.Server.Listen(s.host, s.port)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -54,6 +63,7 @@ func (s *Server) CreateClient(ctx context.Context, rq *pb.CreateClientRequest) (
 			Phone:             rq.Phone,
 			Email:             rq.Email,
 			PersonalAgreement: &domain.PersonalAgreement{},
+			PhotoUrl:          rq.PhotoUrl,
 		},
 	}
 	user, err := s.domain.Create(client)
@@ -71,6 +81,7 @@ func (s *Server) CreateConsultant(ctx context.Context, rq *pb.CreateConsultantRe
 			MiddleName: rq.MiddleName,
 			LastName:   rq.LastName,
 			Email:      rq.Email,
+			PhotoUrl:   rq.PhotoUrl,
 		},
 		Groups: rq.Groups,
 	}
@@ -86,11 +97,11 @@ func (s *Server) CreateExpert(ctx context.Context, rq *pb.CreateExpertRequest) (
 	expert := &domain.User{
 		Type: domain.USER_TYPE_EXPERT,
 		ExpertDetails: &domain.ExpertDetails{
-			FirstName:      rq.FirstName,
-			MiddleName:     rq.MiddleName,
-			LastName:       rq.LastName,
-			Email:          rq.Email,
-			Specialization: rq.Specialization,
+			FirstName:  rq.FirstName,
+			MiddleName: rq.MiddleName,
+			LastName:   rq.LastName,
+			Email:      rq.Email,
+			PhotoUrl:   rq.PhotoUrl,
 		},
 		Groups: rq.Groups,
 	}

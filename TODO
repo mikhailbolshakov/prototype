@@ -2,7 +2,7 @@
 2. Translations
 3. Sessions
 4. Socket hub
-5. .env
+5. Cofiguration service (config + .env)
 6. panic recover
 7. close all connections
 8. Elastic Search
@@ -14,3 +14,7 @@
 14. Api/Protobuf versioning
 15. Queue at Most Once/at least Once
 16. Task config: implement storage instead of mock
+17. Monitoring
+18. Validation (go-playground/validator)
+19. Integration tests approach
+20. Optimistic locking

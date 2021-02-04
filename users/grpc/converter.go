@@ -23,6 +23,7 @@ func (s *Server) clientDetailsFromPb(c *pb.ClientDetails) *domain.ClientDetails 
 		CommonChannelId: c.CommonChannelId,
 		MedChannelId:    c.MedChannelId,
 		LawChannelId:    c.LawChannelId,
+		PhotoUrl: c.PhotoUrl,
 	}
 }
 
@@ -58,6 +59,7 @@ func (s *Server) fromDomain(user *domain.User) *pb.User {
 				GivenAt:   grpc.TimeToPbTS(user.ClientDetails.PersonalAgreement.GivenAt),
 				RevokedAt: grpc.TimeToPbTS(user.ClientDetails.PersonalAgreement.RevokedAt),
 			},
+			PhotoUrl: user.ClientDetails.PhotoUrl,
 		}
 	case domain.USER_TYPE_CONSULTANT:
 		pu.ConsultantDetails = &pb.ConsultantDetails{
@@ -65,6 +67,7 @@ func (s *Server) fromDomain(user *domain.User) *pb.User {
 			MiddleName: user.ConsultantDetails.MiddleName,
 			LastName:   user.ConsultantDetails.LastName,
 			Email:      user.ConsultantDetails.Email,
+			PhotoUrl: user.ConsultantDetails.PhotoUrl,
 		}
 	case domain.USER_TYPE_EXPERT:
 		pu.ExpertDetails = &pb.ExpertDetails{
@@ -72,7 +75,7 @@ func (s *Server) fromDomain(user *domain.User) *pb.User {
 			MiddleName:     user.ExpertDetails.MiddleName,
 			LastName:       user.ExpertDetails.LastName,
 			Email:          user.ExpertDetails.Email,
-			Specialization: user.ExpertDetails.Specialization,
+			PhotoUrl: user.ExpertDetails.PhotoUrl,
 		}
 	case domain.USER_TYPE_SUPERVISOR:
 	}

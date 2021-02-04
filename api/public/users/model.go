@@ -10,6 +10,7 @@ type CreateClientRequest struct {
 	BirthDate  time.Time `json:"birthDate"`
 	Phone      string    `json:"phone"`
 	Email      string    `json:"email"`
+	PhotoUrl   string    `json:"photoUrl"`
 }
 
 type CreateConsultantRequest struct {
@@ -17,16 +18,17 @@ type CreateConsultantRequest struct {
 	MiddleName string   `json:"middleName"`
 	LastName   string   `json:"lastName"`
 	Email      string   `json:"email"`
+	PhotoUrl   string   `json:"photoUrl"`
 	Groups     []string `json:"groups"`
 }
 
 type CreateExpertRequest struct {
-	FirstName      string   `json:"firstName"`
-	MiddleName     string   `json:"middleName"`
-	LastName       string   `json:"lastName"`
-	Email          string   `json:"email"`
-	Specialization string   `json:"specialization"`
-	Groups         []string `json:"groups"`
+	FirstName  string   `json:"firstName"`
+	MiddleName string   `json:"middleName"`
+	LastName   string   `json:"lastName"`
+	Email      string   `json:"email"`
+	PhotoUrl   string   `json:"photoUrl"`
+	Groups     []string `json:"groups"`
 }
 
 type User struct {
@@ -59,6 +61,7 @@ type ClientDetails struct {
 	CommonChannelId   string             `json:"commonChannelId,omitempty"`
 	MedChannelId      string             `json:"medChannelId,omitempty"`
 	LawChannelId      string             `json:"lawChannelId,omitempty"`
+	PhotoUrl          string             `json:"photoUrl,omitempty"`
 }
 
 type ConsultantDetails struct {
@@ -66,14 +69,15 @@ type ConsultantDetails struct {
 	MiddleName string `json:"middleName"`
 	LastName   string `json:"lastName"`
 	Email      string `json:"email"`
+	PhotoUrl   string `json:"photoUrl,omitempty"`
 }
 
 type ExpertDetails struct {
-	FirstName      string `json:"firstName"`
-	MiddleName     string `json:"middleName"`
-	LastName       string `json:"lastName"`
-	Email          string `json:"email"`
-	Specialization string `json:"specialization,omitempty"`
+	FirstName  string `json:"firstName"`
+	MiddleName string `json:"middleName"`
+	LastName   string `json:"lastName"`
+	Email      string `json:"email"`
+	PhotoUrl   string `json:"photoUrl,omitempty"`
 }
 
 type SearchResponse struct {

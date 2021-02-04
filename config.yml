@@ -1,0 +1,99 @@
+redis:
+  port: 6379
+  host: localhost
+  password: ${REDIS_PASSWORD|}
+  ttl: 7200
+
+zeebe:
+  port: 26500
+  host: localhost
+
+keycloak:
+  url: "http://localhost:8086"
+  admin-username: admin
+  admin-password: ${KK_ADMIN_PASSWORD|admin}
+  client-id: app
+  client-secret: "d6dbae97-8570-4758-a081-9077b7899a7d"
+  client-realm: prototype
+
+mattermost:
+  url: "http://localhost:8065"
+  ws: "ws://localhost:8065"
+  admin-username: admin
+  admin-password: ${MM_ADMIN_PASSWORD|admin}
+  team: rgs
+  default-password: ${MM_DEFAULT_PASSWORD|12345}
+  bot-username: bot.rgs
+  bot-access-token: ${MM_BOT_ACCESS_TOKEN|jg88x5sb63yk8ng6kcfkb37iho}
+
+http:
+  host: localhost
+  port: 8000
+
+services:
+  chat:
+    database:
+      dbname: mattermost
+      user: chat
+      password: ${DB_CHAT_PASSWORD|chat}
+      port: 5432
+      # read-write host
+      host-rw: localhost
+      # read-only host
+      host-ro: localhost
+    grpc:
+      port: 50053
+      hosts:
+        - localhost
+  users:
+    database:
+      dbname: mattermost
+      user: users
+      password: ${DB_USERS_PASSWORD|users}
+      port: 5432
+      # read-write host
+      host-rw: localhost
+      # read-only host
+      host-ro: localhost
+    grpc:
+      port: 50051
+      hosts:
+        - localhost
+  tasks:
+    database:
+      dbname: mattermost
+      user: tasks
+      password: ${DB_TASKS_PASSWORD|tasks}
+      port: 5432
+      # read-write host
+      host-rw: localhost
+      # read-only host
+      host-ro: localhost
+    grpc:
+      port: 50052
+      hosts:
+        - localhost
+  services:
+    database:
+      dbname: mattermost
+      user: services
+      password: ${DB_SERVICES_PASSWORD|services}
+      port: 5432
+      # read-write host
+      host-rw: localhost
+      # read-only host
+      host-ro: localhost
+    grpc:
+      port: 50054
+      hosts:
+        - localhost
+  bp:
+    grpc:
+      port: 50055
+      hosts:
+        - localhost
+  config:
+    grpc:
+      port: 50056
+      hosts:
+        - localhost

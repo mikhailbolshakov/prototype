@@ -193,7 +193,8 @@ func (d *daemonImpl) Run() {
 			for {
 
 				select {
-				case <-time.Tick(time.Second * 30):
+				// TODO: configuration
+				case <-time.Tick(time.Second * 20):
 					if err := d.assign(tt); err != nil {
 						return
 					}
@@ -225,7 +226,7 @@ func (d *daemonImpl) Init() error {
 
 	for _, cfg := range d.cfgService.GetAll() {
 
-		if cfg.AssignmentRules != nil && len(cfg.AssignmentRules) == 0 {
+		if cfg.AssignmentRules != nil && len(cfg.AssignmentRules) > 0 {
 			d.taskTypes = append(d.taskTypes, &assignmentTask{
 				taskType: cfg.Type,
 				cfg:      cfg,

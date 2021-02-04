@@ -1,5 +1,7 @@
 package infrastructure
 
+import kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
+
 type Container struct {
 }
 
@@ -9,7 +11,7 @@ func New() *Container {
 	return c
 }
 
-func (c *Container) Init() error {
+func (c *Container) Init(cfg *kitConfig.Config) error {
 	return nil
 }
 

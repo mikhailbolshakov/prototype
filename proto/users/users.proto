@@ -22,6 +22,7 @@ message ClientDetails {
   string MedChannelId = 9;
   string LawChannelId = 10;
   PersonalAgreement PersonalAgreement = 11;
+  string PhotoUrl = 12;
 }
 
 message ConsultantDetails {
@@ -29,6 +30,7 @@ message ConsultantDetails {
   string MiddleName = 2;
   string LastName = 3;
   string Email = 4;
+  string PhotoUrl = 5;
 }
 
 message ExpertDetails {
@@ -36,7 +38,7 @@ message ExpertDetails {
   string MiddleName = 2;
   string LastName = 3;
   string Email = 4;
-  string Specialization = 5;
+  string PhotoUrl = 5;
 }
 
 message User {
@@ -102,6 +104,7 @@ message CreateClientRequest {
   google.protobuf.Timestamp BirthDate = 5;
   string Phone = 6;
   string Email = 7;
+  string PhotoUrl = 8;
 }
 
 message CreateConsultantRequest {
@@ -110,6 +113,7 @@ message CreateConsultantRequest {
   string LastName = 3;
   string Email = 4;
   repeated string Groups = 5;
+  string PhotoUrl = 6;
 }
 
 message CreateExpertRequest {
@@ -119,6 +123,7 @@ message CreateExpertRequest {
   string Email = 4;
   string Specialization = 5;
   repeated string Groups = 6;
+  string PhotoUrl = 7;
 }
 
 message ActivateRequest {

@@ -14,20 +14,27 @@ type serviceImpl struct {
 	pb.ProcessClient
 }
 
-func newImpl() *serviceImpl {
+func newServiceImpl() *serviceImpl {
 	a := &serviceImpl{}
 	return a
 }
 
 func (s *serviceImpl) StartProcess(processId string, vars map[string]interface{}) (string, error) {
-	varsB, _ := json.Marshal(vars)
+
+	var varsb []byte
+
+	if vars != nil {
+		varsb, _ = json.Marshal(vars)
+	}
+
 	rs, err := s.ProcessClient.StartProcess(context.Background(), &pb.StartProcessRequest{
 		ProcessId: processId,
-		Vars:      varsB,
+		Vars:      varsb,
 	})
 	if err != nil {
 		return "", err
 	}
+
 	return rs.Id, nil
 }
 

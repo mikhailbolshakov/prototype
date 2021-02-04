@@ -43,6 +43,7 @@ type ClientDetails struct {
 	CommonChannelId   string             `json:"commonChannelId"`
 	MedChannelId      string             `json:"medChannelId"`
 	LawChannelId      string             `json:"lawChannelId"`
+	PhotoUrl          string             `json:"photoUrl"`
 }
 
 type ConsultantDetails struct {
@@ -50,6 +51,7 @@ type ConsultantDetails struct {
 	MiddleName string `json:"middleName"`
 	LastName   string `json:"lastName"`
 	Email      string `json:"email"`
+	PhotoUrl   string `json:"photoUrl"`
 }
 
 type ExpertDetails struct {
@@ -57,7 +59,7 @@ type ExpertDetails struct {
 	MiddleName     string `json:"middleName"`
 	LastName       string `json:"lastName"`
 	Email          string `json:"email"`
-	Specialization string `json:"specialization"`
+	PhotoUrl       string `json:"photoUrl"`
 }
 
 type User struct {

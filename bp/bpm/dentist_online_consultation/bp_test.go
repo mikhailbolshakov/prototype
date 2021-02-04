@@ -1,4 +1,4 @@
-package expert_online_consultation
+package dentist_online_consultation
 
 import (
 	"context"

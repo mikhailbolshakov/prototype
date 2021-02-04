@@ -89,21 +89,21 @@ func (t *serviceImpl) remindsSchedulerHandler(taskId string) {
 
 	task := t.Get(taskId)
 
-	reportedUser := t.usersService.Get(task.Reported.UserId, "")
-	assigneeUser := t.usersService.Get(task.Assignee.UserId, "")
+	if task.ChannelId != "" {
 
-	params := map[string]interface{}{
-		"task-num": task.Num,
-		"due-date": task.DueDate,
-	}
-	if err := t.chatService.SendTriggerPost("task-reminder", assigneeUser.MMId, task.ChannelId, params); err != nil {
-		log.Println("ERROR!!!", err)
-		return
-	}
+		var msg string
+		if task.DueDate != nil {
+			duration := task.DueDate.Sub(time.Now().UTC().Round(time.Second))
+			msg = fmt.Sprintf("До наступления срока исполнения по задаче %s осталось %v", task.Num, duration)
+		} else {
+			msg = fmt.Sprintf("Напоминание по задаче %s", task.Num)
+		}
 
-	if err := t.chatService.SendTriggerPost("task-reminder", reportedUser.MMId, task.ChannelId, params); err != nil {
-		log.Println("ERROR!!!", err)
-		return
+		if err := t.chatService.Post(msg, task.ChannelId, "", false, true); err != nil {
+			log.Println("ERROR!!!", err)
+			return
+		}
+
 	}
 
 }
@@ -113,25 +113,22 @@ func (t *serviceImpl) dueDateSchedulerHandler(taskId string) {
 
 	task := t.Get(taskId)
 
-	reportedUser := t.usersService.Get(task.Reported.UserId, "")
-	assigneeUser := t.usersService.Get(task.Assignee.UserId, "")
+	t.publish(task, "tasks.duedate")
 
-	dueDateStr := ""
-	if task.DueDate != nil {
-		dueDateStr = task.DueDate.Format("2006-01-02 15:04:05")
-	}
+	if task.ChannelId != "" {
 
-	params := map[string]interface{}{
-		"task-num": task.Num,
-		"due-date": dueDateStr,
-	}
-	if err := t.chatService.SendTriggerPost("task-duedate", assigneeUser.MMId, task.ChannelId, params); err != nil {
-		log.Println("ERROR!!!", err)
-		return
-	}
-	if err := t.chatService.SendTriggerPost("task-duedate", reportedUser.MMId, task.ChannelId, params); err != nil {
-		log.Println("ERROR!!!", err)
-		return
+		dueDateStr := ""
+		if task.DueDate != nil {
+			dueDateStr = task.DueDate.Format("2006-01-02 15:04:05")
+		}
+
+		msg := fmt.Sprintf("Уведомление о наступлении времени решения по задаче %s (%s)", task.Num, dueDateStr)
+
+		if err := t.chatService.Post(msg, task.ChannelId, "", false, true); err != nil {
+			log.Println("ERROR!!!", err)
+			return
+		}
+
 	}
 
 }

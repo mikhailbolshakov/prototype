@@ -2,12 +2,14 @@ package infrastructure
 
 import (
 	kitCache "gitlab.medzdrav.ru/prototype/kit/cache"
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitStorage "gitlab.medzdrav.ru/prototype/kit/storage"
 )
 
 type Container struct {
-	Db    *kitStorage.Storage
-	Cache *kitCache.Redis
+	Db         *kitStorage.Storage
+	ReadOnlyDB *kitStorage.Storage
+	Cache      *kitCache.Redis
 }
 
 func New() *Container {
@@ -15,17 +17,31 @@ func New() *Container {
 	return c
 }
 
-func (c *Container) Init() error {
+func (c *Container) Init(cfg *kitConfig.Config) error {
+
+	servCfg := cfg.Services["users"]
 
 	var err error
 
-	// storage
+	// storage R/W
 	c.Db, err = kitStorage.Open(&kitStorage.Params{
-		UserName: "users",
-		Password: "users",
-		DBName:   "mattermost",
-		Port:     "5432",
-		Host:     "localhost",
+		UserName: servCfg.Database.User,
+		Password: servCfg.Database.Password,
+		DBName:   servCfg.Database.Dbname,
+		Port:     servCfg.Database.Port,
+		Host:     servCfg.Database.HostRw,
+	})
+	if err != nil {
+		return err
+	}
+
+	// storage Readonly
+	c.ReadOnlyDB, err = kitStorage.Open(&kitStorage.Params{
+		UserName: servCfg.Database.User,
+		Password: servCfg.Database.Password,
+		DBName:   servCfg.Database.Dbname,
+		Port:     servCfg.Database.Port,
+		Host:     servCfg.Database.HostRo,
 	})
 	if err != nil {
 		return err
@@ -33,10 +49,10 @@ func (c *Container) Init() error {
 
 	// Redis
 	c.Cache, err = kitCache.Open(&kitCache.Params{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		Ttl:      7200,
+		Host:     cfg.Redis.Host,
+		Port:     cfg.Redis.Port,
+		Password: cfg.Redis.Password,
+		Ttl:      uint(cfg.Redis.Ttl),
 	})
 	if err != nil {
 		return err
@@ -45,7 +61,8 @@ func (c *Container) Init() error {
 	return nil
 }
 
-func(c *Container) Close() {
+func (c *Container) Close() {
 	c.Db.Close()
+	c.ReadOnlyDB.Close()
 	_ = c.Cache.Instance.Close()
 }

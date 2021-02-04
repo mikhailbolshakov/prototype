@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package config;
+option go_package = "proto/config";
+
+message ConfigResponse {
+  bytes Config = 1;
+}
+
+message ConfigRequest {}
+
+service ConfigService {
+  rpc Get(ConfigRequest) returns (ConfigResponse) {}
+}

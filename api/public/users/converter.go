@@ -40,6 +40,7 @@ func (s *ctrlImpl) fromPb(r *pb.User) *User {
 			CommonChannelId: r.ClientDetails.CommonChannelId,
 			MedChannelId:    r.ClientDetails.MedChannelId,
 			LawChannelId:    r.ClientDetails.LawChannelId,
+			PhotoUrl:        r.ClientDetails.PhotoUrl,
 		}
 	case USER_TYPE_CONSULTANT:
 		user.ConsultantDetails = &ConsultantDetails{
@@ -47,14 +48,15 @@ func (s *ctrlImpl) fromPb(r *pb.User) *User {
 			MiddleName: r.ConsultantDetails.MiddleName,
 			LastName:   r.ConsultantDetails.LastName,
 			Email:      r.ConsultantDetails.Email,
+			PhotoUrl:   r.ConsultantDetails.PhotoUrl,
 		}
 	case USER_TYPE_EXPERT:
 		user.ExpertDetails = &ExpertDetails{
-			FirstName:      r.ExpertDetails.FirstName,
-			MiddleName:     r.ExpertDetails.MiddleName,
-			LastName:       r.ExpertDetails.LastName,
-			Email:          r.ExpertDetails.Email,
-			Specialization: r.ExpertDetails.Specialization,
+			FirstName:  r.ExpertDetails.FirstName,
+			MiddleName: r.ExpertDetails.MiddleName,
+			LastName:   r.ExpertDetails.LastName,
+			Email:      r.ExpertDetails.Email,
+			PhotoUrl:   r.ExpertDetails.PhotoUrl,
 		}
 	}
 

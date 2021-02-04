@@ -9,6 +9,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/tasks/grpc"
 	"gitlab.medzdrav.ru/prototype/tasks/infrastructure"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/chat"
+	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/storage"
 	"math/rand"
@@ -19,6 +20,8 @@ type serviceImpl struct {
 	domainConfigService     domain.ConfigService
 	domainTaskSearchService domain.TaskSearchService
 	assignTasksDaemon       domain.AssignmentDaemon
+	configAdapter           config.Adapter
+	configService           config.Service
 	scheduler               domain.TaskScheduler
 	grpc                    *grpc.Server
 	usersAdapter            users.Adapter
@@ -32,11 +35,15 @@ func New() service.Service {
 
 	s := &serviceImpl{}
 
+
 	s.queue = &stan.Stan{}
 	s.infr = infrastructure.New()
 	s.storage = storage.NewStorage(s.infr)
 	s.domainConfigService = domain.NewTaskConfigService()
 	s.scheduler = domain.NewScheduler(s.domainConfigService, s.storage)
+
+	s.configAdapter = config.NewAdapter()
+	s.configService = s.configAdapter.GetService()
 
 	s.usersAdapter = users.NewAdapter()
 	userService := s.usersAdapter.GetUserService()
@@ -60,15 +67,28 @@ func New() service.Service {
 
 func (s *serviceImpl) Init() error {
 
-	if err := s.infr.Init(); err != nil {
+	if err := s.configAdapter.Init(); err != nil {
 		return err
 	}
 
-	if err := s.usersAdapter.Init(); err != nil {
+	c, err := s.configService.Get()
+	if err != nil {
 		return err
 	}
 
-	if err := s.chatAdapter.Init(); err != nil {
+	if err := s.infr.Init(c); err != nil {
+		return err
+	}
+
+	if err := s.grpc.Init(c); err != nil {
+		return err
+	}
+
+	if err := s.usersAdapter.Init(c); err != nil {
+		return err
+	}
+
+	if err := s.chatAdapter.Init(c); err != nil {
 		return err
 	}
 
@@ -94,6 +114,8 @@ func (s *serviceImpl) ListenAsync() error {
 }
 
 func (s *serviceImpl) Close() {
+
+	s.configAdapter.Close()
 
 	// TODO: if uncomment hangs on, has to be investigated
 	_ = s.assignTasksDaemon.Stop()

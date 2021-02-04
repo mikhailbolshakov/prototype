@@ -76,3 +76,7 @@ func (s *Server) SetAuthMiddleware(mdws ...mux.MiddlewareFunc) {
 func (s *Server) Open() error {
 	return s.Srv.ListenAndServe()
 }
+
+func (s *Server) Close() {
+	_ = s.Srv.Close()
+}

@@ -1,13 +1,14 @@
 package tasks
 
 import (
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 )
 
 type Adapter interface {
-	Init() error
+	Init(c *kitConfig.Config) error
 	GetService() Service
 	Close()
 }
@@ -24,8 +25,9 @@ func NewAdapter(queue queue.Queue) Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init() error {
-	cl, err := kitGrpc.NewClient("localhost", "50052")
+func (a *adapterImpl) Init(c *kitConfig.Config) error {
+	cfg := c.Services["tasks"]
+	cl, err := kitGrpc.NewClient(cfg.Grpc.Hosts[0], cfg.Grpc.Port)
 	if err != nil {
 		return err
 	}

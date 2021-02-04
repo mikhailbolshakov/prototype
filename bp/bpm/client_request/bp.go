@@ -19,6 +19,7 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 	"gitlab.medzdrav.ru/prototype/queue_model"
 	"log"
+	"time"
 )
 
 const (
@@ -62,7 +63,7 @@ func (bp *bpImpl) Init() error {
 
 func (bp *bpImpl) SetQueueListeners(ql listener.QueueListener) {
 	ql.Add("tasks.assigned", bp.TaskAssignedMessageHandler)
-	ql.Add("tasks.clientrequest.solved", bp.TaskSolvedMessageHandler)
+	ql.Add("tasks.solved", bp.TaskSolvedMessageHandler)
 	ql.Add("mm.posts", bp.MattermostPostMessageHandler)
 }
 
@@ -95,7 +96,6 @@ func (bp *bpImpl) executeBotTaskHandler(client worker.JobClient, job entities.Jo
 		return
 	}
 	message := variables["message"].(string)
-	chatUserId := variables["chatUserId"].(string)
 	channelId := variables["channelId"].(string)
 
 	rs, err := bp.chatService.AskBot(&chatPb.AskBotRequest{
@@ -111,13 +111,7 @@ func (bp *bpImpl) executeBotTaskHandler(client worker.JobClient, job entities.Jo
 	variables["botSucceeded"] = rs.Found
 
 	if rs.Found {
-		_, err := bp.chatService.SendPostFromBot(&chatPb.SendPostFromBotRequest{
-			Message:   rs.Answer,
-			UserId:    chatUserId,
-			ChannelId: channelId,
-			Ephemeral: true,
-		})
-		if err != nil {
+		if err := bp.chatService.Post(rs.Answer, channelId, "", false, true); err != nil {
 			zeebe.FailJob(client, job, err)
 			return
 		}
@@ -165,6 +159,7 @@ func (bp *bpImpl) checkClientOpenTaskHandler(client worker.JobClient, job entiti
 			// a correct check should verify if there are no tasks with close time > post time
 			// otherwise this post relates to the closed task and somehow hasn't been delivered in time
 			if t.Type.Subtype == TASK_SUBTYPE_COMMON_RQ && t.Status.Status == TASK_STATUS_OPEN {
+				variables["taskNum"] = t.Num
 				taskExists = true
 				break
 			}
@@ -225,7 +220,7 @@ func (bp *bpImpl) createClientRequestTaskHandler(client worker.JobClient, job en
 		return
 	}
 
-	if err := bp.chatService.SendTriggerPost("client.new-request", user.MMId, user.ClientDetails.CommonChannelId, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(channelId, user.MMId, "client.new-request", true, true, map[string]interface{}{
 		"client.name": fmt.Sprintf("%s", user.ClientDetails.FirstName),
 	}); err != nil {
 		zeebe.FailJob(client, job, err)
@@ -260,6 +255,7 @@ func (bp *bpImpl) subscribeConsultantHandler(client worker.JobClient, job entiti
 		zeebe.FailJob(client, job, err)
 		return
 	}
+	time.Sleep(time.Second)
 
 	err = zeebe.CompleteJob(client, job, nil)
 	if err != nil {
@@ -284,23 +280,23 @@ func (bp *bpImpl) sendMessageTaskAssignedHandler(client worker.JobClient, job en
 	user := bp.userService.Get(userId)
 	assignee := bp.userService.Get(assigneeUsername)
 
-	if err := bp.chatService.SendTriggerPost("client.request-assigned", user.MMId, channelId, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(channelId, user.MMId, "client.request-assigned", true, true, map[string]interface{}{
 		"consultant.first-name": assignee.ConsultantDetails.FirstName,
 		"consultant.last-name":  assignee.ConsultantDetails.LastName,
-		"consultant.url":        "https://prodoctorov.ru/media/photo/tula/doctorimage/589564/432638-589564-ezhikov_l.jpg",
+		"consultant.url":        assignee.ConsultantDetails.PhotoUrl,
 	}); err != nil {
-		log.Println(err)
+		zeebe.FailJob(client, job, err)
 		return
 	}
 
-	if err := bp.chatService.SendTriggerPost("consultant.request-assigned", assignee.MMId, channelId, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(channelId, assignee.MMId, "consultant.request-assigned", true, true, map[string]interface{}{
 		"client.first-name": user.ClientDetails.FirstName,
 		"client.last-name":  user.ClientDetails.LastName,
 		"client.phone":      user.ClientDetails.Phone,
-		"client.url":        "https://www.kinonews.ru/insimgs/persimg/persimg3150.jpg",
+		"client.url":        user.ClientDetails.PhotoUrl,
 		"client.med-card":   "https://pmed.moi-service.ru/profile/medcard",
 	}); err != nil {
-		log.Println(err)
+		zeebe.FailJob(client, job, err)
 		return
 	}
 
@@ -325,8 +321,8 @@ func (bp *bpImpl) sendMessageNoAvailableConsultantHandler(client worker.JobClien
 	channelId := variables["channelId"].(string)
 	user := bp.userService.Get(userId)
 
-	if err := bp.chatService.SendTriggerPost("client.no-consultant-available", user.MMId, channelId, nil); err != nil {
-		log.Println(err)
+	if err := bp.chatService.PredefinedPost(channelId, user.MMId, "client.no-consultant-available", true, true, nil); err != nil {
+		zeebe.FailJob(client, job, err)
 		return
 	}
 
@@ -395,13 +391,20 @@ func (bp *bpImpl) TaskSolvedMessageHandler(payload []byte) error {
 		return err
 	}
 
-	user := bp.userService.Get(task.Reported.UserId)
+	if task.Type.Type == TASK_TYPE_CLIENT && task.Type.SubType == TASK_SUBTYPE_COMMON_RQ {
 
-	if err := bp.chatService.SendTriggerPost("client.task-solved", user.MMId, task.ChannelId, map[string]interface{}{
-		"task-num": task.Num,
-	}); err != nil {
-		log.Println(err)
-		return err
+		msg := fmt.Sprintf("Консультация %s завершена", task.Num)
+		if err := bp.chatService.Post(msg, task.ChannelId, "", false, true); err != nil {
+			log.Println(err)
+			return err
+		}
+
+		user := bp.userService.Get(task.Reported.UserId)
+		if err := bp.chatService.PredefinedPost(task.ChannelId, user.Id, "client.feedback",  false, true, nil); err != nil {
+			log.Println(err)
+			return err
+		}
+
 	}
 
 	return nil

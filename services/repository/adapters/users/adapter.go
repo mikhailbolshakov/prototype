@@ -1,12 +1,13 @@
 package users
 
 import (
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 )
 
 type Adapter interface {
-	Init() error
+	Init(c *kitConfig.Config) error
 	GetService() Service
 	Close()
 }
@@ -25,8 +26,11 @@ func NewAdapter() Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init() error {
-	cl, err := kitGrpc.NewClient("localhost", "50051")
+func (a *adapterImpl) Init(c *kitConfig.Config) error {
+
+	usersCfg := c.Services["users"]
+
+	cl, err := kitGrpc.NewClient(usersCfg.Grpc.Hosts[0], usersCfg.Grpc.Port)
 	if err != nil {
 		return err
 	}

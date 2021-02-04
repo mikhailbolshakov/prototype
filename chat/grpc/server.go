@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/chat"
 	"log"
 )
 
 type Server struct {
+	host, port string
 	*kitGrpc.Server
 	domain domain.Service
 	pb.UnimplementedUsersServer
@@ -34,10 +36,17 @@ func New(domain domain.Service) *Server {
 	return s
 }
 
+func  (s *Server) Init(c *kitConfig.Config) error {
+	usersCfg := c.Services["chat"]
+	s.host = usersCfg.Grpc.Hosts[0]
+	s.port = usersCfg.Grpc.Port
+	return nil
+}
+
 func (s *Server) ListenAsync() {
 
 	go func() {
-		err := s.Server.Listen("localhost", "50053")
+		err := s.Server.Listen(s.host, s.port)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -117,33 +126,77 @@ func (s *Server) GetUsersStatuses(ctx context.Context, rq *pb.GetUsersStatusesRe
 
 }
 
-func (s *Server) SendTriggerPost(ctx context.Context, rq *pb.SendTriggerPostRequest) (*pb.SendTriggerPostResponse, error) {
+func (s *Server) Post(ctx context.Context, rq *pb.PostRequest) (*pb.PostResponse, error) {
 
-	var params map[string]interface{}
-	if rq.Params != nil {
-		if err := json.Unmarshal(rq.Params, &params); err != nil {
-			return nil, err
+	var dPosts []*domain.Post
+	for _, post := range rq.Posts {
+
+		dPost := &domain.Post{
+			Message:     post.Message,
+			ToUserId:    post.ToUserId,
+			ChannelId:   post.ChannelId,
+			Ephemeral:   post.Ephemeral,
+			FromBot:     post.FromBot,
+			Attachments: []*domain.PostAttachment{},
 		}
+
+		if post.PredefinedPost != nil && post.PredefinedPost.Code != "" {
+			dPost.PredefinedPost = &domain.PredefinedPost{
+				Code: post.PredefinedPost.Code,
+			}
+
+			if post.PredefinedPost.Params != nil {
+				var params map[string]interface{}
+				if err := json.Unmarshal(post.PredefinedPost.Params, &params); err != nil {
+					return nil, err
+				}
+				dPost.PredefinedPost.Params = params
+			}
+
+		}
+
+		if post.Attachments != nil && len(post.Attachments) > 0 {
+
+			for _, att := range post.Attachments {
+
+				dAtt := &domain.PostAttachment{
+					Fallback:   att.Fallback,
+					Color:      att.Color,
+					Pretext:    att.Pretext,
+					AuthorName: att.AuthorName,
+					AuthorLink: att.AuthorLink,
+					AuthorIcon: att.AuthorIcon,
+					Title:      att.Title,
+					TitleLink:  att.TitleLink,
+					Text:       att.Text,
+					ImageURL:   att.ImageURL,
+					ThumbURL:   att.ThumbURL,
+					Footer:     att.Footer,
+					FooterIcon: att.FooterIcon,
+				}
+
+				dPost.Attachments = append(dPost.Attachments, dAtt)
+			}
+
+		}
+
+		dPosts = append(dPosts, dPost)
+
 	}
 
-	domainRq := &domain.SendTriggerPostRequest{
-		TriggerPostCode: rq.PostCode,
-		UserId:          rq.UserId,
-		ChannelId:       rq.ChannelId,
-		Params:          params,
-	}
-	err := s.domain.SendTriggerPost(domainRq)
+	err := s.domain.Posts(dPosts)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.SendTriggerPostResponse{}, nil
+	return &pb.PostResponse{}, nil
+
 }
 
 func (s *Server) AskBot(ctx context.Context, rq *pb.AskBotRequest) (*pb.AskBotResponse, error) {
 	rs, err := s.domain.AskBot(&domain.AskBotRequest{
-		From: rq.From,
-		Message:   rq.Message,
+		From:    rq.From,
+		Message: rq.Message,
 	})
 	if err != nil {
 		return nil, err
@@ -152,19 +205,6 @@ func (s *Server) AskBot(ctx context.Context, rq *pb.AskBotRequest) (*pb.AskBotRe
 		Found:  rs.Found,
 		Answer: rs.Answer,
 	}, nil
-}
-
-func (s *Server) SendPostFromBot(ctx context.Context, rq *pb.SendPostFromBotRequest) (*pb.SendPostFromBotResponse, error) {
-	err := s.domain.SendPostFromBot(&domain.SendPostRequest{
-		Message:   rq.Message,
-		UserId:    rq.UserId,
-		ChannelId: rq.ChannelId,
-		Ephemeral: rq.Ephemeral,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &pb.SendPostFromBotResponse{}, nil
 }
 
 func (s *Server) DeleteUser(ctx context.Context, rq *pb.DeleteUserRequest) (*pb.DeleteUserResponse, error) {

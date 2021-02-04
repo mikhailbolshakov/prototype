@@ -69,14 +69,42 @@ service Channels {
   rpc Subscribe(SubscribeRequest) returns (SubscribeResponse) {}
 }
 
-message SendTriggerPostRequest {
-  string PostCode = 1;
-  string UserId = 2;
-  string ChannelId = 3;
-  bytes Params = 4;
+message PredefinedPost {
+  string Code = 1;
+  bytes Params = 2;
 }
 
-message SendTriggerPostResponse {}
+message Attachment {
+  string Fallback = 1;
+  string Color = 2;
+  string Pretext = 3;
+  string AuthorName = 4;
+  string AuthorLink = 5;
+  string AuthorIcon = 6;
+  string Title = 7;
+  string TitleLink = 8;
+  string Text = 9;
+  string ImageURL = 10;
+  string ThumbURL = 11;
+  string Footer = 12;
+  string FooterIcon = 13;
+}
+
+message Post {
+  string Message = 1;
+  string ToUserId = 2;
+  string ChannelId = 3;
+  bool Ephemeral = 4;
+  bool FromBot = 5;
+  repeated Attachment Attachments = 6;
+  PredefinedPost PredefinedPost = 7;
+}
+
+message PostRequest {
+  repeated Post Posts = 1;
+}
+
+message PostResponse {}
 
 message AskBotRequest {
   string Message = 1;
@@ -88,17 +116,7 @@ message AskBotResponse {
   string Answer = 2;
 }
 
-message SendPostFromBotRequest {
-    string Message = 1;
-    string UserId = 2;
-    string ChannelId = 3;
-    bool Ephemeral = 4;
-}
-
-message SendPostFromBotResponse {}
-
 service Posts {
-  rpc SendTriggerPost(SendTriggerPostRequest) returns (SendTriggerPostResponse) {}
-  rpc SendPostFromBot(SendPostFromBotRequest) returns (SendPostFromBotResponse) {}
+  rpc Post(PostRequest) returns (PostResponse) {}
   rpc AskBot(AskBotRequest) returns (AskBotResponse) {}
 }

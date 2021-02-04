@@ -10,12 +10,12 @@ import (
 type Service interface {
 	CreateClientChannel(rq *pb.CreateClientChannelRequest) (*pb.CreateClientChannelResponse, error)
 	GetChannelsForUserAndExpert(userId, expertId string) ([]string, error)
-	SendTriggerPost(postCode, userId, channelId string, params map[string]interface{}) error
 	Subscribe(userId, channelId string) error
 	CreateUser(rq *pb.CreateUserRequest) (*pb.CreateUserResponse, error)
 	DeleteUser(userId string) error
 	AskBot(rq *pb.AskBotRequest) (*pb.AskBotResponse, error)
-	SendPostFromBot(rq *pb.SendPostFromBotRequest) (*pb.SendPostFromBotResponse, error)
+	Post(message, channelId, userId string, ephemeral, fromBot bool) error
+	PredefinedPost(channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error
 }
 
 type serviceImpl struct {
@@ -70,22 +70,35 @@ func (u *serviceImpl) GetChannelsForUserAndExpert(userId, expertId string) ([]st
 	return rs.ChannelIds, nil
 }
 
-func (u *serviceImpl) SendTriggerPost(postCode, userId, channelId string, params map[string]interface{}) error {
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	paramsB, _ := json.Marshal(params)
-
-	_, err := u.PostsClient.SendTriggerPost(ctx, &pb.SendTriggerPostRequest{
-		PostCode:  postCode,
-		UserId:    userId,
-		ChannelId: channelId,
-		Params:    paramsB,
-	})
-
+func (u *serviceImpl) Post(message, channelId, userId string, ephemeral, fromBot bool) error {
+	_, err := u.PostsClient.Post(context.Background(), &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
+		Message:        message,
+		ToUserId:       userId,
+		ChannelId:      channelId,
+		Ephemeral:      ephemeral,
+		FromBot:        fromBot,
+	}}})
 	return err
+}
 
+func (u *serviceImpl) PredefinedPost(channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error {
+
+	var paramsB []byte
+	if params != nil {
+		paramsB, _ = json.Marshal(params)
+	}
+
+	_, err := u.PostsClient.Post(context.Background(), &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
+		ToUserId:       userId,
+		ChannelId:      channelId,
+		Ephemeral:      ephemeral,
+		FromBot:        fromBot,
+		PredefinedPost: &pb.PredefinedPost{
+			Code:   code,
+			Params: paramsB,
+		},
+	}}})
+	return err
 }
 
 func (u *serviceImpl) CreateUser(rq *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
@@ -99,8 +112,4 @@ func (u *serviceImpl) DeleteUser(userId string) error {
 
 func (u *serviceImpl) AskBot(rq *pb.AskBotRequest) (*pb.AskBotResponse, error) {
 	return u.PostsClient.AskBot(context.Background(), rq)
-}
-
-func (u *serviceImpl) SendPostFromBot(rq *pb.SendPostFromBotRequest) (*pb.SendPostFromBotResponse, error) {
-	return u.PostsClient.SendPostFromBot(context.Background(), rq)
 }
