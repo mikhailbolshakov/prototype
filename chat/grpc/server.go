@@ -38,7 +38,7 @@ func New(domain domain.Service) *Server {
 
 func  (s *Server) Init(c *kitConfig.Config) error {
 	usersCfg := c.Services["chat"]
-	s.host = usersCfg.Grpc.Hosts[0]
+	s.host = usersCfg.Grpc.Host
 	s.port = usersCfg.Grpc.Port
 	return nil
 }

@@ -28,7 +28,7 @@ func (a *adapterImpl) Init(c *kitConfig.Config) error {
 
 	usersCfg := c.Services["users"]
 
-	cl, err := kitGrpc.NewClient(usersCfg.Grpc.Hosts[0], usersCfg.Grpc.Port)
+	cl, err := kitGrpc.NewClient(usersCfg.Grpc.Host, usersCfg.Grpc.Port)
 	if err != nil {
 		return err
 	}

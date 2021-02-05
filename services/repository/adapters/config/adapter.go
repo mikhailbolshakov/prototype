@@ -29,11 +29,11 @@ func (a *adapterImpl) Init() error {
 
 	if envs, err := kitConfig.Env("../.env"); err == nil {
 
-		port, ok := envs["CONFIG_SERVER_PORT"]
+		port, ok := envs["CONFIG_CFG_GRPC_PORT"]
 		if !ok {
 			return errors.New("config server port isn't specified")
 		}
-		host, ok := envs["CONFIG_SERVER_HOST"]
+		host, ok := envs["CONFIG_CFG_GRPC_HOST"]
 		if !ok {
 			return errors.New("config server port isn't specified")
 		}

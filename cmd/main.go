@@ -5,6 +5,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/api"
 	"gitlab.medzdrav.ru/prototype/bp"
 	"gitlab.medzdrav.ru/prototype/config"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/chat"
 	"gitlab.medzdrav.ru/prototype/services"
@@ -17,6 +18,11 @@ import (
 )
 
 func main() {
+
+	if err := log.Init(log.TraceLevel); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
 
 	// load config first
 	cfg := config.New()

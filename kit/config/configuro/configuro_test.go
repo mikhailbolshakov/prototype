@@ -110,3 +110,41 @@ func Test_Config2(t *testing.T) {
 	log.Println(string(j))
 
 }
+
+func Test_EnrichFromEnv(t *testing.T) {
+	// Create Configuro Object
+	Loader, err := configuro.NewConfig(
+		configuro.WithLoadFromConfigFile("./config.yml", true),
+		configuro.WithoutLoadDotEnv())
+	if err != nil {
+		panic(err)
+	}
+
+	// Create our Config holding Struct
+	config := &Config{}
+
+	// Load Our Config.
+	err = Loader.Load(config)
+	if err != nil {
+		panic(err)
+	}
+
+	j, _ := json.Marshal(config)
+	log.Println(string(j))
+
+	Loader, err = configuro.NewConfig(
+		configuro.WithoutLoadFromConfigFile(),
+		configuro.WithLoadDotEnv("./.env"))
+	if err != nil {
+		panic(err)
+	}
+
+	err = Loader.Load(config)
+	if err != nil {
+		panic(err)
+	}
+
+	j, _ = json.Marshal(config)
+	log.Println(string(j))
+
+}

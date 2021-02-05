@@ -27,7 +27,7 @@ func NewAdapter() Adapter {
 func (a *adapterImpl) Init(c *kitConfig.Config) error {
 
 	chatCfg := c.Services["chat"]
-	cl, err := kitGrpc.NewClient(chatCfg.Grpc.Hosts[0], chatCfg.Grpc.Port)
+	cl, err := kitGrpc.NewClient(chatCfg.Grpc.Host, chatCfg.Grpc.Port)
 	if err != nil {
 		return err
 	}

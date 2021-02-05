@@ -2,73 +2,52 @@ package session
 
 import (
 	"fmt"
-	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	http2 "gitlab.medzdrav.ru/prototype/kit/http"
-	"log"
-	"net/http"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	"time"
 )
 
-type upgrader struct {
-	hub Hub
-}
-
-func newWsUpgrader(hub Hub) http2.WsUpgrader {
-	return &upgrader{
-		hub: hub,
-	}
-}
-
-func (u *upgrader) Set(noAuthRouter *mux.Router, upgrader *websocket.Upgrader) {
-
-	noAuthRouter.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-
-		w.Header().Set("Content-Type", "application/json")
-		wsConn, err := upgrader.Upgrade(w, r, nil)
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		sessionId := r.URL.Query().Get("session")
-		if sessionId == "" {
-			http.Error(w, "no session provided", http.StatusBadRequest)
-			return
-		}
-
-		if err := u.hub.SetWs(sessionId, newWs(wsConn)); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-
-	})
-
-}
-
 const (
-	writeWait      = 10 * time.Second
-	pongWait       = 60 * time.Second
-	pingPeriod     = (pongWait * 9) / 10
-	maxMessageSize = 4608
+	writeWait           = 1000 * time.Second
+	pongWait            = 6000 * time.Second
+	pingPeriod          = (pongWait * 9) / 10
+	maxMessageSize      = 4608
 )
 
 type Ws interface {
 	open()
 	close()
+	closedEvent() <-chan struct{}
+	receivedMessageEvent() <-chan []byte
 	send(message []byte)
 }
 
 type wsImpl struct {
-	conn     *websocket.Conn
-	sendChan chan []byte
+	sessionId    string
+	userId       string
+	conn         *websocket.Conn
+	sendChan     chan []byte
+	receivedChan chan []byte
+	closeChan    chan struct{}
 }
 
-func newWs(conn *websocket.Conn) Ws {
+func newWs(conn *websocket.Conn, sessionId, userId string) Ws {
 	return &wsImpl{
-		conn: conn,
-		sendChan: make(chan []byte, 256),
+		conn:         conn,
+		sendChan:     make(chan []byte, 256),
+		receivedChan: make(chan []byte, 256),
+		closeChan:    make(chan struct{}),
+		sessionId:    sessionId,
+		userId:       userId,
 	}
+}
+
+func (w *wsImpl) closedEvent() <-chan struct{} {
+	return w.closeChan
+}
+
+func (w *wsImpl) receivedMessageEvent() <-chan []byte {
+	return w.receivedChan
 }
 
 func (w *wsImpl) open() {
@@ -77,7 +56,7 @@ func (w *wsImpl) open() {
 }
 
 func (w *wsImpl) close() {
-	close(w.sendChan)
+	w.closeChan <- struct{}{}
 	_ = w.conn.Close()
 }
 
@@ -85,9 +64,9 @@ func (w *wsImpl) send(message []byte) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			_, ok := r.(error)
+			err, ok := r.(error)
 			if !ok {
-				log.Println(fmt.Errorf("%v", r))
+				log.Err(err, true)
 			}
 		}
 	}()
@@ -101,40 +80,46 @@ func (w *wsImpl) write() {
 
 	defer func() {
 		// close connection
+		close(w.sendChan)
 		pingTicker.Stop()
-		_ = w.conn.Close()
+		w.close()
 	}()
 
 	for {
 		select {
 
-		case message, ok := <- w.sendChan:
+		case message, ok := <-w.sendChan:
 
 			_ = w.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			if !ok {
-				//log.Printf("Channel has been closed for account %s", c.account.Id)
 				_ = w.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				log.Dbg("[ws] close message sent")
 				return
 			}
 
 			writer, err := w.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
+				log.Err(err, true)
 				return
 			}
 
-			log.Println("message to client: ", string(message))
+			_, err = writer.Write(message)
+			if err != nil {
+				log.Err(err, true)
+				return
+			}
+			log.Dbg("[ws] message sent: ", string(message))
 
-			_, _ = writer.Write(message)
 			if err := writer.Close(); err != nil {
-				log.Println("writer.Close() error:", err.Error())
+				log.Err(err, true)
 				return
 			}
 
 		case <-pingTicker.C:
 			_ = w.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := w.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-				log.Println("write ping message error:", err.Error())
+				log.Err(err, true)
 				return
 			}
 		}
@@ -144,9 +129,7 @@ func (w *wsImpl) write() {
 func (w *wsImpl) read() {
 
 	defer func() {
-		//app.L().Debugf("Websocket client is closing (accountId: %s)", c.account.Id.String())
-		//w.hub.unregisterChan <- c
-		//w.conn.Close()
+		w.close()
 	}()
 
 	w.conn.SetReadLimit(maxMessageSize)
@@ -158,20 +141,21 @@ func (w *wsImpl) read() {
 
 	for {
 		_, message, err := w.conn.ReadMessage()
-		//app.L().Debugf("Message from socket: %s", string(message))
-
+		log.TrcF("[ws] message received %s", string(message))
 		if err != nil {
-			log.Println("read socket error:", err.Error())
-			//app.E().SetError(system.SysErr(err, system.WsConnReadMessageErrorCode, message))
-			//app.L().Debug(">>>>>> ReadMessageError:", err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				//app.L().Debugf("> > > Read sentry: %s", err)
+				log.Err(err, true)
+			} else {
+				log.Err(fmt.Errorf("read socket error: %s", err.Error()), true)
 			}
-			break
+			return
 		}
 
-		log.Println(message)
+		if string(message) == "ping" {
+			w.sendChan <- []byte("pong")
+		} else {
+			w.receivedChan <- message
+		}
 
-		//go w.hub.onMessage(message, c)
 	}
 }

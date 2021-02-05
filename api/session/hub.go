@@ -3,8 +3,10 @@ package session
 import (
 	"context"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"gitlab.medzdrav.ru/prototype/api/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/kit/chat/mattermost"
+	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	"gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	"golang.org/x/sync/errgroup"
@@ -26,8 +28,8 @@ type Hub interface {
 	NewSession(*NewSessionRequest) (*NewSessionResponse, error)
 	Logout(userId string) error
 	GetById(id string) Session
-	GetByUserId(userId string) Session
-	SetWs(sessionId string, ws Ws) error
+	GetByUserId(userId string) []Session
+	SetupWsConnection(sessionId string, wsConn *websocket.Conn) error
 	GetLoginRouteSetter() http.RouteSetter
 	SessionMiddleware(next net_http.Handler) net_http.Handler
 }
@@ -40,9 +42,10 @@ type hubImpl struct {
 	auth         auth.Service
 	userService  users.Service
 	httpServer   *http.Server
+	cfg          *kitConfig.Config
 }
 
-func NewHub(srv *http.Server, auth auth.Service, userService users.Service) Hub {
+func NewHub(cfg *kitConfig.Config, srv *http.Server, auth auth.Service, userService users.Service) Hub {
 
 	h := &hubImpl{
 		httpServer:   srv,
@@ -50,6 +53,7 @@ func NewHub(srv *http.Server, auth auth.Service, userService users.Service) Hub 
 		userService:  userService,
 		sessions:     map[string]Session{},
 		userSessions: map[string][]Session{},
+		cfg:          cfg,
 	}
 
 	srv.SetWsUpgrader(newWsUpgrader(h))
@@ -81,9 +85,8 @@ func (h *hubImpl) NewSession(rq *NewSessionRequest) (*NewSessionResponse, error)
 		grp.Go(func() error {
 			var err error
 			mmClient, err = mattermost.Login(&mattermost.Params{
-				// TODO: env
-				Url:     "http://localhost:8065",
-				WsUrl:   "ws://localhost:8065",
+				Url:     h.cfg.Mattermost.Url,
+				WsUrl:   h.cfg.Mattermost.Ws,
 				Account: rq.Username,
 				Pwd:     rq.Password,
 				OpenWS:  true,
@@ -144,11 +147,18 @@ func (h *hubImpl) GetById(id string) Session {
 	return nil
 }
 
-func (h *hubImpl) GetByUserId(userId string) Session {
+func (h *hubImpl) GetByUserId(userId string) []Session {
+
+	h.RLock()
+	defer h.RUnlock()
+	if s, ok := h.userSessions[userId]; ok {
+		return s
+	}
+
 	return nil
 }
 
-func (h *hubImpl) SetWs(sessionId string, ws Ws) error {
+func (h *hubImpl) SetupWsConnection(sessionId string, wsConn *websocket.Conn) error {
 
 	s, ok := func() (Session, bool) {
 		h.RLock()
@@ -158,7 +168,13 @@ func (h *hubImpl) SetWs(sessionId string, ws Ws) error {
 	}()
 
 	if ok {
-		s.setWs(ws)
+
+		if s.isWs() {
+			return fmt.Errorf("ws connection is already open for the session %s", sessionId)
+		} else {
+			s.setWs(newWs(wsConn, s.getId(), s.getUserId()))
+		}
+
 	} else {
 		return fmt.Errorf("no active session found %s", sessionId)
 	}

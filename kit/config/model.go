@@ -47,8 +47,8 @@ type Database struct {
 }
 
 type Grpc struct {
-	Port  string
-	Hosts []string
+	Port string
+	Host string
 }
 
 type SrvCfg struct {
@@ -63,4 +63,5 @@ type Config struct {
 	Mattermost *Mattermost
 	Services   map[string]*SrvCfg
 	Http       *Http
+	Test       string
 }

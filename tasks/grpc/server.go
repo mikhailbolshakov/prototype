@@ -36,7 +36,7 @@ func New(domain domain.TaskService, search domain.TaskSearchService) *Server {
 
 func  (s *Server) Init(c *kitConfig.Config) error {
 	usersCfg := c.Services["tasks"]
-	s.host = usersCfg.Grpc.Hosts[0]
+	s.host = usersCfg.Grpc.Host
 	s.port = usersCfg.Grpc.Port
 	return nil
 }

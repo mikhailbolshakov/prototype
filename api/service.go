@@ -94,14 +94,14 @@ func (s *serviceImpl) Init() error {
 	s.Server.SetRouters(users.NewRouter(userController), tasks.NewRouter(taskController), services.NewRouter(servController), bp.NewRouter(bpController))
 
 	// session HUB
-	s.hub = session.NewHub(s.Server, authService, s.userService)
+	s.hub = session.NewHub(c, s.Server, authService, s.userService)
 	s.Server.SetRouters(s.hub.GetLoginRouteSetter())
 
 	// set auth middlewares
 	// the first middleware checks session by X-SESSION-ID header and if correct sets Authorization Bearer with Access Token
 	// then the mdw which checks standard Bearer token takes its action
 	// TODO: currently if a token expires we don't remove session immediately, but we must
-	//s.Server.SetAuthMiddleware(s.hub.SessionMiddleware, s.mdw.CheckToken)
+	s.Server.SetAuthMiddleware(s.hub.SessionMiddleware, s.mdw.CheckToken)
 
 	if err := s.userAdapter.Init(c); err != nil {
 		return err

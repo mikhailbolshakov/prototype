@@ -63,7 +63,7 @@ func (s *serviceImpl) GrpcSettings() *kit.Grpc {
 	defer s.RUnlock()
 
 	return &kit.Grpc{
-		Port:  s.config.Services["config"].Grpc.Port,
-		Hosts: s.config.Services["config"].Grpc.Hosts,
+		Port: s.config.Services["cfg"].Grpc.Port,
+		Host: s.config.Services["cfg"].Grpc.Host,
 	}
 }

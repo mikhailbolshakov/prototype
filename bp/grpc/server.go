@@ -34,7 +34,7 @@ func New(bpm bpmKit.Engine) *Server {
 
 func  (s *Server) Init(c *kitConfig.Config) error {
 	cfg := c.Services["bp"]
-	s.host = cfg.Grpc.Hosts[0]
+	s.host = cfg.Grpc.Host
 	s.port = cfg.Grpc.Port
 	return nil
 }

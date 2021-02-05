@@ -43,8 +43,7 @@ services:
       host-ro: localhost
     grpc:
       port: 50053
-      hosts:
-        - localhost
+      host: localhost
   users:
     database:
       dbname: mattermost
@@ -57,8 +56,7 @@ services:
       host-ro: localhost
     grpc:
       port: 50051
-      hosts:
-        - localhost
+      host: localhost
   tasks:
     database:
       dbname: mattermost
@@ -71,8 +69,7 @@ services:
       host-ro: localhost
     grpc:
       port: 50052
-      hosts:
-        - localhost
+      host: localhost
   services:
     database:
       dbname: mattermost
@@ -90,10 +87,8 @@ services:
   bp:
     grpc:
       port: 50055
-      hosts:
-        - localhost
-  config:
+      host: localhost
+  cfg:
     grpc:
       port: 50056
-      hosts:
-        - localhost
+      host: localhost

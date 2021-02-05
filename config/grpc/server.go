@@ -50,7 +50,7 @@ func (s *Server) ListenAsync() {
 
 	go func() {
 		grpc := s.configService.GrpcSettings()
-		err := s.Server.Listen(grpc.Hosts[0], grpc.Port)
+		err := s.Server.Listen(grpc.Host, grpc.Port)
 		if err != nil {
 			log.Fatal(err)
 		}

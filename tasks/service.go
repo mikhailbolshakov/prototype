@@ -107,8 +107,8 @@ func (s *serviceImpl) Init() error {
 func (s *serviceImpl) ListenAsync() error {
 
 	s.grpc.ListenAsync()
-	s.assignTasksDaemon.Run()
-	s.scheduler.StartAsync()
+	//s.assignTasksDaemon.Run()
+	//s.scheduler.StartAsync()
 
 	return nil
 }

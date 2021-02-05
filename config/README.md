@@ -1,0 +1,4 @@
+- Configs are provided by gRPS service `config`
+- General configs are specified in config.yml and mapped to the `kit.config.model` struct
+- Configs might be overwritten by environment variables supplied either as session variables or .env files
+- Each service tries to enrich the general configs obtained from the gRpc service with its local environment variables ()

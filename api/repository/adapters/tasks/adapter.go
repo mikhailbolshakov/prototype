@@ -26,7 +26,7 @@ func NewAdapter() Adapter {
 
 func (a *adapterImpl) Init(c *kitConfig.Config) error {
 	cfg := c.Services["tasks"]
-	cl, err := kitGrpc.NewClient(cfg.Grpc.Hosts[0], cfg.Grpc.Port)
+	cl, err := kitGrpc.NewClient(cfg.Grpc.Host, cfg.Grpc.Port)
 	if err != nil {
 		return err
 	}
