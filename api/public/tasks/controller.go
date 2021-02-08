@@ -122,6 +122,7 @@ func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 			Type:    request.FormValue("type"),
 			Subtype: request.FormValue("subtype"),
 		},
+		Num: request.FormValue("num"),
 	}
 
 	if sizeTxt := request.FormValue("limit"); sizeTxt != "" {

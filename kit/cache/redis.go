@@ -36,3 +36,9 @@ func Open(params *Params) (*Redis, error) {
 		Ttl:      time.Duration(params.Ttl) * time.Second,
 	}, nil
 }
+
+func (r *Redis) Close() {
+	if r.Instance != nil {
+		_ = r.Instance.Close()
+	}
+}

@@ -101,7 +101,7 @@ func (s *serviceImpl) Init() error {
 	// the first middleware checks session by X-SESSION-ID header and if correct sets Authorization Bearer with Access Token
 	// then the mdw which checks standard Bearer token takes its action
 	// TODO: currently if a token expires we don't remove session immediately, but we must
-	s.Server.SetAuthMiddleware(s.hub.SessionMiddleware, s.mdw.CheckToken)
+	//s.Server.SetAuthMiddleware(s.hub.SessionMiddleware, s.mdw.CheckToken)
 
 	if err := s.userAdapter.Init(c); err != nil {
 		return err

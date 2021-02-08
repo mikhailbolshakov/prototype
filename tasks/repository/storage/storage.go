@@ -12,6 +12,7 @@ import (
 type TaskStorage interface {
 	Create(t *Task) (*Task, error)
 	Get(id string) *Task
+	GetByIds(id []string) []*Task
 	Update(t *Task) (*Task, error)
 	GetByChannel(channelId string) []*Task
 	CreateHistory(h *History) (*History, error)
@@ -19,6 +20,8 @@ type TaskStorage interface {
 	SaveAssignmentLog(l *AssignmentLog) (*AssignmentLog, error)
 	GetAssignmentLog(c *AssignmentLogCriteria) (*AssignmentLogResponse, error)
 	GetHistory(taskId string) []*History
+
+	EnsureIndex() error
 }
 
 type taskStorageImpl struct {
@@ -40,7 +43,8 @@ func (s *taskStorageImpl) Create(task *Task) (*Task, error) {
 		return nil, result.Error
 	}
 
-	// TODO: put to Redis
+	// to index
+	s.infr.Search.IndexAsync("tasks", task.Id, task.toIndex())
 
 	return task, nil
 }
@@ -70,8 +74,8 @@ func (s *taskStorageImpl) Update(task *Task) (*Task, error) {
 		return nil, result.Error
 	}
 
-	// TODO: put to Redis
-	// TODO: save history
+	// to index
+	s.infr.Search.IndexAsync("tasks", task.Id, task.toIndex())
 
 	return task, nil
 }
@@ -79,6 +83,12 @@ func (s *taskStorageImpl) Update(task *Task) (*Task, error) {
 func (s *taskStorageImpl) GetByChannel(channelId string) []*Task {
 	var tasks []*Task
 	s.infr.Db.Instance.Where("channel_id = ?", channelId).Find(&tasks)
+	return tasks
+}
+
+func (s *taskStorageImpl) GetByIds(ids []string) []*Task {
+	var tasks []*Task
+	s.infr.Db.Instance.Find(&tasks, ids)
 	return tasks
 }
 
@@ -94,91 +104,6 @@ func (s *taskStorageImpl) GetHistory(taskId string) []*History {
 	var histories []*History
 	s.infr.Db.Instance.Where("task_id = ?", taskId).Order("changed_at desc").Find(&histories)
 	return histories
-}
-
-func (s *taskStorageImpl) Search(cr *SearchCriteria) (*SearchResponse, error) {
-
-	response := &SearchResponse{
-		PagingResponse: &common.PagingResponse{
-			Total: 0,
-			Index: 0,
-		},
-		Tasks: []*Task{},
-	}
-
-	selectClause := `*`
-
-	query := s.infr.Db.Instance.
-		Table(`tasks t`).
-		Where(`t.deleted_at is null`)
-
-	if cr.Num != "" {
-		query = query.Where(`t.num = ?`, cr.Num)
-	}
-
-	if cr.Type != "" {
-		query = query.Where(`t.type = ?`, cr.Type)
-	}
-
-	if cr.SubType != "" {
-		query = query.Where(`t.subtype = ?`, cr.SubType)
-	}
-
-	if cr.Status != "" {
-		query = query.Where(`t.status = ?`, cr.Status)
-	}
-
-	if cr.SubStatus != "" {
-		query = query.Where(`t.substatus = ?`, cr.SubStatus)
-	}
-
-	if cr.AssigneeUserId != "" {
-		query = query.Where(`t.assignee_user_id = ?`, cr.AssigneeUserId)
-	}
-
-	if cr.AssigneeUsername != "" {
-		query = query.Where(`t.assignee_username = ?`, cr.AssigneeUsername)
-	}
-
-	if cr.AssigneeType != "" {
-		query = query.Where(`t.assignee_type = ?`, cr.AssigneeType)
-	}
-
-	if cr.AssigneeGroup != "" {
-		query = query.Where(`t.assignee_group = ?`, cr.AssigneeGroup)
-	}
-
-	if cr.ChannelId != "" {
-		query = query.Where(`t.channel_id = ?`, cr.ChannelId)
-	}
-
-	// paging
-	var totalCount int64
-	var offset int
-
-	query.Count(&totalCount)
-
-	if totalCount > int64(cr.Size) {
-		offset = (cr.Index - 1) * cr.Size
-	}
-
-	response.PagingResponse.Total = int(math.Ceil(float64(totalCount) / float64(cr.Size)))
-	response.PagingResponse.Index = cr.Index
-
-	query = query.Select(selectClause).Offset(offset).Limit(cr.Size)
-
-	rows, err := query.Rows()
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		task := &Task{}
-		_ = s.infr.Db.Instance.ScanRows(rows, task)
-		response.Tasks = append(response.Tasks, task)
-	}
-
-	return response, nil
 }
 
 func (s *taskStorageImpl) SaveAssignmentLog(l *AssignmentLog) (*AssignmentLog, error) {

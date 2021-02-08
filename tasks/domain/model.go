@@ -13,6 +13,9 @@ const (
 	TST_MED_REQUEST          = "med-request"
 	TST_LAWYER_REQUEST       = "lawyer-request"
 
+	TT_TST  = "test"
+	TST_TST = "test"
+
 	TS_EMPTY  = "#"
 	TS_OPEN   = "open"
 	TS_CLOSED = "closed"
@@ -30,6 +33,7 @@ const (
 	USR_TYPE_CONSULTANT = "consultant"
 	USR_TYPE_EXPERT     = "expert"
 
+	USR_GRP_CLIENT            = "client"
 	USR_GRP_CONSULTANT_LAWYER = "consultant-lawyer"
 	USR_GRP_CONSULTANT_MED    = "consultant-med"
 	USR_GRP_CONSULTANT_COMMON = "consultant"

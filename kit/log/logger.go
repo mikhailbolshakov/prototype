@@ -30,6 +30,10 @@ const (
 	TraceLevel = "trace"
 )
 
+func GetLogger() *logrus.Logger {
+	return logger
+}
+
 func Init(level string) error {
 
 	lv, err := logrus.ParseLevel(level)

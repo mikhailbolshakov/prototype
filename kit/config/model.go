@@ -56,6 +56,11 @@ type SrvCfg struct {
 	Grpc     *Grpc
 }
 
+type Es struct {
+	Url   string
+	Trace bool
+}
+
 type Config struct {
 	Redis      *Redis
 	Zeebe      *Zeebe
@@ -63,5 +68,6 @@ type Config struct {
 	Mattermost *Mattermost
 	Services   map[string]*SrvCfg
 	Http       *Http
+	Es         *Es
 	Test       string
 }

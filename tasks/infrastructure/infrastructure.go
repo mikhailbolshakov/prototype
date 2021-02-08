@@ -3,6 +3,7 @@ package infrastructure
 import (
 	kitCache "gitlab.medzdrav.ru/prototype/kit/cache"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
+	"gitlab.medzdrav.ru/prototype/kit/search"
 	kitStorage "gitlab.medzdrav.ru/prototype/kit/storage"
 )
 
@@ -10,6 +11,7 @@ type Container struct {
 	Db         *kitStorage.Storage
 	ReadOnlyDB *kitStorage.Storage
 	Cache      *kitCache.Redis
+	Search     search.Search
 }
 
 func New() *Container {
@@ -58,11 +60,17 @@ func (c *Container) Init(cfg *kitConfig.Config) error {
 		return err
 	}
 
+	// Index search
+	c.Search, err = search.NewEs(cfg.Es.Url, cfg.Es.Trace)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (c *Container) Close() {
 	c.Db.Close()
 	c.ReadOnlyDB.Close()
-	_ = c.Cache.Instance.Close()
+	c.Cache.Close()
 }

@@ -87,3 +87,19 @@ type AssignmentLogResponse struct {
 	*common.PagingResponse
 	Logs []*AssignmentLog
 }
+
+type iTask struct {
+	Id               string     `json:"id"`
+	Title            string     `json:"title"`
+	Description      string     `json:"description"`
+	Num              string     `json:"num"`
+	Type             string     `json:"type"`
+	SubType          string     `json:"subtype"`
+	Status           string     `json:"status"`
+	SubStatus        string     `json:"substatus"`
+	AssigneeType     string     `json:"assigneeType"`
+	AssigneeGroup    string     `json:"assigneeGroup"`
+	AssigneeUserId   string     `json:"assigneeUserId"`
+	AssigneeUsername string     `json:"assigneeUsername"`
+	ChannelId        string     `json:"channelId"`
+}

@@ -423,5 +423,36 @@ func getMockConfig() []*Config {
 		},
 	})
 
+	// тестовая задача
+	r = append(r, &Config{
+		Id: "6",
+		Type: &Type{
+			Type:    TT_TST,
+			SubType: TST_TST,
+		},
+		NumGenRule: &NumGenerationRule{
+			Prefix:         "TST-",
+			GenerationType: NUM_GEN_TYPE_RANDOM,
+		},
+		StatusModel: &StatusModel{
+			Transitions: []*Transition{
+				{
+					Id:              "1",
+					From:            &Status{TS_EMPTY, TSS_EMPTY},
+					To:              &Status{TS_OPEN, TSS_REPORTED},
+					AutoAssignType:  USR_TYPE_CLIENT,
+					AutoAssignGroup: USR_GRP_CLIENT,
+					Initial:         true,
+				},
+				{
+					Id:                "2",
+					From:              &Status{TS_OPEN, TSS_REPORTED},
+					To:                &Status{TS_CLOSED, TSS_SOLVED},
+				},
+			},
+		},
+		AssignmentRules: []*AssignmentRule{},
+	})
+
 	return r
 }

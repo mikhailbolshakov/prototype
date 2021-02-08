@@ -30,6 +30,10 @@ http:
   host: localhost
   port: 8000
 
+es:
+  url: "http://localhost:9200"
+  trace: true
+
 services:
   chat:
     database:

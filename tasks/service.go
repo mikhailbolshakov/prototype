@@ -100,6 +100,10 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
+	if err := s.storage.EnsureIndex(); err != nil {
+		return err
+	}
+
 	return nil
 
 }

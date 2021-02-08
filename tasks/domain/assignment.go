@@ -1,11 +1,13 @@
 package domain
 
 import (
+	"context"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/storage"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -19,7 +21,24 @@ type assignmentTask struct {
 	taskType *Type
 	cfg      *Config
 	quit     chan struct{}
+	cancel   context.CancelFunc
+	ctx      context.Context
+	run      bool
+	sync.Mutex
 }
+
+func (t *assignmentTask) setRun(v bool) {
+	t.Lock()
+	defer t.Unlock()
+	t.run = v
+}
+
+func (t *assignmentTask) getRun() bool {
+	t.Lock()
+	defer t.Unlock()
+	return t.run
+}
+
 
 func NewAssignmentDaemon(cfgService ConfigService,
 	taskService TaskService,
@@ -188,7 +207,11 @@ func (d *daemonImpl) Run() {
 
 	for _, t := range d.taskTypes {
 
+		t.setRun(true)
+
 		go func(tt *assignmentTask) {
+
+			defer tt.setRun(false)
 
 			for {
 
@@ -198,7 +221,10 @@ func (d *daemonImpl) Run() {
 					if err := d.assign(tt); err != nil {
 						return
 					}
-				case <-tt.quit:
+				//case <-tt.quit:
+				//	log.Printf("assignment task of type %v is cancelled", tt.taskType)
+				//	return
+				case <-tt.ctx.Done():
 					log.Printf("assignment task of type %v is cancelled", tt.taskType)
 					return
 				}
@@ -214,7 +240,10 @@ func (d *daemonImpl) Run() {
 func (d *daemonImpl) Stop() error {
 
 	for _, t := range d.taskTypes {
-		t.quit <- struct{}{}
+		if t.getRun() {
+			t.cancel()
+			//t.quit <- struct{}{}
+		}
 	}
 
 	return nil
@@ -227,10 +256,16 @@ func (d *daemonImpl) Init() error {
 	for _, cfg := range d.cfgService.GetAll() {
 
 		if cfg.AssignmentRules != nil && len(cfg.AssignmentRules) > 0 {
+
+			ctx := context.Background()
+			ctx, cancel := context.WithCancel(ctx)
+
 			d.taskTypes = append(d.taskTypes, &assignmentTask{
 				taskType: cfg.Type,
 				cfg:      cfg,
 				quit:     make(chan struct{}),
+				ctx:      ctx,
+				cancel:   cancel,
 			})
 		}
 
