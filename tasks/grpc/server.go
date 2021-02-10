@@ -15,13 +15,12 @@ type Server struct {
 	host, port string
 	*kitGrpc.Server
 	domain domain.TaskService
-	search domain.TaskSearchService
 	pb.UnimplementedTasksServer
 }
 
-func New(domain domain.TaskService, search domain.TaskSearchService) *Server {
+func New(domain domain.TaskService) *Server {
 
-	s := &Server{domain: domain, search: search}
+	s := &Server{domain: domain}
 
 	// grpc server
 	gs, err := kitGrpc.NewServer()
@@ -53,12 +52,12 @@ func (s *Server) ListenAsync() {
 
 func (s *Server) New(ctx context.Context, rq *pb.NewTaskRequest) (*pb.Task, error) {
 
-	task, err := s.domain.New(s.fromPb(rq))
+	task, err := s.domain.New(s.toTaskDomain(rq))
 	if err != nil {
 		return nil, err
 	}
 
-	return s.fromDomain(task), nil
+	return s.toTaskPb(task), nil
 }
 
 func (s *Server) NextTransitions(ctx context.Context, rq *pb.NextTransitionsRequest) (*pb.NextTransitionsResponse, error) {
@@ -72,7 +71,7 @@ func (s *Server) MakeTransition(ctx context.Context, rq *pb.MakeTransitionReques
 		return nil, err
 	}
 
-	return s.fromDomain(task), nil
+	return s.toTaskPb(task), nil
 }
 
 func (s *Server) GetByChannel(ctx context.Context, rq *pb.GetByChannelRequest) (*pb.GetByChannelResponse, error) {
@@ -81,7 +80,7 @@ func (s *Server) GetByChannel(ctx context.Context, rq *pb.GetByChannelRequest) (
 
 	tasks := s.domain.GetByChannel(rq.ChannelId)
 	for _, t := range tasks {
-		response.Tasks = append(response.Tasks, s.fromDomain(t))
+		response.Tasks = append(response.Tasks, s.toTaskPb(t))
 	}
 
 	return response, nil
@@ -90,36 +89,36 @@ func (s *Server) GetByChannel(ctx context.Context, rq *pb.GetByChannelRequest) (
 
 func (s *Server) SetAssignee(ctx context.Context, rq *pb.SetAssigneeRequest) (*pb.Task, error) {
 
-	task, err := s.domain.SetAssignee(rq.TaskId, s.assigneeFromPb(rq.Assignee))
+	task, err := s.domain.SetAssignee(rq.TaskId, s.toAssigneeDomain(rq.Assignee))
 	if err != nil {
 		return nil, err
 	}
 
-	return s.fromDomain(task), nil
+	return s.toTaskPb(task), nil
 }
 
 func (s *Server) GetById(ctx context.Context, rq *pb.GetByIdRequest) (*pb.Task, error) {
 	task := s.domain.Get(rq.Id)
-	return s.fromDomain(task), nil
+	return s.toTaskPb(task), nil
 }
 
 func (s *Server) Search(ctx context.Context, rq *pb.SearchRequest) (*pb.SearchResponse, error) {
 
-	dRs, err := s.search.Search(s.searchRqFromPb(rq))
+	dRs, err := s.domain.Search(s.toSrchRqDomain(rq))
 	if err != nil {
 		return nil, err
 	}
 
-	return s.searchRsFromDomain(dRs), nil
+	return s.toSrchRsPb(dRs), nil
 }
 
 func (s *Server) GetAssignmentLog(ctx context.Context, rq *pb.AssignmentLogRequest) (*pb.AssignmentLogResponse, error) {
-	dRs, err := s.domain.GetAssignmentLog(s.assLogRqFromPb(rq))
+	dRs, err := s.domain.GetAssignmentLog(s.toAssignLogDomain(rq))
 	if err != nil {
 		return nil, err
 	}
 
-	return s.assLogRsFromDomain(dRs), nil
+	return s.toAssignLogRsPb(dRs), nil
 }
 
 func (s *Server) GetHistory(ctx context.Context, rq *pb.GetHistoryRequest) (*pb.GetHistoryResponse, error) {
@@ -127,7 +126,7 @@ func (s *Server) GetHistory(ctx context.Context, rq *pb.GetHistoryRequest) (*pb.
 	rs := &pb.GetHistoryResponse{Items: []*pb.History{}}
 
 	for _, h := range s.domain.GetHistory(rq.TaskId) {
-		rs.Items = append(rs.Items, s.histToPb(h))
+		rs.Items = append(rs.Items, s.toHistoryPb(h))
 	}
 
 	return rs, nil

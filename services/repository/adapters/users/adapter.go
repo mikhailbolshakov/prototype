@@ -4,11 +4,12 @@ import (
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
+	"gitlab.medzdrav.ru/prototype/services/domain"
 )
 
 type Adapter interface {
 	Init(c *kitConfig.Config) error
-	GetService() Service
+	GetService() domain.UserService
 	Close()
 }
 
@@ -39,7 +40,7 @@ func (a *adapterImpl) Init(c *kitConfig.Config) error {
 	return nil
 }
 
-func (a *adapterImpl) GetService() Service {
+func (a *adapterImpl) GetService() domain.UserService {
 	return a.userServiceImpl
 }
 

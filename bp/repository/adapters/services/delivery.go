@@ -3,18 +3,11 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"gitlab.medzdrav.ru/prototype/bp/domain"
 	"gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/services"
 	"time"
 )
-
-type DeliveryService interface {
-	Create(userId, serviceTypeId string, details map[string]interface{}) (*Delivery, error)
-	GetDelivery(deliveryId string) (*Delivery, error)
-	Cancel(deliveryId string, cancelTime *time.Time) (*Delivery, error)
-	Complete(deliveryId string, completeTime *time.Time) (*Delivery, error)
-	UpdateDetails(id string, details map[string]interface{}) (*Delivery, error)
-}
 
 type deliveryServiceImpl struct {
 	pb.DeliveryServiceClient
@@ -25,14 +18,14 @@ func newDeliveryImpl() *deliveryServiceImpl {
 	return a
 }
 
-func fromPb(d *pb.Delivery) *Delivery {
+func fromPb(d *pb.Delivery) *domain.Delivery {
 
 	startTime := grpc.PbTSToTime(d.StartTime)
 
 	var details map[string]interface{}
 	_ = json.Unmarshal(d.Details, &details)
 
-	return &Delivery{
+	return &domain.Delivery{
 		Id:            d.Id,
 		UserId:        d.UserId,
 		ServiceTypeId: d.ServiceTypeId,
@@ -43,7 +36,7 @@ func fromPb(d *pb.Delivery) *Delivery {
 	}
 }
 
-func (u *deliveryServiceImpl) Create(userId, serviceTypeId string, details map[string]interface{}) (*Delivery, error){
+func (u *deliveryServiceImpl) Create(userId, serviceTypeId string, details map[string]interface{}) (*domain.Delivery, error){
 	v, _ := json.Marshal(details)
 	if d, err := u.DeliveryServiceClient.Create(context.Background(), &pb.DeliveryRequest{
 		UserId:        userId,
@@ -56,7 +49,7 @@ func (u *deliveryServiceImpl) Create(userId, serviceTypeId string, details map[s
 	}
 }
 
-func (u *deliveryServiceImpl) GetDelivery(deliveryId string) (*Delivery, error){
+func (u *deliveryServiceImpl) GetDelivery(deliveryId string) (*domain.Delivery, error){
 	if d, err := u.DeliveryServiceClient.GetDelivery(context.Background(), &pb.GetDeliveryRequest{Id: deliveryId}); err == nil {
 		return fromPb(d), nil
 	} else {
@@ -64,7 +57,7 @@ func (u *deliveryServiceImpl) GetDelivery(deliveryId string) (*Delivery, error){
 	}
 }
 
-func (u *deliveryServiceImpl) Cancel(deliveryId string, cancelTime *time.Time) (*Delivery, error){
+func (u *deliveryServiceImpl) Cancel(deliveryId string, cancelTime *time.Time) (*domain.Delivery, error){
 	if d, err := u.DeliveryServiceClient.Cancel(context.Background(), &pb.CancelDeliveryRequest{Id: deliveryId, CancelTime: grpc.TimeToPbTS(cancelTime)}); err == nil {
 		return fromPb(d), nil
 	} else {
@@ -72,7 +65,7 @@ func (u *deliveryServiceImpl) Cancel(deliveryId string, cancelTime *time.Time) (
 	}
 }
 
-func (u *deliveryServiceImpl) Complete(deliveryId string, completeTime *time.Time) (*Delivery, error){
+func (u *deliveryServiceImpl) Complete(deliveryId string, completeTime *time.Time) (*domain.Delivery, error){
 	if d, err := u.DeliveryServiceClient.Complete(context.Background(), &pb.CompleteDeliveryRequest{Id: deliveryId, CompleteTime: grpc.TimeToPbTS(completeTime)}); err == nil {
 		return fromPb(d), nil
 	} else {
@@ -80,7 +73,7 @@ func (u *deliveryServiceImpl) Complete(deliveryId string, completeTime *time.Tim
 	}
 }
 
-func (u *deliveryServiceImpl) UpdateDetails(id string, details map[string]interface{}) (*Delivery, error) {
+func (u *deliveryServiceImpl) UpdateDetails(id string, details map[string]interface{}) (*domain.Delivery, error) {
 	v, _ := json.Marshal(details)
 	if d, err := u.DeliveryServiceClient.UpdateDetails(context.Background(), &pb.UpdateDetailsRequest{
 		Id:      id,

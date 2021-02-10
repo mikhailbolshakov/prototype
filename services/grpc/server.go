@@ -67,7 +67,7 @@ func (s *Server) Add(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.Use
 		return nil, err
 	}
 
-	return userBalanceFromDomain(rs), nil
+	return s.toUserBalancePb(rs), nil
 }
 
 func (s *Server) GetBalance(ctx context.Context, rq *pb.GetBalanceRequest) (*pb.UserBalance, error) {
@@ -79,7 +79,7 @@ func (s *Server) GetBalance(ctx context.Context, rq *pb.GetBalanceRequest) (*pb.
 		return nil, err
 	}
 
-	return userBalanceFromDomain(rs), nil
+	return s.toUserBalancePb(rs), nil
 }
 
 func (s *Server) WriteOff(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
@@ -93,7 +93,7 @@ func (s *Server) WriteOff(ctx context.Context, rq *pb.ChangeServicesRequest) (*p
 		return nil, err
 	}
 
-	return userBalanceFromDomain(rs), nil
+	return s.toUserBalancePb(rs), nil
 }
 
 func (s *Server) Lock(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
@@ -106,7 +106,7 @@ func (s *Server) Lock(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.Us
 		return nil, err
 	}
 
-	return userBalanceFromDomain(rs), nil
+	return s.toUserBalancePb(rs), nil
 }
 
 func (s *Server) CancelLock(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
@@ -120,11 +120,11 @@ func (s *Server) CancelLock(ctx context.Context, rq *pb.ChangeServicesRequest) (
 		return nil, err
 	}
 
-	return userBalanceFromDomain(rs), nil
+	return s.toUserBalancePb(rs), nil
 }
 
 func (s *Server) GetDelivery(ctx context.Context, rq *pb.GetDeliveryRequest) (*pb.Delivery, error) {
-	return deliveryFromDomain(s.deliveryService.Get(rq.Id)), nil
+	return s.toDeliveryPb(s.deliveryService.Get(rq.Id)), nil
 }
 
 func (s *Server) Cancel(ctx context.Context, rq *pb.CancelDeliveryRequest) (*pb.Delivery, error) {
@@ -133,7 +133,7 @@ func (s *Server) Cancel(ctx context.Context, rq *pb.CancelDeliveryRequest) (*pb.
 	if err != nil {
 		return nil, err
 	}
-	return deliveryFromDomain(d), nil
+	return s.toDeliveryPb(d), nil
 }
 
 func (s *Server) Complete(ctx context.Context, rq *pb.CompleteDeliveryRequest) (*pb.Delivery, error) {
@@ -141,7 +141,7 @@ func (s *Server) Complete(ctx context.Context, rq *pb.CompleteDeliveryRequest) (
 	if err != nil {
 		return nil, err
 	}
-	return deliveryFromDomain(d), nil
+	return s.toDeliveryPb(d), nil
 }
 
 func (s *Server) UpdateDetails(ctx context.Context, rq *pb.UpdateDetailsRequest) (*pb.Delivery, error) {
@@ -156,7 +156,7 @@ func (s *Server) UpdateDetails(ctx context.Context, rq *pb.UpdateDetailsRequest)
 	if err != nil {
 		return nil, err
 	}
-	return deliveryFromDomain(d), nil
+	return s.toDeliveryPb(d), nil
 }
 
 func (s *Server) Create(ctx context.Context, rq *pb.DeliveryRequest) (*pb.Delivery, error) {
@@ -176,5 +176,5 @@ func (s *Server) Create(ctx context.Context, rq *pb.DeliveryRequest) (*pb.Delive
 		return nil, err
 	}
 
-	return deliveryFromDomain(d), nil
+	return s.toDeliveryPb(d), nil
 }

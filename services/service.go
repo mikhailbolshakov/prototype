@@ -6,8 +6,8 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/services/domain"
+	"gitlab.medzdrav.ru/prototype/services/domain/impl"
 	"gitlab.medzdrav.ru/prototype/services/grpc"
-	"gitlab.medzdrav.ru/prototype/services/infrastructure"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/bp"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/users"
@@ -16,21 +16,20 @@ import (
 )
 
 type serviceImpl struct {
-	grpc          *grpc.Server
-	storage       storage.Storage
-	infr          *infrastructure.Container
-	queue         queue.Queue
-	usersAdapter  users.Adapter
-	configAdapter config.Adapter
-	configService config.Service
-	bpAdapter     bp.Adapter
+	grpc           *grpc.Server
+	storageAdapter storage.Adapter
+	queue          queue.Queue
+	usersAdapter   users.Adapter
+	configAdapter  config.Adapter
+	configService  domain.ConfigService
+	bpAdapter      bp.Adapter
 }
 
 func New() service.Service {
 
 	s := &serviceImpl{}
-	s.infr = infrastructure.New()
-	s.storage = storage.NewStorage(s.infr)
+	s.storageAdapter = storage.NewAdapter()
+	strg := s.storageAdapter.GetService()
 
 	s.configAdapter = config.NewAdapter()
 	s.configService = s.configAdapter.GetService()
@@ -43,9 +42,9 @@ func New() service.Service {
 	s.usersAdapter = users.NewAdapter()
 	userService := s.usersAdapter.GetService()
 
-	balanceService := domain.NewBalanceService(userService, s.storage, s.queue)
+	balanceService := impl.NewBalanceService(userService, strg, s.queue)
 
-	deliveryService := domain.NewDeliveryService(balanceService, userService, bpService, s.storage, s.queue)
+	deliveryService := impl.NewDeliveryService(balanceService, userService, bpService, strg, s.queue)
 
 	s.grpc = grpc.New(balanceService, deliveryService)
 
@@ -63,7 +62,7 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
-	if err := s.infr.Init(c); err != nil {
+	if err := s.storageAdapter.Init(c); err != nil {
 		return err
 	}
 
@@ -97,6 +96,6 @@ func (s *serviceImpl) Close() {
 	s.configAdapter.Close()
 	s.usersAdapter.Close()
 	s.grpc.Close()
-	s.infr.Close()
+	s.storageAdapter.Close()
 	_ = s.queue.Close()
 }

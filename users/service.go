@@ -6,8 +6,8 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/users/domain"
+	"gitlab.medzdrav.ru/prototype/users/domain/impl"
 	"gitlab.medzdrav.ru/prototype/users/grpc"
-	"gitlab.medzdrav.ru/prototype/users/infrastructure"
 	"gitlab.medzdrav.ru/prototype/users/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/users/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/users/repository/storage"
@@ -15,15 +15,13 @@ import (
 )
 
 type serviceImpl struct {
-	domain        domain.UserService
-	search        domain.UserSearchService
-	grpc          *grpc.Server
-	chatAdapter   chat.Adapter
-	configAdapter config.Adapter
-	configService config.Service
-	storage       storage.UserStorage
-	infr          *infrastructure.Container
-	queue         queue.Queue
+	domainService  domain.UserService
+	grpc           *grpc.Server
+	chatAdapter    chat.Adapter
+	configAdapter  config.Adapter
+	configService  domain.ConfigService
+	storageAdapter storage.Adapter
+	queue          queue.Queue
 }
 
 func New() service.Service {
@@ -34,15 +32,14 @@ func New() service.Service {
 	s.configService = s.configAdapter.GetService()
 
 	s.queue = &stan.Stan{}
-	s.infr = infrastructure.New()
-	s.storage = storage.NewStorage(s.infr)
+	s.storageAdapter = storage.NewAdapter()
+	strg := s.storageAdapter.GetService()
 	s.chatAdapter = chat.NewAdapter()
 
-	mmService := s.chatAdapter.GetService()
+	chatService := s.chatAdapter.GetService()
 
-	s.search = domain.NewUserSearchService(s.storage, mmService)
-	s.domain = domain.NewUserService(s.storage, s.queue)
-	s.grpc = grpc.New(s.domain, s.search)
+	s.domainService = impl.NewUserService(strg, chatService, s.queue)
+	s.grpc = grpc.New(s.domainService)
 
 	return s
 }
@@ -58,15 +55,15 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
+	if err := s.storageAdapter.Init(c); err != nil {
+		return err
+	}
+
 	if err := s.queue.Open(fmt.Sprintf("users_%d", rand.Intn(99999))); err != nil {
 		return err
 	}
 
 	if err := s.grpc.Init(c); err != nil {
-		return err
-	}
-
-	if err := s.infr.Init(c); err != nil {
 		return err
 	}
 
@@ -87,6 +84,6 @@ func (s *serviceImpl) Close() {
 	s.configAdapter.Close()
 	s.chatAdapter.Close()
 	_ = s.queue.Close()
-	s.infr.Close()
+	s.storageAdapter.Close()
 	s.grpc.Close()
 }

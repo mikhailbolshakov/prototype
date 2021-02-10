@@ -1,14 +1,14 @@
 package mattermost
 
 import (
+	"gitlab.medzdrav.ru/prototype/chat/domain"
 	"gitlab.medzdrav.ru/prototype/kit/chat/mattermost"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
-	"gitlab.medzdrav.ru/prototype/kit/queue"
 )
 
 type Adapter interface {
 	Init(cfg *kitConfig.Config) error
-	GetService() Service
+	GetService() domain.MattermostService
 	Close()
 }
 
@@ -16,9 +16,9 @@ type adapterImpl struct {
 	mmServiceImpl *serviceImpl
 }
 
-func NewAdapter(queue queue.Queue) Adapter {
+func NewAdapter() Adapter {
 	a := &adapterImpl{
-		mmServiceImpl: newImpl(queue),
+		mmServiceImpl: newImpl(),
 	}
 	return a
 }
@@ -47,7 +47,7 @@ func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
 
 }
 
-func (a *adapterImpl) GetService() Service {
+func (a *adapterImpl) GetService() domain.MattermostService {
 	return a.mmServiceImpl
 }
 

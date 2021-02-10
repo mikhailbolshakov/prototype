@@ -3,20 +3,7 @@ package tasks
 import (
 	"context"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
-	"gitlab.medzdrav.ru/prototype/queue_model"
 )
-
-type Service interface {
-	New(rq *pb.NewTaskRequest) (*pb.Task, error)
-	MakeTransition(rq *pb.MakeTransitionRequest) (*pb.Task, error)
-	SetAssignee(rq *pb.SetAssigneeRequest) (*pb.Task, error)
-	GetById(id string) (*pb.Task, error)
-	Search(rq *pb.SearchRequest) (*pb.SearchResponse, error)
-	GetAssignmentLog(rq *pb.AssignmentLogRequest) (*pb.AssignmentLogResponse, error)
-	GetHistory(taskId string) (*pb.GetHistoryResponse, error)
-}
-
-type TaskHandler func(task *queue_model.Task)
 
 type serviceImpl struct {
 	pb.TasksClient

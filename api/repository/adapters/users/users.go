@@ -5,14 +5,6 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 )
 
-type Service interface {
-	Get(id string) *pb.User
-	CreateClient(request *pb.CreateClientRequest) (*pb.User, error)
-	CreateConsultant(request *pb.CreateConsultantRequest) (*pb.User, error)
-	CreateExpert(request *pb.CreateExpertRequest) (*pb.User, error)
-	Search(request *pb.SearchRequest) (*pb.SearchResponse, error)
-}
-
 type serviceImpl struct {
 	pb.UsersClient
 }

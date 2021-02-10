@@ -8,7 +8,7 @@ import (
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/zbc"
 	"gitlab.medzdrav.ru/prototype/kit/bpm"
-	"log"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	"path/filepath"
 	"strings"
 	"time"
@@ -17,20 +17,15 @@ import (
 const ERR_EXHAUSTED_RESOURCES_MAX_RETRY = 10
 
 type engineImpl struct {
-	params *Params
+	params *bpm.Params
 	client zbc.Client
 	jobWorkers []worker.JobWorker
 }
 
-type Params struct {
-	Port string
-	Host string
-}
-
-func NewEngine(params *Params) bpm.Engine {
+func NewEngine() bpm.Engine {
 
 	zeebe := &engineImpl{
-		params: params,
+		params: &bpm.Params{},
 		jobWorkers: []worker.JobWorker{},
 	}
 
@@ -38,7 +33,9 @@ func NewEngine(params *Params) bpm.Engine {
 
 }
 
-func (z *engineImpl) Open() error {
+func (z *engineImpl) Open(params *bpm.Params) error {
+
+	z.params = params
 
 	// if already opened, close it
 	if err := z.Close(); err != nil {
@@ -46,7 +43,7 @@ func (z *engineImpl) Open() error {
 	}
 
 	if z.params.Port == "" || z.params.Host == "" {
-		return errors.New("cannot open zeebe connection, params are invalid")
+		return errors.New("[zeebe] cannot open connection, params are invalid")
 	}
 
 	if zc, err := zbc.NewClient(&zbc.ClientConfig{
@@ -54,7 +51,7 @@ func (z *engineImpl) Open() error {
 		UsePlaintextConnection: true,
 	}); err == nil {
 		z.client = zc
-		log.Printf("zeebe connetion is opened on %s:%s", z.params.Host, z.params.Port)
+		log.DbgF("[zeebe] connection is opened on %s:%s", z.params.Host, z.params.Port)
 	} else {
 		return err
 	}
@@ -94,11 +91,11 @@ func (z *engineImpl) DeployBPMNs(paths []string) error {
 						time.Sleep(time.Millisecond * 100)
 						errRetryCount++
 					} else {
-						log.Printf("ERROR!!! zeebe deployment %s. err: %v", path, rs)
+						log.Err(fmt.Errorf("[zeebe] deployment %s. err: %v", path, rs), true)
 						return
 					}
 				} else {
-					log.Printf("zeebe: %s deployed. details: %v", path, rs)
+					log.DbgF("[zeebe] %s deployed. details: %v", path, rs)
 					return
 				}
 			}
@@ -137,7 +134,7 @@ func (z *engineImpl) StartProcess(processId string, vars map[string]interface{})
 		return "", err
 	}
 
-	log.Printf("zeebe has started BPMN process %s. details = %v", processId, pRs.String())
+	log.DbgF("[zeebe] process %s started. details = %v", processId, pRs.String())
 
 	return fmt.Sprintf("%d", pRs.WorkflowInstanceKey), nil
 
@@ -157,7 +154,7 @@ func (z *engineImpl) SendMessage(messageId string, correlationId string, vars ma
 	if err != nil {
 		return err
 	}
-	log.Printf("zeebe publish message, response: %v", rs)
+	log.DbgF("[zeebe] message %s published, response: %v", messageId, rs)
 
 	return nil
 }
@@ -170,7 +167,7 @@ func (z *engineImpl) SendError(jobId int64, errCode, errMessage string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("zeebe sent error. code: %s, message: %s, response: %v", errCode, errMessage, rs)
+	log.DbgF("[zeebe] error sent. code: %s, message: %s, response: %v", errCode, errMessage, rs)
 
 	return nil
 }

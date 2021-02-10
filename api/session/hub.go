@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"gitlab.medzdrav.ru/prototype/api/repository/adapters/users"
+	"gitlab.medzdrav.ru/prototype/api/public"
 	"gitlab.medzdrav.ru/prototype/kit/chat/mattermost"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	"gitlab.medzdrav.ru/prototype/kit/http"
@@ -40,12 +40,12 @@ type hubImpl struct {
 	sessions     map[string]Session
 	userSessions map[string][]Session
 	auth         auth.Service
-	userService  users.Service
+	userService  public.UserService
 	httpServer   *http.Server
 	cfg          *kitConfig.Config
 }
 
-func NewHub(cfg *kitConfig.Config, srv *http.Server, auth auth.Service, userService users.Service) Hub {
+func NewHub(cfg *kitConfig.Config, srv *http.Server, auth auth.Service, userService public.UserService) Hub {
 
 	h := &hubImpl{
 		httpServer:   srv,

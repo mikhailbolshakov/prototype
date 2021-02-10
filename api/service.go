@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"github.com/Nerzal/gocloak/v7"
+	"gitlab.medzdrav.ru/prototype/api/public"
 	"gitlab.medzdrav.ru/prototype/api/public/bp"
 	"gitlab.medzdrav.ru/prototype/api/public/services"
 	"gitlab.medzdrav.ru/prototype/api/public/tasks"
@@ -25,16 +26,16 @@ type serviceImpl struct {
 	mdw             auth.Middleware
 	hub             session.Hub
 	userAdapter     usersRep.Adapter
-	userService     usersRep.Service
+	userService     public.UserService
 	taskAdapter     tasksRep.Adapter
-	taskService     tasksRep.Service
+	taskService     public.TaskService
 	servAdapter     servRep.Adapter
-	balanceService  servRep.BalanceService
-	deliveryService servRep.DeliveryService
+	balanceService  public.BalanceService
+	deliveryService public.DeliveryService
 	bpAdapter       bpRep.Adapter
-	bpService       bpRep.Service
+	bpService       public.BpService
 	configAdapter   config.Adapter
-	configService   config.Service
+	configService   public.ConfigService
 }
 
 func New() service.Service {

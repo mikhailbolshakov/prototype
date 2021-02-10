@@ -6,10 +6,6 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/bp"
 )
 
-type Service interface {
-	StartProcess(processId string, vars map[string]interface{}) (string, error)
-}
-
 type serviceImpl struct {
 	pb.ProcessClient
 }

@@ -13,13 +13,12 @@ type Server struct {
 	port, host string
 	*kitGrpc.Server
 	domain domain.UserService
-	search domain.UserSearchService
 	pb.UnimplementedUsersServer
 }
 
-func New(domain domain.UserService, search domain.UserSearchService) *Server {
+func New(domain domain.UserService) *Server {
 
-	s := &Server{domain: domain, search: search}
+	s := &Server{domain: domain}
 
 	// grpc server
 	gs, err := kitGrpc.NewServer()
@@ -70,7 +69,7 @@ func (s *Server) CreateClient(ctx context.Context, rq *pb.CreateClientRequest) (
 	if err != nil {
 		return nil, err
 	}
-	return s.fromDomain(user), nil
+	return s.toUserPb(user), nil
 }
 
 func (s *Server) CreateConsultant(ctx context.Context, rq *pb.CreateConsultantRequest) (*pb.User, error) {
@@ -90,7 +89,7 @@ func (s *Server) CreateConsultant(ctx context.Context, rq *pb.CreateConsultantRe
 	if err != nil {
 		return nil, err
 	}
-	return s.fromDomain(user), nil
+	return s.toUserPb(user), nil
 }
 
 func (s *Server) CreateExpert(ctx context.Context, rq *pb.CreateExpertRequest) (*pb.User, error) {
@@ -110,32 +109,32 @@ func (s *Server) CreateExpert(ctx context.Context, rq *pb.CreateExpertRequest) (
 	if err != nil {
 		return nil, err
 	}
-	return s.fromDomain(user), nil
+	return s.toUserPb(user), nil
 }
 
 func (s *Server) GetByUsername(ctx context.Context, rq *pb.GetByUsernameRequest) (*pb.User, error) {
 	user := s.domain.GetByUsername(rq.Username)
-	return s.fromDomain(user), nil
+	return s.toUserPb(user), nil
 }
 
 func (s *Server) GetByMMId(ctx context.Context, rq *pb.GetByMMIdRequest) (*pb.User, error) {
 	user := s.domain.GetByMMId(rq.MMId)
-	return s.fromDomain(user), nil
+	return s.toUserPb(user), nil
 }
 
 func (s *Server) Get(ctx context.Context, rq *pb.GetByIdRequest) (*pb.User, error) {
 	user := s.domain.Get(rq.Id)
-	return s.fromDomain(user), nil
+	return s.toUserPb(user), nil
 }
 
 func (s *Server) Search(ctx context.Context, rq *pb.SearchRequest) (*pb.SearchResponse, error) {
 
-	dRs, err := s.search.Search(s.searchRqFromPb(rq))
+	dRs, err := s.domain.Search(s.toSrchRqDomain(rq))
 	if err != nil {
 		return nil, err
 	}
 
-	return s.searchRsFromDomain(dRs), nil
+	return s.toSrchRsPb(dRs), nil
 }
 
 func (s *Server) Activate(ctx context.Context, rq *pb.ActivateRequest) (*pb.User, error) {
@@ -143,7 +142,7 @@ func (s *Server) Activate(ctx context.Context, rq *pb.ActivateRequest) (*pb.User
 	if err != nil {
 		return nil, err
 	}
-	return s.fromDomain(user), nil
+	return s.toUserPb(user), nil
 }
 
 func (s *Server) Delete(ctx context.Context, rq *pb.DeleteRequest) (*pb.User, error) {
@@ -151,16 +150,16 @@ func (s *Server) Delete(ctx context.Context, rq *pb.DeleteRequest) (*pb.User, er
 	if err != nil {
 		return nil, err
 	}
-	return s.fromDomain(user), nil
+	return s.toUserPb(user), nil
 }
 
 func (s *Server) SetClientDetails(ctx context.Context, rq *pb.SetClientDetailsRequest) (*pb.User, error) {
 
-	user, err := s.domain.SetClientDetails(rq.UserId, s.clientDetailsFromPb(rq.ClientDetails))
+	user, err := s.domain.SetClientDetails(rq.UserId, s.toClientDetailsDomain(rq.ClientDetails))
 	if err != nil {
 		return nil, err
 	}
-	return s.fromDomain(user), nil
+	return s.toUserPb(user), nil
 }
 
 func (s *Server) SetMMUserId(ctx context.Context, rq *pb.SetMMIdRequest) (*pb.User, error) {
@@ -168,7 +167,7 @@ func (s *Server) SetMMUserId(ctx context.Context, rq *pb.SetMMIdRequest) (*pb.Us
 	if err != nil {
 		return nil, err
 	}
-	return s.fromDomain(user), nil
+	return s.toUserPb(user), nil
 }
 
 func (s *Server) SetKKUserId(ctx context.Context, rq *pb.SetKKIdRequest) (*pb.User, error) {
@@ -176,5 +175,5 @@ func (s *Server) SetKKUserId(ctx context.Context, rq *pb.SetKKIdRequest) (*pb.Us
 	if err != nil {
 		return nil, err
 	}
-	return s.fromDomain(user), nil
+	return s.toUserPb(user), nil
 }

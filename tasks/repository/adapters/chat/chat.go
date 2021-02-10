@@ -6,11 +6,6 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/chat"
 )
 
-type Service interface {
-	Post(message, channelId, userId string, ephemeral, fromBot bool) error
-	PredefinedPost(channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error
-}
-
 type serviceImpl struct {
 	pb.PostsClient
 }

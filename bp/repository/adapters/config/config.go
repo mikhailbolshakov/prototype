@@ -9,10 +9,6 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/config"
 )
 
-type Service interface {
-	Get() (*kit.Config, error)
-}
-
 type serviceImpl struct {
 	pb.ConfigServiceClient
 }

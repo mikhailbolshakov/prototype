@@ -5,11 +5,12 @@ import (
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/config"
+	"gitlab.medzdrav.ru/prototype/tasks/domain"
 )
 
 type Adapter interface {
 	Init() error
-	GetService() Service
+	GetService() domain.CfgService
 	Close()
 }
 
@@ -54,7 +55,7 @@ func (a *adapterImpl) Init() error {
 
 }
 
-func (a *adapterImpl) GetService() Service {
+func (a *adapterImpl) GetService() domain.CfgService {
 	return a.serviceImpl
 }
 

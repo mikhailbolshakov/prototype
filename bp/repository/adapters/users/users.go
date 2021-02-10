@@ -5,15 +5,6 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 )
 
-type Service interface {
-	Get(id string) *pb.User
-	Activate(userId string) (*pb.User, error)
-	Delete(userId string) (*pb.User, error)
-	SetClientDetails(userId string, details *pb.ClientDetails) (*pb.User, error)
-	SetMMUserId(userId, mmId string) (*pb.User, error)
-	SetKKUserId(userId, kkId string) (*pb.User, error)
-	GetByMMId(mmUserId string) (*pb.User, error)
-}
 
 type serviceImpl struct {
 	pb.UsersClient

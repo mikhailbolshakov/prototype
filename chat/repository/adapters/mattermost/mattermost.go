@@ -2,37 +2,19 @@ package mattermost
 
 import (
 	"github.com/adacta-ru/mattermost-server/v6/model"
+	"gitlab.medzdrav.ru/prototype/chat/domain"
 	"gitlab.medzdrav.ru/prototype/kit/chat/mattermost"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
-	"gitlab.medzdrav.ru/prototype/kit/queue"
 )
-
-type NewPostMessageHandler func(post *Post)
-
-type Service interface {
-	CreateUser(user *CreateUserRequest) (*CreateUserResponse, error)
-	CreateClientChannel(rq *CreateClientChannelRequest) (*CreateChannelResponse, error)
-	SubscribeUser(rq *SubscribeUserRequest) (*SubscribeUserResponse, error)
-	Post(channelId, message, toUserId string, ephemeral, fromBot bool, attachments []*PostAttachment) error
-	GetUserStatuses(rq *GetUsersStatusesRequest) (*GetUsersStatusesResponse, error)
-	CreateDirectChannel(userId1, userId2 string) (string, error)
-	// returns list of user's channels which have given active members (there might be more members and it's OK)
-	GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMembersRequest) ([]string, error)
-	DeleteUser(userId string) error
-}
 
 type serviceImpl struct {
 	adminClient     *mattermost.Client
-	queue           queue.Queue
-	newPostsHandler NewPostMessageHandler
 	botClient       *mattermost.Client
 	cfg             *kitConfig.Config
 }
 
-func newImpl(queue queue.Queue) *serviceImpl {
-	m := &serviceImpl{
-		queue: queue,
-	}
+func newImpl() *serviceImpl {
+	m := &serviceImpl{}
 	return m
 }
 
@@ -41,7 +23,7 @@ func (s *serviceImpl) setConfig(cfg *kitConfig.Config) {
 	s.cfg = cfg
 }
 
-func (s *serviceImpl) CreateUser(rq *CreateUserRequest) (*CreateUserResponse, error) {
+func (s *serviceImpl) CreateUser(rq *domain.CreateUserRequest) (string, error) {
 
 	if rq.TeamName == "" {
 		rq.TeamName = s.cfg.Mattermost.Team
@@ -53,13 +35,13 @@ func (s *serviceImpl) CreateUser(rq *CreateUserRequest) (*CreateUserResponse, er
 
 	userId, err := s.adminClient.CreateUser(rq.TeamName, rq.Username, rq.Password, rq.Email)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &CreateUserResponse{userId}, nil
+	return userId, nil
 }
 
-func (s *serviceImpl) CreateClientChannel(rq *CreateClientChannelRequest) (*CreateChannelResponse, error) {
+func (s *serviceImpl) CreateClientChannel(rq *domain.CreateClientChannelRequest) (string, error) {
 
 	if rq.TeamName == "" {
 		rq.TeamName = s.cfg.Mattermost.Team
@@ -67,26 +49,17 @@ func (s *serviceImpl) CreateClientChannel(rq *CreateClientChannelRequest) (*Crea
 
 	chId, err := s.adminClient.CreateUserChannel("P", rq.TeamName, rq.ClientUserId, rq.DisplayName, rq.Name)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &CreateChannelResponse{chId}, nil
+	return chId, nil
 }
 
-func (s *serviceImpl) SetNewPostMessageHandler(handler NewPostMessageHandler) {
-	s.newPostsHandler = handler
+func (s *serviceImpl) SubscribeUser(userId, channelId string) error {
+	return s.adminClient.SubscribeUser(channelId, userId)
 }
 
-func (s *serviceImpl) SubscribeUser(rq *SubscribeUserRequest) (*SubscribeUserResponse, error) {
-	err := s.adminClient.SubscribeUser(rq.ChannelId, rq.UserId)
-	if err != nil {
-		return nil, err
-	}
-
-	return &SubscribeUserResponse{}, nil
-}
-
-func (s *serviceImpl) Post(channelId, message, toUserId string, ephemeral, fromBot bool, attachments []*PostAttachment) error {
+func (s *serviceImpl) Post(channelId, message, toUserId string, ephemeral, fromBot bool, attachments []*domain.PostAttachment) error {
 
 	var client *mattermost.Client
 	if fromBot {
@@ -96,7 +69,7 @@ func (s *serviceImpl) Post(channelId, message, toUserId string, ephemeral, fromB
 	}
 
 	if attachments == nil {
-		attachments = []*PostAttachment{}
+		attachments = []*domain.PostAttachment{}
 	}
 	att := s.convertAttachments(attachments)
 
@@ -108,16 +81,16 @@ func (s *serviceImpl) Post(channelId, message, toUserId string, ephemeral, fromB
 
 }
 
-func (s *serviceImpl) GetUserStatuses(rq *GetUsersStatusesRequest) (*GetUsersStatusesResponse, error) {
+func (s *serviceImpl) GetUserStatuses(rq *domain.GetUsersStatusesRequest) (*domain.GetUsersStatusesResponse, error) {
 
-	rs := &GetUsersStatusesResponse{
-		Statuses: []*UserStatus{},
+	rs := &domain.GetUsersStatusesResponse{
+		Statuses: []*domain.UserStatus{},
 	}
 
 	if statuses, err := s.adminClient.GetUsersStatuses(rq.UserIds); err == nil {
 
 		for _, s := range statuses {
-			rs.Statuses = append(rs.Statuses, &UserStatus{
+			rs.Statuses = append(rs.Statuses, &domain.UserStatus{
 				UserId: s.UserId,
 				Status: s.Status,
 			})
@@ -137,7 +110,7 @@ func (s *serviceImpl) CreateDirectChannel(userId1, userId2 string) (string, erro
 	return chId, nil
 }
 
-func (s *serviceImpl) GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMembersRequest) ([]string, error) {
+func (s *serviceImpl) GetChannelsForUserAndMembers(rq *domain.GetChannelsForUserAndMembersRequest) ([]string, error) {
 
 	teamName := s.cfg.Mattermost.Team
 	if rq.TeamName != "" {
@@ -152,7 +125,7 @@ func (s *serviceImpl) DeleteUser(userId string) error {
 	return s.adminClient.DeleteUser(userId)
 }
 
-func (s *serviceImpl) convertAttachments(attachments []*PostAttachment) []*model.SlackAttachment {
+func (s *serviceImpl) convertAttachments(attachments []*domain.PostAttachment) []*model.SlackAttachment {
 
 	var slackAttachments []*model.SlackAttachment
 
@@ -174,18 +147,18 @@ func (s *serviceImpl) convertAttachments(attachments []*PostAttachment) []*model
 			FooterIcon: a.FooterIcon,
 		}
 
-		if a.Fields != nil && len(a.Fields) > 0 {
-			sa.Fields = []*model.SlackAttachmentField{}
-
-			for _, f := range a.Fields {
-				sa.Fields = append(sa.Fields, &model.SlackAttachmentField{
-					Title: f.Title,
-					Value: f.Value,
-					Short: model.SlackCompatibleBool(f.Short),
-				})
-
-			}
-		}
+		//if a.Fields != nil && len(a.Fields) > 0 {
+		//	sa.Fields = []*model.SlackAttachmentField{}
+		//
+		//	for _, f := range a.Fields {
+		//		sa.Fields = append(sa.Fields, &model.SlackAttachmentField{
+		//			Title: f.Title,
+		//			Value: f.Value,
+		//			Short: model.SlackCompatibleBool(f.Short),
+		//		})
+		//
+		//	}
+		//}
 
 		if a.Actions != nil && len(a.Actions) > 0 {
 			sa.Actions = []*model.PostAction{}

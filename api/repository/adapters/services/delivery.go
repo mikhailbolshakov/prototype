@@ -8,14 +8,6 @@ import (
 	"time"
 )
 
-type DeliveryService interface {
-	Create(userId, serviceTypeId string, details map[string]interface{}) (*pb.Delivery, error)
-	GetDelivery(deliveryId string) (*pb.Delivery, error)
-	Cancel(deliveryId string, cancelTime *time.Time) (*pb.Delivery, error)
-	Complete(deliveryId string, completeTime *time.Time) (*pb.Delivery, error)
-	UpdateDetails(id string, details map[string]interface{}) (*pb.Delivery, error)
-}
-
 type deliveryServiceImpl struct {
 	pb.DeliveryServiceClient
 }

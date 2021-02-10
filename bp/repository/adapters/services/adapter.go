@@ -1,6 +1,7 @@
 package services
 
 import (
+	"gitlab.medzdrav.ru/prototype/bp/domain"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/services"
@@ -8,8 +9,8 @@ import (
 
 type Adapter interface {
 	Init(c *kitConfig.Config) error
-	GetBalanceService() BalanceService
-	GetDeliveryService() DeliveryService
+	GetBalanceService() domain.BalanceService
+	GetDeliveryService() domain.DeliveryService
 	Close()
 }
 
@@ -39,11 +40,11 @@ func (a *adapterImpl) Init(c *kitConfig.Config) error {
 	return nil
 }
 
-func (a *adapterImpl) GetBalanceService() BalanceService {
+func (a *adapterImpl) GetBalanceService() domain.BalanceService {
 	return a.balanceServiceImpl
 }
 
-func (a *adapterImpl) GetDeliveryService() DeliveryService {
+func (a *adapterImpl) GetDeliveryService() domain.DeliveryService {
 	return a.deliveryServiceImpl
 }
 

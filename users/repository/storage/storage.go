@@ -1,64 +1,69 @@
 package storage
 
 import (
-	"fmt"
 	"github.com/google/uuid"
 	"gitlab.medzdrav.ru/prototype/kit"
-	"gitlab.medzdrav.ru/prototype/kit/common"
-	"gitlab.medzdrav.ru/prototype/users/infrastructure"
-	"math"
+	kitStorage "gitlab.medzdrav.ru/prototype/kit/storage"
+	"gitlab.medzdrav.ru/prototype/users/domain"
 	"time"
 )
 
-type UserStorage interface {
-	CreateUser(u *User) (*User, error)
-	GetByUsername(username string) *User
-	GetByMMId(mmId string) *User
-	Get(id string) *User
-	Search(cr *SearchCriteria) (*SearchResponse, error)
-	UpdateStatus(userId, status string, isDeleted bool) (*User, error)
-	UpdateDetails(userId string, details string) (*User, error)
-	UpdateMMId(userId, mmId string) (*User, error)
-	UpdateKKId(userId, kkId string) (*User, error)
-	AddGroups(groups ...*UserGroup) error
-	RevokeGroups(groups ...*UserGroup) error
+type userGroup struct {
+	kitStorage.BaseDto
+	Id     string `gorm:"column:id"`
+	UserId string `gorm:"column:user_id"`
+	Type   string `gorm:"column:type"`
+	Group  string `gorm:"column:group_code"`
+}
+
+type user struct {
+	kitStorage.BaseDto
+	Id       string       `gorm:"column:id"`
+	Type     string       `gorm:"column:type"`
+	Status   string       `gorm:"column:status"`
+	Username string       `gorm:"column:username"`
+	MMUserId string       `gorm:"column:mm_id"`
+	KKUserId string       `gorm:"column:kk_id"`
+	Details  string       `gorm:"column:details"`
+	Groups   []*userGroup `gorm:"-"`
 }
 
 type storageImpl struct {
-	infr *infrastructure.Container
+	c *container
 }
 
-func NewStorage(infr *infrastructure.Container) UserStorage {
-	s := &storageImpl{
-		infr: infr,
-	}
+func newStorage(c *container) *storageImpl {
+	s := &storageImpl{c}
 	return s
 }
 
-func (s *storageImpl) CreateUser(user *User) (*User, error) {
+func (s *storageImpl) CreateUser(user *domain.User) (*domain.User, error) {
+
+	dto := s.toUserDto(user)
 
 	t := time.Now().UTC()
-	user.CreatedAt, user.UpdatedAt = t, t
+	dto.CreatedAt, dto.UpdatedAt = t, t
 
-	result := s.infr.Db.Instance.Create(user)
+	result := s.c.Db.Instance.Create(dto)
 
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
-	if err := s.AddGroups(user.Groups...); err != nil {
+	if err := s.addGroups(dto.Groups...); err != nil {
 		return nil, err
 	}
+
 	return user, nil
 
 }
 
 func (s *storageImpl) updateField(userId, fieldName string, value interface{}) error {
-	return s.infr.Db.Instance.Model(&User{Id: userId}).
+	return s.c.Db.Instance.Model(&user{Id: userId}).
 		Updates(map[string]interface{}{fieldName: value, "updated_at": time.Now().UTC()}).Error
 }
 
-func (s *storageImpl) UpdateStatus(userId, status string, isDeleted bool) (*User, error) {
+func (s *storageImpl) UpdateStatus(userId, status string, isDeleted bool) (*domain.User, error) {
 
 	var deletedAt *time.Time = nil
 	if isDeleted {
@@ -66,157 +71,74 @@ func (s *storageImpl) UpdateStatus(userId, status string, isDeleted bool) (*User
 		deletedAt = &t
 	}
 
-	if err:=  s.infr.Db.Instance.Model(&User{Id: userId}).
+	if err:=  s.c.Db.Instance.Model(&user{Id: userId}).
 		Updates(map[string]interface{}{"status": status, "updated_at": time.Now().UTC(), "deleted_at": deletedAt}).Error; err != nil {
 
 	}
 	return s.Get(userId), nil
 }
 
-func (s *storageImpl) UpdateMMId(userId, mmId string) (*User, error) {
+func (s *storageImpl) UpdateMMId(userId, mmId string) (*domain.User, error) {
 	if err := s.updateField(userId, "mm_id", mmId); err != nil {
 		return nil, err
 	}
 	return s.Get(userId), nil
 }
 
-func (s *storageImpl) UpdateKKId(userId, kkId string) (*User, error) {
+func (s *storageImpl) UpdateKKId(userId, kkId string) (*domain.User, error) {
 	if err := s.updateField(userId, "kk_id", kkId); err != nil {
 		return nil, err
 	}
 	return s.Get(userId), nil
 }
 
-func (s *storageImpl) UpdateDetails(userId string, details string) (*User, error) {
+func (s *storageImpl) UpdateDetails(userId string, details string) (*domain.User, error) {
 	if err := s.updateField(userId, "details", details); err != nil {
 		return nil, err
 	}
 	return s.Get(userId), nil
 }
 
-func (s *storageImpl) getGroups(userId string) []*UserGroup {
-	var res []*UserGroup
+func (s *storageImpl) getGroups(userId string) []*userGroup {
+	var res []*userGroup
 	if userId == "" {
 		return res
 	}
-	s.infr.Db.Instance.Where("user_id = ?::uuid", userId).Find(&res)
+	s.c.Db.Instance.Where("user_id = ?::uuid", userId).Find(&res)
 	return res
 }
 
-func (s *storageImpl) Get(id string) *User{
+func (s *storageImpl) Get(id string) *domain.User {
 
 	_, err := uuid.Parse(id)
 	if err != nil {
 		return s.GetByUsername(id)
 	} else {
-		user := &User{Id: id}
-		s.infr.Db.Instance.First(user)
-		user.Groups = s.getGroups(user.Id)
-		return user
+		dto := &user{Id: id}
+		s.c.Db.Instance.First(dto)
+		dto.Groups = s.getGroups(dto.Id)
+		return s.toUserDomain(dto)
 	}
 
 }
 
-func (s *storageImpl) GetByUsername(username string) *User {
-	user := &User{}
-	s.infr.Db.Instance.Where("username = ? and deleted_at is null", username).First(&user)
-	user.Groups = s.getGroups(user.Id)
-	return user
+func (s *storageImpl) GetByUsername(username string) *domain.User {
+	dto := &user{}
+	s.c.Db.Instance.Where("username = ? and deleted_at is null", username).First(&dto)
+	dto.Groups = s.getGroups(dto.Id)
+	return s.toUserDomain(dto)
 }
 
-func (s *storageImpl) GetByMMId(mmId string) *User {
-	user := &User{}
-	s.infr.Db.Instance.Where("mm_id = ? and deleted_at is null", mmId).First(&user)
-	user.Groups = s.getGroups(user.Id)
-	return user
+func (s *storageImpl) GetByMMId(mmId string) *domain.User {
+	dto := &user{}
+	s.c.Db.Instance.Where("mm_id = ? and deleted_at is null", mmId).First(&dto)
+	dto.Groups = s.getGroups(dto.Id)
+	return s.toUserDomain(dto)
 }
 
-func (s *storageImpl) Search(cr *SearchCriteria) (*SearchResponse, error) {
 
-	response := &SearchResponse{
-		PagingResponse: &common.PagingResponse{
-			Total: 0,
-			Index: 0,
-		},
-		Users: []*User{},
-	}
+func (s *storageImpl) addGroups(groups ...*userGroup) error {
 
-	selectClause := `*`
-
-	query := s.infr.Db.Instance.
-		Table(`users u`).
-		Where(`u.deleted_at is null`)
-
-	if cr.Username != "" {
-		query = query.Where(`u.username = ?`, cr.Username)
-	}
-
-	if cr.UserGroup != "" {
-		query = query.Where(`exists(select 1 from users.user_groups ug where ug.group_code = ? and ug.user_id = u.id and ug.deleted_at is null)`, cr.UserGroup)
-	}
-
-	if cr.Status != "" {
-		query = query.Where(`u.status = ?`, cr.Status)
-	}
-
-	if cr.CommonChannelId != "" {
-		query = query.Where(`(u.details -> 'commonChannelId')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.CommonChannelId))
-	}
-
-	if cr.MedChannelId != "" {
-		query = query.Where(`(u.details -> 'medChannelId')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.MedChannelId))
-	}
-
-	if cr.LawChannelId != "" {
-		query = query.Where(`(u.details -> 'lawChannelId')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.LawChannelId))
-	}
-
-	if cr.MMId != "" {
-		query = query.Where(`u.mm_id = ?`, cr.MMId)
-	}
-
-	if cr.Email != "" {
-		query = query.Where(`(u.details -> 'email')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.Email))
-	}
-
-	if cr.Phone != "" {
-		query = query.Where(`(u.details -> 'phone')::varchar = ?`, fmt.Sprintf(`"%s"`, cr.Phone))
-	}
-
-	if cr.UserType != "" {
-		query = query.Where(`u.type = ?`, cr.UserType)
-	}
-
-	// paging
-	var totalCount int64
-	var offset int
-
-	query.Count(&totalCount)
-
-	if totalCount > int64(cr.Size) {
-		offset = (cr.Index - 1) * cr.Size
-	}
-
-	response.PagingResponse.Total = int(math.Ceil(float64(totalCount) / float64(cr.Size)))
-	response.PagingResponse.Index = cr.Index
-
-	query = query.Select(selectClause).Offset(offset).Limit(cr.Size)
-
-	rows, err := query.Rows()
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		user := &User{Groups: []*UserGroup{}}
-		_ = s.infr.Db.Instance.ScanRows(rows, user)
-		response.Users = append(response.Users, user)
-	}
-
-	return response, nil
-}
-
-func (s *storageImpl) AddGroups(groups ...*UserGroup) error {
 	t := time.Now().UTC()
 	for _, g := range groups {
 		g.CreatedAt, g.UpdatedAt = t, t
@@ -224,13 +146,13 @@ func (s *storageImpl) AddGroups(groups ...*UserGroup) error {
 			g.Id = kit.NewId()
 		}
 	}
-	return s.infr.Db.Instance.Create(groups).Error
+	return s.c.Db.Instance.Create(groups).Error
 }
 
-func (s *storageImpl) RevokeGroups(groups ...*UserGroup) error {
+func (s *storageImpl) RevokeGroups(groups ...*userGroup) error {
 	t := time.Now().UTC()
 	for _, g := range groups {
 		g.DeletedAt = &t
 	}
-	return s.infr.Db.Instance.Save(groups).Error
+	return s.c.Db.Instance.Save(groups).Error
 }

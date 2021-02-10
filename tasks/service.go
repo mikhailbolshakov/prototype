@@ -6,8 +6,8 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
+	"gitlab.medzdrav.ru/prototype/tasks/domain/impl"
 	"gitlab.medzdrav.ru/prototype/tasks/grpc"
-	"gitlab.medzdrav.ru/prototype/tasks/infrastructure"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/users"
@@ -16,34 +16,31 @@ import (
 )
 
 type serviceImpl struct {
-	domainTaskService       domain.TaskService
-	domainConfigService     domain.ConfigService
-	domainTaskSearchService domain.TaskSearchService
-	assignTasksDaemon       domain.AssignmentDaemon
-	configAdapter           config.Adapter
-	configService           config.Service
-	scheduler               domain.TaskScheduler
-	grpc                    *grpc.Server
-	usersAdapter            users.Adapter
-	chatAdapter             chat.Adapter
-	storage                 storage.TaskStorage
-	infr                    *infrastructure.Container
-	queue                   queue.Queue
+	taskService       domain.TaskService
+	taskConfigService domain.ConfigService
+	assignTasksDaemon domain.AssignmentDaemon
+	configAdapter     config.Adapter
+	cfgService        domain.CfgService
+	scheduler         domain.TaskScheduler
+	grpc              *grpc.Server
+	usersAdapter      users.Adapter
+	chatAdapter       chat.Adapter
+	storageAdapter    storage.Adapter
+	queue             queue.Queue
 }
 
 func New() service.Service {
 
 	s := &serviceImpl{}
 
-
 	s.queue = &stan.Stan{}
-	s.infr = infrastructure.New()
-	s.storage = storage.NewStorage(s.infr)
-	s.domainConfigService = domain.NewTaskConfigService()
-	s.scheduler = domain.NewScheduler(s.domainConfigService, s.storage)
+	s.storageAdapter = storage.NewAdapter()
+	strg := s.storageAdapter.GetService()
+	s.taskConfigService = impl.NewTaskConfigService()
+	s.scheduler = impl.NewScheduler(s.taskConfigService, strg)
 
 	s.configAdapter = config.NewAdapter()
-	s.configService = s.configAdapter.GetService()
+	s.cfgService = s.configAdapter.GetService()
 
 	s.usersAdapter = users.NewAdapter()
 	userService := s.usersAdapter.GetUserService()
@@ -51,16 +48,14 @@ func New() service.Service {
 	s.chatAdapter = chat.NewAdapter()
 	chatService := s.chatAdapter.GetService()
 
-	s.domainTaskService = domain.NewTaskService(s.scheduler, s.storage, s.domainConfigService, userService, s.queue, chatService)
-	s.domainTaskSearchService = domain.NewTaskSearchService(s.storage)
+	s.taskService = impl.NewTaskService(s.scheduler, strg, s.taskConfigService, userService, s.queue, chatService)
 
-	s.assignTasksDaemon = domain.NewAssignmentDaemon(s.domainConfigService,
-		s.domainTaskService,
-		s.domainTaskSearchService,
+	s.assignTasksDaemon = impl.NewAssignmentDaemon(s.taskConfigService,
+		s.taskService,
 		userService,
-		s.storage)
+		strg)
 
-	s.grpc = grpc.New(s.domainTaskService, s.domainTaskSearchService)
+	s.grpc = grpc.New(s.taskService)
 
 	return s
 }
@@ -71,12 +66,12 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
-	c, err := s.configService.Get()
+	c, err := s.cfgService.Get()
 	if err != nil {
 		return err
 	}
 
-	if err := s.infr.Init(c); err != nil {
+	if err := s.storageAdapter.Init(c); err != nil {
 		return err
 	}
 
@@ -100,10 +95,6 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
-	if err := s.storage.EnsureIndex(); err != nil {
-		return err
-	}
-
 	return nil
 
 }
@@ -111,8 +102,8 @@ func (s *serviceImpl) Init() error {
 func (s *serviceImpl) ListenAsync() error {
 
 	s.grpc.ListenAsync()
-	//s.assignTasksDaemon.Run()
-	//s.scheduler.StartAsync()
+	s.assignTasksDaemon.Run()
+	s.scheduler.StartAsync()
 
 	return nil
 }
@@ -121,12 +112,11 @@ func (s *serviceImpl) Close() {
 
 	s.configAdapter.Close()
 
-	// TODO: if uncomment hangs on, has to be investigated
 	_ = s.assignTasksDaemon.Stop()
 	s.chatAdapter.Close()
 	s.usersAdapter.Close()
 
 	_ = s.queue.Close()
-	s.infr.Close()
+	s.storageAdapter.Close()
 	s.grpc.Close()
 }

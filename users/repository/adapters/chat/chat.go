@@ -6,12 +6,6 @@ import (
 	"log"
 )
 
-type Service interface {
-	CreateUser(rq *pb.CreateUserRequest) (*pb.CreateUserResponse, error)
-	CreateClientChannel(rq *pb.CreateClientChannelRequest) (*pb.CreateClientChannelResponse, error)
-	GetUsersStatuses(rq *pb.GetUsersStatusesRequest) (*pb.GetUserStatusesResponse, error)
-}
-
 type serviceImpl struct {
 	pb.UsersClient
 	pb.ChannelsClient

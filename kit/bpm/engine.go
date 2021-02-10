@@ -1,7 +1,12 @@
 package bpm
 
+type Params struct {
+	Port string
+	Host string
+}
+
 type Engine interface {
-	Open() error
+	Open(params *Params) error
 	Close() error
 	IsOpened() bool
 	DeployBPMNs(paths []string) error

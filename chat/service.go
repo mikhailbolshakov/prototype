@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
 	"gitlab.medzdrav.ru/prototype/chat/grpc"
-	"gitlab.medzdrav.ru/prototype/chat/infrastructure"
 	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/mattermost"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
+	"gitlab.medzdrav.ru/prototype/chat/domain/impl"
 	"math/rand"
 )
 
@@ -19,17 +19,14 @@ type serviceImpl struct {
 	grpc              *grpc.Server
 	mattermostAdapter mattermost.Adapter
 	configAdapter     config.Adapter
-	configService     config.Service
+	configService     domain.ConfigService
 	queue             queue.Queue
 	queueListener     listener.QueueListener
-	infr              *infrastructure.Container
 }
 
 func New() service.Service {
 
 	s := &serviceImpl{}
-
-	s.infr = infrastructure.New()
 
 	s.configAdapter = config.NewAdapter()
 	s.configService = s.configAdapter.GetService()
@@ -37,10 +34,10 @@ func New() service.Service {
 	s.queue = &stan.Stan{}
 	s.queueListener = listener.NewQueueListener(s.queue)
 
-	s.mattermostAdapter = mattermost.NewAdapter(s.queue)
+	s.mattermostAdapter = mattermost.NewAdapter()
 	mattermostService := s.mattermostAdapter.GetService()
 
-	s.domainService = domain.NewService(mattermostService)
+	s.domainService = impl.NewService(mattermostService)
 	s.grpc = grpc.New(s.domainService)
 
 	return s
@@ -57,7 +54,7 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
-	if err := s.infr.Init(c); err != nil {
+	if err := s.mattermostAdapter.Init(c); err != nil {
 		return err
 	}
 
@@ -66,10 +63,6 @@ func (s *serviceImpl) Init() error {
 	}
 
 	if err := s.queue.Open(fmt.Sprintf("mm_%d", rand.Intn(99999))); err != nil {
-		return err
-	}
-
-	if err := s.mattermostAdapter.Init(c); err != nil {
 		return err
 	}
 
@@ -89,6 +82,5 @@ func (s *serviceImpl) Close() {
 	s.configAdapter.Close()
 	s.mattermostAdapter.Close()
 	s.grpc.Close()
-	s.infr.Close()
 	_ = s.queue.Close()
 }

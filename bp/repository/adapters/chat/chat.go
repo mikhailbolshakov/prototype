@@ -4,19 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	pb "gitlab.medzdrav.ru/prototype/proto/chat"
-	"log"
 )
-
-type Service interface {
-	CreateClientChannel(rq *pb.CreateClientChannelRequest) (*pb.CreateClientChannelResponse, error)
-	GetChannelsForUserAndExpert(userId, expertId string) ([]string, error)
-	Subscribe(userId, channelId string) error
-	CreateUser(rq *pb.CreateUserRequest) (*pb.CreateUserResponse, error)
-	DeleteUser(userId string) error
-	AskBot(rq *pb.AskBotRequest) (*pb.AskBotResponse, error)
-	Post(message, channelId, userId string, ephemeral, fromBot bool) error
-	PredefinedPost(channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error
-}
 
 type serviceImpl struct {
 	pb.ChannelsClient
@@ -29,7 +17,7 @@ func newImpl() *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) CreateClientChannel(rq *pb.CreateClientChannelRequest) (*pb.CreateClientChannelResponse, error) {
+func (u *serviceImpl) CreateClientChannel(rq *pb.CreateClientChannelRequest) (string, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -40,11 +28,10 @@ func (u *serviceImpl) CreateClientChannel(rq *pb.CreateClientChannelRequest) (*p
 		Subscribers:  rq.Subscribers,
 	})
 	if err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
+		return "", err
 	}
 
-	return rs, err
+	return rs.ChannelId, err
 }
 
 func (u *serviceImpl) Subscribe(userId, channelId string) error {
@@ -101,8 +88,12 @@ func (u *serviceImpl) PredefinedPost(channelId, userId, code string, ephemeral, 
 	return err
 }
 
-func (u *serviceImpl) CreateUser(rq *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
-	return u.UsersClient.CreateUser(context.Background(), rq)
+func (u *serviceImpl) CreateUser(rq *pb.CreateUserRequest) (string, error) {
+	rs, err := u.UsersClient.CreateUser(context.Background(), rq)
+	if err != nil {
+		return "", err
+	}
+	return rs.Id, nil
 }
 
 func (u *serviceImpl) DeleteUser(userId string) error {

@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"gitlab.medzdrav.ru/prototype/api/public"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
@@ -8,7 +9,7 @@ import (
 
 type Adapter interface {
 	Init(c *kitConfig.Config) error
-	GetService() Service
+	GetService() public.TaskService
 	Close()
 }
 
@@ -35,7 +36,7 @@ func (a *adapterImpl) Init(c *kitConfig.Config) error {
 	return nil
 }
 
-func (a *adapterImpl) GetService() Service {
+func (a *adapterImpl) GetService() public.TaskService {
 	return a.taskServiceImpl
 }
 

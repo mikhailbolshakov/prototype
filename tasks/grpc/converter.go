@@ -8,7 +8,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
 )
 
-func (s *Server) assigneeFromPb(assignee *pb.Assignee) *domain.Assignee {
+func (s *Server) toAssigneeDomain(assignee *pb.Assignee) *domain.Assignee {
 	return &domain.Assignee{
 		Type:     assignee.Type,
 		Group:    assignee.Group,
@@ -18,7 +18,7 @@ func (s *Server) assigneeFromPb(assignee *pb.Assignee) *domain.Assignee {
 	}
 }
 
-func (s *Server) fromPb(r *pb.NewTaskRequest) *domain.Task {
+func (s *Server) toTaskDomain(r *pb.NewTaskRequest) *domain.Task {
 
 	details := map[string]interface{}{}
 
@@ -74,7 +74,7 @@ func (s *Server) fromPb(r *pb.NewTaskRequest) *domain.Task {
 	return t
 }
 
-func (s *Server) fromDomain(task *domain.Task) *pb.Task {
+func (s *Server) toTaskPb(task *domain.Task) *pb.Task {
 
 	var details []byte
 	if task.Details != nil {
@@ -138,7 +138,7 @@ func (s *Server) fromDomain(task *domain.Task) *pb.Task {
 	return t
 }
 
-func (s *Server) searchRqFromPb(pb *pb.SearchRequest) *domain.SearchCriteria {
+func (s *Server) toSrchRqDomain(pb *pb.SearchRequest) *domain.SearchCriteria {
 
 	if pb == nil {
 		return nil
@@ -170,7 +170,7 @@ func (s *Server) searchRqFromPb(pb *pb.SearchRequest) *domain.SearchCriteria {
 
 }
 
-func (s *Server) searchRsFromDomain(d *domain.SearchResponse) *pb.SearchResponse {
+func (s *Server) toSrchRsPb(d *domain.SearchResponse) *pb.SearchResponse {
 
 	rs := &pb.SearchResponse{
 		Paging: &pb.PagingResponse{
@@ -181,13 +181,13 @@ func (s *Server) searchRsFromDomain(d *domain.SearchResponse) *pb.SearchResponse
 	}
 
 	for _, t := range d.Tasks {
-		rs.Tasks = append(rs.Tasks, s.fromDomain(t))
+		rs.Tasks = append(rs.Tasks, s.toTaskPb(t))
 	}
 
 	return rs
 }
 
-func (s *Server) assLogRqFromPb(pb *pb.AssignmentLogRequest) *domain.AssignmentLogCriteria {
+func (s *Server) toAssignLogDomain(pb *pb.AssignmentLogRequest) *domain.AssignmentLogCriteria {
 
 	if pb == nil {
 		return nil
@@ -204,7 +204,7 @@ func (s *Server) assLogRqFromPb(pb *pb.AssignmentLogRequest) *domain.AssignmentL
 
 }
 
-func (s *Server) assLogRsFromDomain(d *domain.AssignmentLogResponse) *pb.AssignmentLogResponse {
+func (s *Server) toAssignLogRsPb(d *domain.AssignmentLogResponse) *pb.AssignmentLogResponse {
 
 	rs := &pb.AssignmentLogResponse{
 		Paging: &pb.PagingResponse{
@@ -232,7 +232,7 @@ func (s *Server) assLogRsFromDomain(d *domain.AssignmentLogResponse) *pb.Assignm
 	return rs
 }
 
-func (s *Server) histToPb(src *domain.History) *pb.History {
+func (s *Server) toHistoryPb(src *domain.History) *pb.History {
 	return &pb.History{
 		Id:     src.Id,
 		TaskId: src.TaskId,
@@ -252,7 +252,7 @@ func (s *Server) histToPb(src *domain.History) *pb.History {
 	}
 }
 
-func (s *Server) histFromPb(src *pb.History) *domain.History {
+func (s *Server) toHistoryDomain(src *pb.History) *domain.History {
 	return &domain.History{
 		Id:     src.Id,
 		TaskId: src.TaskId,

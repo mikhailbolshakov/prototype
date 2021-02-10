@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
-	"gitlab.medzdrav.ru/prototype/api/repository/adapters/users"
+	"gitlab.medzdrav.ru/prototype/api/public"
 	"gitlab.medzdrav.ru/prototype/kit/grpc"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
@@ -25,11 +25,11 @@ type Controller interface {
 
 type ctrlImpl struct {
 	kitHttp.Controller
-	userService users.Service
+	userService public.UserService
 	auth        auth.Service
 }
 
-func NewController(auth auth.Service, userService users.Service) Controller {
+func NewController(auth auth.Service, userService public.UserService) Controller {
 
 	return &ctrlImpl{
 		auth:        auth,

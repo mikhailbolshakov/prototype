@@ -7,7 +7,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/users/domain"
 )
 
-func (s *Server) clientDetailsFromPb(c *pb.ClientDetails) *domain.ClientDetails {
+func (s *Server) toClientDetailsDomain(c *pb.ClientDetails) *domain.ClientDetails {
 	return &domain.ClientDetails{
 		FirstName:  c.FirstName,
 		MiddleName: c.MiddleName,
@@ -27,7 +27,7 @@ func (s *Server) clientDetailsFromPb(c *pb.ClientDetails) *domain.ClientDetails 
 	}
 }
 
-func (s *Server) fromDomain(user *domain.User) *pb.User {
+func (s *Server) toUserPb(user *domain.User) *pb.User {
 
 	if user == nil {
 		return nil
@@ -84,7 +84,7 @@ func (s *Server) fromDomain(user *domain.User) *pb.User {
 
 }
 
-func (s *Server) searchRqFromPb(pb *pb.SearchRequest) *domain.SearchCriteria {
+func (s *Server) toSrchRqDomain(pb *pb.SearchRequest) *domain.SearchCriteria {
 
 	if pb == nil {
 		return nil
@@ -110,7 +110,7 @@ func (s *Server) searchRqFromPb(pb *pb.SearchRequest) *domain.SearchCriteria {
 
 }
 
-func (s *Server) searchRsFromDomain(d *domain.SearchResponse) *pb.SearchResponse {
+func (s *Server) toSrchRsPb(d *domain.SearchResponse) *pb.SearchResponse {
 
 	rs := &pb.SearchResponse{
 		Paging: &pb.PagingResponse{
@@ -121,7 +121,7 @@ func (s *Server) searchRsFromDomain(d *domain.SearchResponse) *pb.SearchResponse
 	}
 
 	for _, t := range d.Users {
-		rs.Users = append(rs.Users, s.fromDomain(t))
+		rs.Users = append(rs.Users, s.toUserPb(t))
 	}
 
 	return rs

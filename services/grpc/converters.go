@@ -7,7 +7,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/services/domain"
 )
 
-func userBalanceFromDomain(d *domain.UserBalance) *pb.UserBalance {
+func (s *Server) toUserBalancePb(d *domain.UserBalance) *pb.UserBalance {
 	rs := &pb.UserBalance{
 		UserId:  d.UserId,
 		Balance: make(map[string]*pb.Balance),
@@ -25,7 +25,7 @@ func userBalanceFromDomain(d *domain.UserBalance) *pb.UserBalance {
 	return rs
 }
 
-func deliveryFromDomain(d *domain.Delivery) *pb.Delivery {
+func (s *Server) toDeliveryPb(d *domain.Delivery) *pb.Delivery {
 
 	if d == nil {
 		return nil

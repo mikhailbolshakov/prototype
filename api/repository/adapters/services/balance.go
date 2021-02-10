@@ -5,13 +5,7 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/services"
 )
 
-type BalanceService interface {
-	Add(rq *pb.ChangeServicesRequest) (*pb.UserBalance, error)
-	GetBalance(rq *pb.GetBalanceRequest) (*pb.UserBalance, error)
-	WriteOff(rq *pb.ChangeServicesRequest) (*pb.UserBalance, error)
-	Lock(rq *pb.ChangeServicesRequest) (*pb.UserBalance, error)
-	CancelLock(rq *pb.ChangeServicesRequest) (*pb.UserBalance, error)
-}
+
 
 type balanceServiceImpl struct {
 	pb.BalanceServiceClient

@@ -3,7 +3,7 @@ package bp
 import (
 	"encoding/json"
 	"errors"
-	bpRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/bp"
+	"gitlab.medzdrav.ru/prototype/api/public"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	pb "gitlab.medzdrav.ru/prototype/proto/bp"
 	"net/http"
@@ -15,10 +15,10 @@ type Controller interface {
 
 type ctrlImpl struct {
 	kitHttp.Controller
-	bpService bpRep.Service
+	bpService public.BpService
 }
 
-func NewController(bpService bpRep.Service) Controller {
+func NewController(bpService public.BpService) Controller {
 	return &ctrlImpl{
 		bpService: bpService,
 	}

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gorilla/mux"
-	"gitlab.medzdrav.ru/prototype/api/repository/adapters/services"
+	"gitlab.medzdrav.ru/prototype/api/public"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	pb "gitlab.medzdrav.ru/prototype/proto/services"
 	"net/http"
@@ -18,11 +18,11 @@ type Controller interface {
 
 type ctrlImpl struct {
 	kitHttp.Controller
-	balanceService services.BalanceService
-	deliveryService services.DeliveryService
+	balanceService public.BalanceService
+	deliveryService public.DeliveryService
 }
 
-func NewController(balanceService services.BalanceService, deliveryService services.DeliveryService) Controller {
+func NewController(balanceService public.BalanceService, deliveryService public.DeliveryService) Controller {
 	return &ctrlImpl{
 		balanceService: balanceService,
 		deliveryService: deliveryService,

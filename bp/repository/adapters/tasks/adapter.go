@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"gitlab.medzdrav.ru/prototype/bp/domain"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
@@ -9,7 +10,7 @@ import (
 
 type Adapter interface {
 	Init(c *kitConfig.Config) error
-	GetService() Service
+	GetService() domain.TaskService
 	Close()
 }
 
@@ -36,7 +37,7 @@ func (a *adapterImpl) Init(c *kitConfig.Config) error {
 	return nil
 }
 
-func (a *adapterImpl) GetService() Service {
+func (a *adapterImpl) GetService() domain.TaskService {
 	return a.taskServiceImpl
 }
 

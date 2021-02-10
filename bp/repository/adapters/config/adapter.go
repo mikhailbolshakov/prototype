@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"gitlab.medzdrav.ru/prototype/bp/domain"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/config"
@@ -9,7 +10,7 @@ import (
 
 type Adapter interface {
 	Init() error
-	GetService() Service
+	GetService() domain.ConfigService
 	Close()
 }
 
@@ -54,7 +55,7 @@ func (a *adapterImpl) Init() error {
 
 }
 
-func (a *adapterImpl) GetService() Service {
+func (a *adapterImpl) GetService() domain.ConfigService {
 	return a.serviceImpl
 }
 

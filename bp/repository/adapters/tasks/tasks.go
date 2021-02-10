@@ -3,18 +3,8 @@ package tasks
 import (
 	"context"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
-	"gitlab.medzdrav.ru/prototype/queue_model"
 	"log"
 )
-
-type Service interface {
-	GetByChannelId(channelId string) []*pb.Task
-	New(rq *pb.NewTaskRequest) (*pb.Task, error)
-	MakeTransition(rq *pb.MakeTransitionRequest) error
-	Search(rq *pb.SearchRequest) ([]*pb.Task, error)
-}
-
-type TaskHandler func(task *queue_model.Task)
 
 type serviceImpl struct {
 	pb.TasksClient

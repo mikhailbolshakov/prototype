@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
-	"gitlab.medzdrav.ru/prototype/api/repository/adapters/tasks"
+	"gitlab.medzdrav.ru/prototype/api/public"
 	"gitlab.medzdrav.ru/prototype/kit/grpc"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
@@ -26,10 +26,10 @@ type Controller interface {
 
 type ctrlImpl struct {
 	kitHttp.Controller
-	taskService tasks.Service
+	taskService public.TaskService
 }
 
-func NewController(taskService tasks.Service) Controller {
+func NewController(taskService public.TaskService) Controller {
 	return &ctrlImpl{
 		taskService: taskService,
 	}
