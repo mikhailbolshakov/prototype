@@ -26,7 +26,7 @@ type Reported struct {
 	Type     string     `json:"type,omitempty"`
 	UserId   string     `json:"userId,omitempty"`
 	Username string     `json:"username,omitempty"`
-	At *time.Time `json:"at"`
+	At       *time.Time `json:"at"`
 }
 
 type BeforeDueDate struct {
@@ -64,6 +64,7 @@ type NewTaskRequest struct {
 	Assignee    *Assignee              `json:"assignee"`
 	Description string                 `json:"description"`
 	Title       string                 `json:"title"`
+	ChannelId   string                 `json:"channelId"`
 	Details     map[string]interface{} `json:"details"`
 	Reminders   []*Reminder            `json:"reminders"`
 }

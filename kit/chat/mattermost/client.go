@@ -81,6 +81,23 @@ func Login(p *Params) (*Client, error) {
 	return cl, nil
 }
 
+func (c *Client) SetStatus(userId, status string) error {
+
+	s, rs := c.RestApi.UpdateUserStatus(userId, &model.Status{
+		UserId:         userId,
+		Status:         status,
+	})
+	if err := handleResponse(rs); err != nil {
+		return err
+	}
+
+	if s.Status != status {
+		return fmt.Errorf("status hasn't been changed")
+	}
+
+	return nil
+}
+
 func (c *Client) Logout() error {
 	_, rs := c.RestApi.Logout()
 	if err := handleResponse(rs); err != nil {

@@ -155,7 +155,8 @@ func (s *taskStorageImpl) SaveAssignmentLog(l *domain.AssignmentLog) (*domain.As
 
 	dto := s.toAssgnLogDto(l)
 	if l.Id == "" {
-		dto.Id = kit.NewId()
+		id := kit.NewId()
+		dto.Id, l.Id = id, id
 		s.c.Db.Instance.Create(dto)
 	} else {
 		s.c.Db.Instance.Save(dto)

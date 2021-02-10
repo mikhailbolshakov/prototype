@@ -97,7 +97,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 			OnlineStatuses: rule.UserPool.Statuses,
 		})
 		if err != nil {
-			logSuccess(l)
+			logFail(l, err)
 			log.Err(err, true)
 			return err
 		}
@@ -141,7 +141,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 
 			if len(usersPool) == 0 {
 				// TODO: message from here to notify task there are no available users to assign
-				log.Dbg("no users available for task %s", t.Id)
+				log.DbgF("no users available for task %s", t.Id)
 				break
 			}
 

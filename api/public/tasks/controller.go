@@ -44,10 +44,10 @@ func (c *ctrlImpl) New(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if rsPb, err := c.taskService.New(c.toPb(rq)); err != nil {
+	if rsPb, err := c.taskService.New(c.toTaskRqPb(rq)); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.fromPb(rsPb))
+		c.RespondOK(writer, c.toTaskApi(rsPb))
 	}
 
 }
@@ -63,7 +63,7 @@ func (c *ctrlImpl) MakeTransition(writer http.ResponseWriter, request *http.Requ
 	}); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.fromPb(t))
+		c.RespondOK(writer, c.toTaskApi(t))
 	}
 }
 
@@ -74,7 +74,7 @@ func (c *ctrlImpl) GetById(writer http.ResponseWriter, request *http.Request) {
 	if rsPb, err := c.taskService.GetById(taskId); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.fromPb(rsPb))
+		c.RespondOK(writer, c.toTaskApi(rsPb))
 	}
 }
 
@@ -101,7 +101,7 @@ func (c *ctrlImpl) SetAssignee(writer http.ResponseWriter, request *http.Request
 	}); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.fromPb(rsPb))
+		c.RespondOK(writer, c.toTaskApi(rsPb))
 	}
 }
 
@@ -146,7 +146,7 @@ func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 	if rsPb, err := c.taskService.Search(rq); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.searchRsFromPb(rsPb))
+		c.RespondOK(writer, c.toSrchRsApi(rsPb))
 	}
 
 }
@@ -196,7 +196,7 @@ func (c *ctrlImpl) AssignmentLog(writer http.ResponseWriter, request *http.Reque
 	if rsPb, err := c.taskService.GetAssignmentLog(rq); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.assLogRsFromPb(rsPb))
+		c.RespondOK(writer, c.toAssgnLogRsApi(rsPb))
 	}
 
 }
@@ -208,6 +208,6 @@ func (c *ctrlImpl) GetHistory(writer http.ResponseWriter, request *http.Request)
 	if rsPb, err := c.taskService.GetHistory(taskId); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.histFromPb(rsPb))
+		c.RespondOK(writer, c.toHistApi(rsPb))
 	}
 }

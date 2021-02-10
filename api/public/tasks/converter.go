@@ -6,7 +6,7 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 )
 
-func (c *ctrlImpl) toPb(r *NewTaskRequest) *pb.NewTaskRequest {
+func (c *ctrlImpl) toTaskRqPb(r *NewTaskRequest) *pb.NewTaskRequest {
 
 	var details []byte
 	if r.Details != nil {
@@ -58,12 +58,13 @@ func (c *ctrlImpl) toPb(r *NewTaskRequest) *pb.NewTaskRequest {
 		},
 		Reminders: reminders,
 		Details:   details,
+		ChannelId: r.ChannelId,
 	}
 
 	return t
 }
 
-func (s *ctrlImpl) fromPb(r *pb.Task) *Task {
+func (s *ctrlImpl) toTaskApi(r *pb.Task) *Task {
 
 	details := map[string]interface{}{}
 
@@ -123,7 +124,7 @@ func (s *ctrlImpl) fromPb(r *pb.Task) *Task {
 	return t
 }
 
-func (s *ctrlImpl) searchRsFromPb(rs *pb.SearchResponse) *SearchResponse {
+func (s *ctrlImpl) toSrchRsApi(rs *pb.SearchResponse) *SearchResponse {
 	r := &SearchResponse{
 		Index: int(rs.Paging.Index),
 		Total: int(rs.Paging.Total),
@@ -131,13 +132,13 @@ func (s *ctrlImpl) searchRsFromPb(rs *pb.SearchResponse) *SearchResponse {
 	}
 
 	for _, t := range rs.Tasks {
-		r.Tasks = append(r.Tasks, s.fromPb(t))
+		r.Tasks = append(r.Tasks, s.toTaskApi(t))
 	}
 
 	return r
 }
 
-func (s *ctrlImpl) assLogRsFromPb(rs *pb.AssignmentLogResponse) *AssignmentLogResponse {
+func (s *ctrlImpl) toAssgnLogRsApi(rs *pb.AssignmentLogResponse) *AssignmentLogResponse {
 	r := &AssignmentLogResponse{
 		Index: int(rs.Paging.Index),
 		Total: int(rs.Paging.Total),
@@ -162,7 +163,7 @@ func (s *ctrlImpl) assLogRsFromPb(rs *pb.AssignmentLogResponse) *AssignmentLogRe
 	return r
 }
 
-func (s *ctrlImpl) histFromPb(rs *pb.GetHistoryResponse) []*History {
+func (s *ctrlImpl) toHistApi(rs *pb.GetHistoryResponse) []*History {
 	var res []*History
 	for _, h := range rs.Items {
 		res = append(res, &History{
