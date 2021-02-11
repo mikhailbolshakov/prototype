@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
@@ -33,7 +34,7 @@ func New() service.Service {
 
 	s := &serviceImpl{}
 
-	s.queue = &stan.Stan{}
+	s.queue = stan.New()
 	s.storageAdapter = storage.NewAdapter()
 	strg := s.storageAdapter.GetService()
 	s.taskConfigService = impl.NewTaskConfigService()
@@ -60,13 +61,13 @@ func New() service.Service {
 	return s
 }
 
-func (s *serviceImpl) Init() error {
+func (s *serviceImpl) Init(ctx context.Context) error {
 
 	if err := s.configAdapter.Init(); err != nil {
 		return err
 	}
 
-	c, err := s.cfgService.Get()
+	c, err := s.cfgService.Get(ctx)
 	if err != nil {
 		return err
 	}
@@ -87,11 +88,11 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
-	if err := s.queue.Open(fmt.Sprintf("client_tasks_%d", rand.Intn(99999))); err != nil {
+	if err := s.queue.Open(ctx, fmt.Sprintf("client_tasks_%d", rand.Intn(99999))); err != nil {
 		return err
 	}
 
-	if err := s.assignTasksDaemon.Init(); err != nil {
+	if err := s.assignTasksDaemon.Init(ctx); err != nil {
 		return err
 	}
 
@@ -99,20 +100,20 @@ func (s *serviceImpl) Init() error {
 
 }
 
-func (s *serviceImpl) ListenAsync() error {
+func (s *serviceImpl) ListenAsync(ctx context.Context) error {
 
 	s.grpc.ListenAsync()
-	s.assignTasksDaemon.Run()
-	s.scheduler.StartAsync()
+	//s.assignTasksDaemon.Run()
+	//s.scheduler.StartAsync()
 
 	return nil
 }
 
-func (s *serviceImpl) Close() {
+func (s *serviceImpl) Close(ctx context.Context) {
 
 	s.configAdapter.Close()
 
-	_ = s.assignTasksDaemon.Stop()
+	_ = s.assignTasksDaemon.Stop(ctx)
 	s.chatAdapter.Close()
 	s.usersAdapter.Close()
 

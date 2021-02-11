@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"time"
 )
@@ -229,55 +230,55 @@ type AssignmentLogResponse struct {
 }
 
 type ConfigService interface {
-	GetAll() []*Config
+	GetAll(ctx context.Context) []*Config
 	// get whole configuration
-	Get(t *Type) (*Config, error)
+	Get(ctx context.Context, t *Type) (*Config, error)
 	// if status is final
-	IsFinalStatus(t *Type, s *Status) bool
+	IsFinalStatus(ctx context.Context, t *Type, s *Status) bool
 	// retrieves a list of available statuses which might be set for the task
-	NextTransitions(t *Type, currentStatus *Status) ([]*Transition, error)
+	NextTransitions(ctx context.Context, t *Type, currentStatus *Status) ([]*Transition, error)
 	// get initial transition
-	InitialTransition(t *Type) (*Transition, error)
+	InitialTransition(ctx context.Context, t *Type) (*Transition, error)
 	// get transition by source/target statuses
-	FindTransition(t *Type, current, target *Status) (*Transition, error)
+	FindTransition(ctx context.Context, t *Type, current, target *Status) (*Transition, error)
 }
 
 type TaskService interface {
 	// register a new task
-	New(task *Task) (*Task, error)
+	New(ctx context.Context, task *Task) (*Task, error)
 	// set status
-	MakeTransition(taskId, transitionId string) (*Task, error)
+	MakeTransition(ctx context.Context, taskId, transitionId string) (*Task, error)
 	// assign
-	SetAssignee(taskId string, target *Assignee) (*Task, error)
+	SetAssignee(ctx context.Context, taskId string, target *Assignee) (*Task, error)
 	// get by Id
-	Get(taskId string) *Task
+	Get(ctx context.Context, taskId string) *Task
 	// get tasks by channel
-	GetByChannel(channelId string) []*Task
+	GetByChannel(ctx context.Context, channelId string) []*Task
 	// update task
-	Update(task *Task) (*Task, error)
+	Update(ctx context.Context, task *Task) (*Task, error)
 	// get assignment tasks execution log
-	GetAssignmentLog(cr *AssignmentLogCriteria) (*AssignmentLogResponse, error)
+	GetAssignmentLog(ctx context.Context, cr *AssignmentLogCriteria) (*AssignmentLogResponse, error)
 	// get task history
-	GetHistory(taskId string) []*History
+	GetHistory(ctx context.Context, taskId string) []*History
 	// search tasks by the criteria
-	Search(cr *SearchCriteria) (*SearchResponse, error)
+	Search(ctx context.Context, cr *SearchCriteria) (*SearchResponse, error)
 }
 
 // Daemon assigns tasks to users according to rules
 type AssignmentDaemon interface {
 	// run daemon
-	Run()
+	Run(ctx context.Context)
 	// stop daemon
-	Stop() error
+	Stop(ctx context.Context) error
 	// init daemon
-	Init() error
+	Init(ctx context.Context) error
 }
 
-type TaskSchedulerHandler func(taskId string)
+type TaskSchedulerHandler func(ctx context.Context, taskId string)
 
 type TaskScheduler interface {
 	SetReminderHandler(h TaskSchedulerHandler)
 	SetDueDateHandler(h TaskSchedulerHandler)
-	StartAsync()
-	ScheduleTask(ts *Task)
+	StartAsync(ctx context.Context, )
+	ScheduleTask(ctx context.Context, ts *Task)
 }

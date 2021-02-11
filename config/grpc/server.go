@@ -34,7 +34,7 @@ func New(configService domain.ConfigService) *Server {
 
 func (s *Server) Get(ctx context.Context, rq *pb.ConfigRequest) (*pb.ConfigResponse, error) {
 
-	if cfg, err := s.configService.Get(); err == nil {
+	if cfg, err := s.configService.Get(ctx); err == nil {
 		cfgj, err := json.Marshal(cfg)
 		if err != nil {
 			return nil, err
@@ -46,10 +46,10 @@ func (s *Server) Get(ctx context.Context, rq *pb.ConfigRequest) (*pb.ConfigRespo
 
 }
 
-func (s *Server) ListenAsync() {
+func (s *Server) ListenAsync(ctx context.Context) {
 
 	go func() {
-		grpc := s.configService.GrpcSettings()
+		grpc := s.configService.GrpcSettings(ctx)
 		err := s.Server.Listen(grpc.Host, grpc.Port)
 		if err != nil {
 			log.Fatal(err)

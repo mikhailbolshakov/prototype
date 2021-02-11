@@ -1,5 +1,7 @@
 package domain
 
+import "context"
+
 type UserStatus struct {
 	UserId string
 	Status string
@@ -127,12 +129,12 @@ const (
 )
 
 type Service interface {
-	GetUsersStatuses(rq *GetUsersStatusesRequest) (*GetUsersStatusesResponse, error)
-	CreateUser(rq *CreateUserRequest) (*CreateUserResponse, error)
-	CreateClientChannel(rq *CreateClientChannelRequest) (*CreateClientChannelResponse, error)
-	GetChannelsForUserAndMembers(rq *GetChannelsForUserAndMembersRequest) ([]string, error)
-	SubscribeUser(rq *SubscribeUserRequest) error
-	DeleteUser(userId string) error
-	AskBot(request *AskBotRequest) (*AskBotResponse, error)
-	Posts(posts []*Post) error
+	GetUsersStatuses(ctx context.Context, rq *GetUsersStatusesRequest) (*GetUsersStatusesResponse, error)
+	CreateUser(ctx context.Context, rq *CreateUserRequest) (*CreateUserResponse, error)
+	CreateClientChannel(ctx context.Context, rq *CreateClientChannelRequest) (*CreateClientChannelResponse, error)
+	GetChannelsForUserAndMembers(ctx context.Context, rq *GetChannelsForUserAndMembersRequest) ([]string, error)
+	SubscribeUser(ctx context.Context, rq *SubscribeUserRequest) error
+	DeleteUser(ctx context.Context, userId string) error
+	AskBot(ctx context.Context, request *AskBotRequest) (*AskBotResponse, error)
+	Posts(ctx context.Context, posts []*Post) error
 }

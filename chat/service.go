@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"context"
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
 	"gitlab.medzdrav.ru/prototype/chat/grpc"
@@ -31,7 +32,7 @@ func New() service.Service {
 	s.configAdapter = config.NewAdapter()
 	s.configService = s.configAdapter.GetService()
 
-	s.queue = &stan.Stan{}
+	s.queue = stan.New()
 	s.queueListener = listener.NewQueueListener(s.queue)
 
 	s.mattermostAdapter = mattermost.NewAdapter()
@@ -43,7 +44,7 @@ func New() service.Service {
 	return s
 }
 
-func (s *serviceImpl) Init() error {
+func (s *serviceImpl) Init(ctx context.Context) error {
 
 	if err := s.configAdapter.Init(); err != nil {
 		return err
@@ -62,7 +63,7 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
-	if err := s.queue.Open(fmt.Sprintf("mm_%d", rand.Intn(99999))); err != nil {
+	if err := s.queue.Open(ctx, fmt.Sprintf("mm_%d", rand.Intn(99999))); err != nil {
 		return err
 	}
 
@@ -70,7 +71,7 @@ func (s *serviceImpl) Init() error {
 
 }
 
-func (s *serviceImpl) ListenAsync() error {
+func (s *serviceImpl) ListenAsync(ctx context.Context) error {
 
 	s.grpc.ListenAsync()
 	s.queueListener.ListenAsync()
@@ -78,7 +79,7 @@ func (s *serviceImpl) ListenAsync() error {
 	return nil
 }
 
-func (s *serviceImpl) Close() {
+func (s *serviceImpl) Close(ctx context.Context) {
 	s.configAdapter.Close()
 	s.mattermostAdapter.Close()
 	s.grpc.Close()

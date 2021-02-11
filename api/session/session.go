@@ -17,6 +17,7 @@ type Session interface {
 	isWs() bool
 	getId() string
 	getUserId() string
+	getUsername() string
 	getAccessToken() string
 	close()
 }
@@ -27,16 +28,18 @@ type sessionImpl struct {
 	RefreshToken string
 	ExpiresIn    int
 	UserId       string
+	Username     string
 	mmClient     *mattermost.Client
 	ws           Ws
 	sync.RWMutex
 	closeMMws chan struct{}
 }
 
-func newSession(userId string, mmClient *mattermost.Client) Session {
+func newSession(userId, username string, mmClient *mattermost.Client) Session {
 	s := &sessionImpl{
 		Id:        kit.NewId(),
 		UserId:    userId,
+		Username:  username,
 		mmClient:  mmClient,
 		closeMMws: make(chan struct{}),
 	}
@@ -82,13 +85,13 @@ func (s *sessionImpl) listenMMSocket() {
 	go func() {
 		for {
 			select {
-			case event := <- s.mmClient.WsApi.EventChannel:
+			case event := <-s.mmClient.WsApi.EventChannel:
 				s.forwardEventFromMM(event)
-			case response := <- s.mmClient.WsApi.ResponseChannel:
+			case response := <-s.mmClient.WsApi.ResponseChannel:
 				s.forwardResponseFromMM(response)
-			case _ = <- s.mmClient.WsApi.PingTimeoutChannel:
+			case _ = <-s.mmClient.WsApi.PingTimeoutChannel:
 				log.Trc("[mm-ws] ping")
-			case <- s.closeMMws:
+			case <-s.closeMMws:
 				log.Trc("[mm-ws] close", s.mmClient.User.Email)
 				s.mmClient.WsApi.Close()
 				s.mmClient.RestApi.ClearOAuthToken()
@@ -108,6 +111,12 @@ func (s *sessionImpl) getUserId() string {
 	s.RLock()
 	defer s.RUnlock()
 	return s.UserId
+}
+
+func (s *sessionImpl) getUsername() string {
+	s.RLock()
+	defer s.RUnlock()
+	return s.Username
 }
 
 func (s *sessionImpl) getAccessToken() string {
@@ -151,14 +160,14 @@ func (s *sessionImpl) wsListen(ws Ws) {
 	receivedEventChan := ws.receivedMessageEvent()
 	for {
 		select {
-			case <- closedEventChan:
-				s.Lock()
-				s.ws = nil
-				s.Unlock()
-				return
-			case msg := <- receivedEventChan:
-				//TODO: we have to distinguish between MM message and ours
-				s.forwardToMM(msg)
+		case <-closedEventChan:
+			s.Lock()
+			s.ws = nil
+			s.Unlock()
+			return
+		case msg := <-receivedEventChan:
+			//TODO: we have to distinguish between MM message and ours
+			s.forwardToMM(msg)
 		}
 	}
 }

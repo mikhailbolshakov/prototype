@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"context"
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
 )
@@ -12,11 +13,11 @@ func NewTaskConfigService() domain.ConfigService {
 
 type taskConfigServiceImpl struct{}
 
-func (c *taskConfigServiceImpl) GetAll() []*domain.Config {
+func (c *taskConfigServiceImpl) GetAll(ctx context.Context) []*domain.Config {
 	return mockConfigs
 }
 
-func (c *taskConfigServiceImpl) Get(t *domain.Type) (*domain.Config, error) {
+func (c *taskConfigServiceImpl) Get(ctx context.Context, t *domain.Type) (*domain.Config, error) {
 
 	for _, c := range mockConfigs {
 		if c.Type.Equals(t) {
@@ -28,9 +29,9 @@ func (c *taskConfigServiceImpl) Get(t *domain.Type) (*domain.Config, error) {
 	return nil, fmt.Errorf("config not found for %v", t)
 }
 
-func (c *taskConfigServiceImpl) NextTransitions(t *domain.Type, currentStatus *domain.Status) ([]*domain.Transition, error) {
+func (c *taskConfigServiceImpl) NextTransitions(ctx context.Context, t *domain.Type, currentStatus *domain.Status) ([]*domain.Transition, error) {
 
-	cfg, err := c.Get(t)
+	cfg, err := c.Get(ctx, t)
 	if err != nil {
 		return nil, err
 	}
@@ -45,14 +46,14 @@ func (c *taskConfigServiceImpl) NextTransitions(t *domain.Type, currentStatus *d
 	return tr, nil
 }
 
-func (c *taskConfigServiceImpl) IsFinalStatus(t *domain.Type, s *domain.Status) bool {
-	tr, _ := c.NextTransitions(t, s)
+func (c *taskConfigServiceImpl) IsFinalStatus(ctx context.Context, t *domain.Type, s *domain.Status) bool {
+	tr, _ := c.NextTransitions(ctx, t, s)
 	return len(tr) == 0
 }
 
-func (c *taskConfigServiceImpl) FindTransition(t *domain.Type, current, target *domain.Status) (*domain.Transition, error) {
+func (c *taskConfigServiceImpl) FindTransition(ctx context.Context, t *domain.Type, current, target *domain.Status) (*domain.Transition, error) {
 
-	cfg, err := c.Get(t)
+	cfg, err := c.Get(ctx, t)
 	if err != nil {
 		return nil, err
 	}
@@ -67,9 +68,9 @@ func (c *taskConfigServiceImpl) FindTransition(t *domain.Type, current, target *
 
 }
 
-func (c *taskConfigServiceImpl) InitialTransition(t *domain.Type) (*domain.Transition, error) {
+func (c *taskConfigServiceImpl) InitialTransition(ctx context.Context, t *domain.Type) (*domain.Transition, error) {
 
-	cfg, err := c.Get(t)
+	cfg, err := c.Get(ctx, t)
 	if err != nil {
 		return nil, err
 	}

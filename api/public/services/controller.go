@@ -29,57 +29,57 @@ func NewController(balanceService public.BalanceService, deliveryService public.
 	}
 }
 
-func (c *ctrlImpl) AddBalance(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) AddBalance(w http.ResponseWriter, r *http.Request) {
 
 	rq := &ModifyUserBalanceRequest{}
-	decoder := json.NewDecoder(request.Body)
+	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(rq); err != nil {
-		c.RespondError(writer,  http.StatusBadRequest, errors.New("invalid request"))
+		c.RespondError(w,  http.StatusBadRequest, errors.New("invalid request"))
 		return
 	}
 
-	userId := mux.Vars(request)["userId"]
+	userId := mux.Vars(r)["userId"]
 
-	if rsPb, err := c.balanceService.Add(&pb.ChangeServicesRequest{
+	if rsPb, err := c.balanceService.Add(r.Context(), &pb.ChangeServicesRequest{
 		UserId:        userId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Quantity:      int32(rq.Quantity),
 	}); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+		c.RespondError(w, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.balanceFromPb(rsPb))
+		c.RespondOK(w, c.balanceFromPb(rsPb))
 	}
 
 }
 
-func (c *ctrlImpl) GetBalance(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) GetBalance(w http.ResponseWriter, r *http.Request) {
 
-	userId := mux.Vars(request)["userId"]
+	userId := mux.Vars(r)["userId"]
 
-	if rsPb, err := c.balanceService.GetBalance(&pb.GetBalanceRequest{
+	if rsPb, err := c.balanceService.GetBalance(r.Context(), &pb.GetBalanceRequest{
 		UserId:        userId,
 	}); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+		c.RespondError(w, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.balanceFromPb(rsPb))
+		c.RespondOK(w, c.balanceFromPb(rsPb))
 	}
 }
 
-func (c *ctrlImpl) Delivery(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) Delivery(w http.ResponseWriter, r *http.Request) {
 
 	rq := &DeliveryRequest{}
-	decoder := json.NewDecoder(request.Body)
+	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(rq); err != nil {
-		c.RespondError(writer,  http.StatusBadRequest, errors.New("invalid request"))
+		c.RespondError(w,  http.StatusBadRequest, errors.New("invalid request"))
 		return
 	}
 
-	userId := mux.Vars(request)["userId"]
+	userId := mux.Vars(r)["userId"]
 
-	if rsPb, err := c.deliveryService.Create(userId, rq.ServiceTypeId, rq.Details); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+	if rsPb, err := c.deliveryService.Create(r.Context(), userId, rq.ServiceTypeId, rq.Details); err != nil {
+		c.RespondError(w, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.deliveryFromPb(rsPb))
+		c.RespondOK(w, c.deliveryFromPb(rsPb))
 	}
 
 }

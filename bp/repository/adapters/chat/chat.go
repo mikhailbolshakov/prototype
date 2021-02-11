@@ -17,10 +17,7 @@ func newImpl() *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) CreateClientChannel(rq *pb.CreateClientChannelRequest) (string, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func (u *serviceImpl) CreateClientChannel(ctx context.Context, rq *pb.CreateClientChannelRequest) (string, error) {
 	rs, err := u.ChannelsClient.CreateClientChannel(ctx, &pb.CreateClientChannelRequest{
 		ClientUserId: rq.ClientUserId,
 		Name:         rq.Name,
@@ -34,19 +31,15 @@ func (u *serviceImpl) CreateClientChannel(rq *pb.CreateClientChannelRequest) (st
 	return rs.ChannelId, err
 }
 
-func (u *serviceImpl) Subscribe(userId, channelId string) error {
-	_, err := u.ChannelsClient.Subscribe(context.Background(), &pb.SubscribeRequest{
+func (u *serviceImpl) Subscribe(ctx context.Context, userId, channelId string) error {
+	_, err := u.ChannelsClient.Subscribe(ctx, &pb.SubscribeRequest{
 		UserId:    userId,
 		ChannelId: channelId,
 	})
 	return err
 }
 
-func (u *serviceImpl) GetChannelsForUserAndExpert(userId, expertId string) ([]string, error) {
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func (u *serviceImpl) GetChannelsForUserAndExpert(ctx context.Context, userId, expertId string) ([]string, error) {
 	rs, err := u.ChannelsClient.GetChannelsForUserAndMembers(ctx, &pb.GetChannelsForUserAndMembersRequest{
 		UserId:        userId,
 		MemberUserIds: []string{expertId},
@@ -57,8 +50,8 @@ func (u *serviceImpl) GetChannelsForUserAndExpert(userId, expertId string) ([]st
 	return rs.ChannelIds, nil
 }
 
-func (u *serviceImpl) Post(message, channelId, userId string, ephemeral, fromBot bool) error {
-	_, err := u.PostsClient.Post(context.Background(), &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
+func (u *serviceImpl) Post(ctx context.Context, message, channelId, userId string, ephemeral, fromBot bool) error {
+	_, err := u.PostsClient.Post(ctx, &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
 		Message:        message,
 		ToUserId:       userId,
 		ChannelId:      channelId,
@@ -68,14 +61,14 @@ func (u *serviceImpl) Post(message, channelId, userId string, ephemeral, fromBot
 	return err
 }
 
-func (u *serviceImpl) PredefinedPost(channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error {
+func (u *serviceImpl) PredefinedPost(ctx context.Context, channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error {
 
 	var paramsB []byte
 	if params != nil {
 		paramsB, _ = json.Marshal(params)
 	}
 
-	_, err := u.PostsClient.Post(context.Background(), &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
+	_, err := u.PostsClient.Post(ctx, &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
 		ToUserId:       userId,
 		ChannelId:      channelId,
 		Ephemeral:      ephemeral,
@@ -88,19 +81,19 @@ func (u *serviceImpl) PredefinedPost(channelId, userId, code string, ephemeral, 
 	return err
 }
 
-func (u *serviceImpl) CreateUser(rq *pb.CreateUserRequest) (string, error) {
-	rs, err := u.UsersClient.CreateUser(context.Background(), rq)
+func (u *serviceImpl) CreateUser(ctx context.Context, rq *pb.CreateUserRequest) (string, error) {
+	rs, err := u.UsersClient.CreateUser(ctx, rq)
 	if err != nil {
 		return "", err
 	}
 	return rs.Id, nil
 }
 
-func (u *serviceImpl) DeleteUser(userId string) error {
-	_, err := u.UsersClient.DeleteUser(context.Background(), &pb.DeleteUserRequest{MMUserId: userId})
+func (u *serviceImpl) DeleteUser(ctx context.Context, userId string) error {
+	_, err := u.UsersClient.DeleteUser(ctx, &pb.DeleteUserRequest{MMUserId: userId})
 	return err
 }
 
-func (u *serviceImpl) AskBot(rq *pb.AskBotRequest) (*pb.AskBotResponse, error) {
-	return u.PostsClient.AskBot(context.Background(), rq)
+func (u *serviceImpl) AskBot(ctx context.Context, rq *pb.AskBotRequest) (*pb.AskBotResponse, error) {
+	return u.PostsClient.AskBot(ctx, rq)
 }

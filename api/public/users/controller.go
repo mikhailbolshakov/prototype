@@ -37,10 +37,10 @@ func NewController(auth auth.Service, userService public.UserService) Controller
 	}
 }
 
-func (c *ctrlImpl) CreateClient(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) CreateClient(writer http.ResponseWriter, r *http.Request) {
 
 	rq := &CreateClientRequest{}
-	decoder := json.NewDecoder(request.Body)
+	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(rq); err != nil {
 		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
 		return
@@ -57,7 +57,7 @@ func (c *ctrlImpl) CreateClient(writer http.ResponseWriter, request *http.Reques
 		PhotoUrl:   rq.PhotoUrl,
 	}
 
-	if rsPb, err := c.userService.CreateClient(p); err != nil {
+	if rsPb, err := c.userService.CreateClient(r.Context(), p); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.fromPb(rsPb))
@@ -65,10 +65,10 @@ func (c *ctrlImpl) CreateClient(writer http.ResponseWriter, request *http.Reques
 
 }
 
-func (c *ctrlImpl) CreateConsultant(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) CreateConsultant(writer http.ResponseWriter, r *http.Request) {
 
 	rq := &CreateConsultantRequest{}
-	decoder := json.NewDecoder(request.Body)
+	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(rq); err != nil {
 		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
 		return
@@ -83,7 +83,7 @@ func (c *ctrlImpl) CreateConsultant(writer http.ResponseWriter, request *http.Re
 		PhotoUrl:   rq.PhotoUrl,
 	}
 
-	if rsPb, err := c.userService.CreateConsultant(p); err != nil {
+	if rsPb, err := c.userService.CreateConsultant(r.Context(), p); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.fromPb(rsPb))
@@ -91,10 +91,10 @@ func (c *ctrlImpl) CreateConsultant(writer http.ResponseWriter, request *http.Re
 
 }
 
-func (c *ctrlImpl) CreateExpert(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) CreateExpert(writer http.ResponseWriter, r *http.Request) {
 
 	rq := &CreateExpertRequest{}
-	decoder := json.NewDecoder(request.Body)
+	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(rq); err != nil {
 		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
 		return
@@ -109,7 +109,7 @@ func (c *ctrlImpl) CreateExpert(writer http.ResponseWriter, request *http.Reques
 		Groups:     rq.Groups,
 	}
 
-	if rsPb, err := c.userService.CreateExpert(p); err != nil {
+	if rsPb, err := c.userService.CreateExpert(r.Context(), p); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.fromPb(rsPb))
@@ -117,11 +117,11 @@ func (c *ctrlImpl) CreateExpert(writer http.ResponseWriter, request *http.Reques
 
 }
 
-func (c *ctrlImpl) GetByUsername(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) GetByUsername(writer http.ResponseWriter, r *http.Request) {
 
-	username := mux.Vars(request)["un"]
+	username := mux.Vars(r)["un"]
 
-	if usr := c.userService.Get(username); usr != nil {
+	if usr := c.userService.Get(r.Context(), username); usr != nil {
 		c.RespondOK(writer, c.fromPb(usr))
 	} else {
 		c.RespondError(writer, http.StatusNotFound, errors.New("user not found"))
@@ -129,30 +129,30 @@ func (c *ctrlImpl) GetByUsername(writer http.ResponseWriter, request *http.Reque
 
 }
 
-func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) Search(writer http.ResponseWriter, r *http.Request) {
 
 	rq := &pb.SearchRequest{
 		Paging: &pb.PagingRequest{
 			Size:  0,
 			Index: 0,
 		},
-		UserType:        request.FormValue("type"),
-		Username:        request.FormValue("username"),
-		Email:           request.FormValue("email"),
-		Phone:           request.FormValue("phone"),
-		MMId:            request.FormValue("mmId"),
-		CommonChannelId: request.FormValue("commonChannel"),
-		MedChannelId:    request.FormValue("medChannel"),
-		LawChannelId:    request.FormValue("lawChannel"),
-		UserGroup:       request.FormValue("group"),
+		UserType:        r.FormValue("type"),
+		Username:        r.FormValue("username"),
+		Email:           r.FormValue("email"),
+		Phone:           r.FormValue("phone"),
+		MMId:            r.FormValue("mmId"),
+		CommonChannelId: r.FormValue("commonChannel"),
+		MedChannelId:    r.FormValue("medChannel"),
+		LawChannelId:    r.FormValue("lawChannel"),
+		UserGroup:       r.FormValue("group"),
 		OnlineStatuses:  []string{},
 	}
 
-	if onlineStatusesTxt := request.FormValue("statuses"); onlineStatusesTxt != "" {
+	if onlineStatusesTxt := r.FormValue("statuses"); onlineStatusesTxt != "" {
 		rq.OnlineStatuses = strings.Split(onlineStatusesTxt, ",")
 	}
 
-	if sizeTxt := request.FormValue("limit"); sizeTxt != "" {
+	if sizeTxt := r.FormValue("limit"); sizeTxt != "" {
 		size, e := strconv.Atoi(sizeTxt)
 		if e != nil {
 			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("limit: "+e.Error()))
@@ -161,7 +161,7 @@ func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 		rq.Paging.Size = int32(size)
 	}
 
-	if indexTxt := request.FormValue("offset"); indexTxt != "" {
+	if indexTxt := r.FormValue("offset"); indexTxt != "" {
 		index, e := strconv.Atoi(indexTxt)
 		if e != nil {
 			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("offset: "+e.Error()))
@@ -170,7 +170,7 @@ func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
 		rq.Paging.Index = int32(index)
 	}
 
-	if rsPb, err := c.userService.Search(rq); err != nil {
+	if rsPb, err := c.userService.Search(r.Context(), rq); err != nil {
 		c.RespondError(writer, http.StatusInternalServerError, err)
 	} else {
 		c.RespondOK(writer, c.searchRsFromPb(rsPb))

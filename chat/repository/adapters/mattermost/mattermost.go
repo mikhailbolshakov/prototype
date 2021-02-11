@@ -1,6 +1,7 @@
 package mattermost
 
 import (
+	"context"
 	"github.com/adacta-ru/mattermost-server/v6/model"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
 	"gitlab.medzdrav.ru/prototype/kit/chat/mattermost"
@@ -23,7 +24,7 @@ func (s *serviceImpl) setConfig(cfg *kitConfig.Config) {
 	s.cfg = cfg
 }
 
-func (s *serviceImpl) CreateUser(rq *domain.CreateUserRequest) (string, error) {
+func (s *serviceImpl) CreateUser(ctx context.Context, rq *domain.CreateUserRequest) (string, error) {
 
 	if rq.TeamName == "" {
 		rq.TeamName = s.cfg.Mattermost.Team
@@ -41,7 +42,7 @@ func (s *serviceImpl) CreateUser(rq *domain.CreateUserRequest) (string, error) {
 	return userId, nil
 }
 
-func (s *serviceImpl) CreateClientChannel(rq *domain.CreateClientChannelRequest) (string, error) {
+func (s *serviceImpl) CreateClientChannel(ctx context.Context, rq *domain.CreateClientChannelRequest) (string, error) {
 
 	if rq.TeamName == "" {
 		rq.TeamName = s.cfg.Mattermost.Team
@@ -55,11 +56,11 @@ func (s *serviceImpl) CreateClientChannel(rq *domain.CreateClientChannelRequest)
 	return chId, nil
 }
 
-func (s *serviceImpl) SubscribeUser(userId, channelId string) error {
+func (s *serviceImpl) SubscribeUser(ctx context.Context, userId, channelId string) error {
 	return s.adminClient.SubscribeUser(channelId, userId)
 }
 
-func (s *serviceImpl) Post(channelId, message, toUserId string, ephemeral, fromBot bool, attachments []*domain.PostAttachment) error {
+func (s *serviceImpl) Post(ctx context.Context, channelId, message, toUserId string, ephemeral, fromBot bool, attachments []*domain.PostAttachment) error {
 
 	var client *mattermost.Client
 	if fromBot {
@@ -81,7 +82,7 @@ func (s *serviceImpl) Post(channelId, message, toUserId string, ephemeral, fromB
 
 }
 
-func (s *serviceImpl) GetUserStatuses(rq *domain.GetUsersStatusesRequest) (*domain.GetUsersStatusesResponse, error) {
+func (s *serviceImpl) GetUserStatuses(ctx context.Context, rq *domain.GetUsersStatusesRequest) (*domain.GetUsersStatusesResponse, error) {
 
 	rs := &domain.GetUsersStatusesResponse{
 		Statuses: []*domain.UserStatus{},
@@ -102,7 +103,7 @@ func (s *serviceImpl) GetUserStatuses(rq *domain.GetUsersStatusesRequest) (*doma
 	return rs, nil
 }
 
-func (s *serviceImpl) CreateDirectChannel(userId1, userId2 string) (string, error) {
+func (s *serviceImpl) CreateDirectChannel(ctx context.Context, userId1, userId2 string) (string, error) {
 	chId, err := s.adminClient.CreateDirectChannel(userId1, userId2)
 	if err != nil {
 		return "", err
@@ -110,7 +111,7 @@ func (s *serviceImpl) CreateDirectChannel(userId1, userId2 string) (string, erro
 	return chId, nil
 }
 
-func (s *serviceImpl) GetChannelsForUserAndMembers(rq *domain.GetChannelsForUserAndMembersRequest) ([]string, error) {
+func (s *serviceImpl) GetChannelsForUserAndMembers(ctx context.Context, rq *domain.GetChannelsForUserAndMembersRequest) ([]string, error) {
 
 	teamName := s.cfg.Mattermost.Team
 	if rq.TeamName != "" {
@@ -121,7 +122,7 @@ func (s *serviceImpl) GetChannelsForUserAndMembers(rq *domain.GetChannelsForUser
 
 }
 
-func (s *serviceImpl) DeleteUser(userId string) error {
+func (s *serviceImpl) DeleteUser(ctx context.Context, userId string) error {
 	return s.adminClient.DeleteUser(userId)
 }
 

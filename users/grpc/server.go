@@ -65,7 +65,7 @@ func (s *Server) CreateClient(ctx context.Context, rq *pb.CreateClientRequest) (
 			PhotoUrl:          rq.PhotoUrl,
 		},
 	}
-	user, err := s.domain.Create(client)
+	user, err := s.domain.Create(ctx, client)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (s *Server) CreateConsultant(ctx context.Context, rq *pb.CreateConsultantRe
 		Groups: rq.Groups,
 	}
 
-	user, err := s.domain.Create(consultant)
+	user, err := s.domain.Create(ctx, consultant)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (s *Server) CreateExpert(ctx context.Context, rq *pb.CreateExpertRequest) (
 		Groups: rq.Groups,
 	}
 
-	user, err := s.domain.Create(expert)
+	user, err := s.domain.Create(ctx, expert)
 	if err != nil {
 		return nil, err
 	}
@@ -113,23 +113,23 @@ func (s *Server) CreateExpert(ctx context.Context, rq *pb.CreateExpertRequest) (
 }
 
 func (s *Server) GetByUsername(ctx context.Context, rq *pb.GetByUsernameRequest) (*pb.User, error) {
-	user := s.domain.GetByUsername(rq.Username)
+	user := s.domain.GetByUsername(ctx, rq.Username)
 	return s.toUserPb(user), nil
 }
 
 func (s *Server) GetByMMId(ctx context.Context, rq *pb.GetByMMIdRequest) (*pb.User, error) {
-	user := s.domain.GetByMMId(rq.MMId)
+	user := s.domain.GetByMMId(ctx, rq.MMId)
 	return s.toUserPb(user), nil
 }
 
 func (s *Server) Get(ctx context.Context, rq *pb.GetByIdRequest) (*pb.User, error) {
-	user := s.domain.Get(rq.Id)
+	user := s.domain.Get(ctx, rq.Id)
 	return s.toUserPb(user), nil
 }
 
 func (s *Server) Search(ctx context.Context, rq *pb.SearchRequest) (*pb.SearchResponse, error) {
 
-	dRs, err := s.domain.Search(s.toSrchRqDomain(rq))
+	dRs, err := s.domain.Search(ctx, s.toSrchRqDomain(rq))
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (s *Server) Search(ctx context.Context, rq *pb.SearchRequest) (*pb.SearchRe
 }
 
 func (s *Server) Activate(ctx context.Context, rq *pb.ActivateRequest) (*pb.User, error) {
-	user, err := s.domain.Activate(rq.UserId)
+	user, err := s.domain.Activate(ctx, rq.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (s *Server) Activate(ctx context.Context, rq *pb.ActivateRequest) (*pb.User
 }
 
 func (s *Server) Delete(ctx context.Context, rq *pb.DeleteRequest) (*pb.User, error) {
-	user, err := s.domain.Delete(rq.UserId)
+	user, err := s.domain.Delete(ctx, rq.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func (s *Server) Delete(ctx context.Context, rq *pb.DeleteRequest) (*pb.User, er
 
 func (s *Server) SetClientDetails(ctx context.Context, rq *pb.SetClientDetailsRequest) (*pb.User, error) {
 
-	user, err := s.domain.SetClientDetails(rq.UserId, s.toClientDetailsDomain(rq.ClientDetails))
+	user, err := s.domain.SetClientDetails(ctx, rq.UserId, s.toClientDetailsDomain(rq.ClientDetails))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (s *Server) SetClientDetails(ctx context.Context, rq *pb.SetClientDetailsRe
 }
 
 func (s *Server) SetMMUserId(ctx context.Context, rq *pb.SetMMIdRequest) (*pb.User, error) {
-	user, err := s.domain.SetMMUserId(rq.UserId, rq.MMId)
+	user, err := s.domain.SetMMUserId(ctx, rq.UserId, rq.MMId)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func (s *Server) SetMMUserId(ctx context.Context, rq *pb.SetMMIdRequest) (*pb.Us
 }
 
 func (s *Server) SetKKUserId(ctx context.Context, rq *pb.SetKKIdRequest) (*pb.User, error) {
-	user, err := s.domain.SetKKUserId(rq.UserId, rq.KKId)
+	user, err := s.domain.SetKKUserId(ctx, rq.UserId, rq.KKId)
 	if err != nil {
 		return nil, err
 	}

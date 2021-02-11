@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
@@ -22,7 +23,7 @@ var postMap = map[string]handler{
 	domain.TP_CLIENT_FEEDBACK:                clientFeedback,
 }
 
-func (s *serviceImpl) predefinedPost(p *domain.Post) (*domain.Post, error) {
+func (s *serviceImpl) predefinedPost(ctx context.Context, p *domain.Post) (*domain.Post, error) {
 
 	if postFunc, ok := postMap[p.PredefinedPost.Code]; ok {
 		predefinedPost, err := postFunc(p.PredefinedPost.Params)

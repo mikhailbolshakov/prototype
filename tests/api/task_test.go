@@ -14,10 +14,19 @@ func Test_CreateTask_Success(t *testing.T) {
 	// create user
 	testHelper := NewTestHelper()
 
-	user, err := testHelper.CreateClient()
+	if _, err := testHelper.Login(TEST_USER); err != nil {
+		t.Fatal(err)
+	}
+
+	user, err := testHelper.GetUser(TEST_USER)
 	if err != nil {
 		t.Fatal(err)
 	}
+	//
+	//user, err := testHelper.CreateClient()
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
 
 	if user.ClientDetails == nil || user.ClientDetails.CommonChannelId == "" {
 		t.Fatal("user must be a client")

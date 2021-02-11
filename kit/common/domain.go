@@ -1,26 +1,26 @@
 package common
 
 import (
-	"encoding/json"
+	"context"
+	"fmt"
+	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
-	"log"
 )
 
 type BaseService struct {
 	Queue queue.Queue
 }
 
-func (s *BaseService) Publish(o interface{}, topic string) {
-	go func() {
-		j, err := json.Marshal(o)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-		err = s.Queue.Publish(topic, j)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-	}()
+func (s *BaseService) Publish(ctx context.Context, o interface{}, topic string) error {
+
+	m := &queue.Message{ Payload: o	}
+
+	if rCtx, ok := kitContext.Request(ctx); ok {
+		m.Ctx = rCtx
+	} else {
+		return fmt.Errorf("cannot publish to queue topic %s, context invalid", topic)
+	}
+
+	return s.Queue.Publish(ctx, topic, m)
+
 }

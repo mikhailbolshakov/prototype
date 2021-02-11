@@ -51,7 +51,7 @@ func (s *taskStorageImpl) ensureIndex() error {
 	return s.c.Search.CreateIndexIfNotExists(IDX_TASKS, tasksMapping)
 }
 
-func (s *taskStorageImpl) Search(cr *domain.SearchCriteria) (*domain.SearchResponse, error) {
+func (s *taskStorageImpl) Search(ctx context.Context, cr *domain.SearchCriteria) (*domain.SearchResponse, error) {
 
 	response := &domain.SearchResponse{
 		PagingResponse: &common.PagingResponse{
@@ -119,7 +119,7 @@ func (s *taskStorageImpl) Search(cr *domain.SearchCriteria) (*domain.SearchRespo
 		Query(bq).
 		From(from).
 		Size(cr.Size).
-		Do(context.Background())
+		Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (s *taskStorageImpl) Search(cr *domain.SearchCriteria) (*domain.SearchRespo
 	response.PagingResponse.Index = cr.Index
 
 	if len(ids) > 0 {
-		response.Tasks = s.GetByIds(ids)
+		response.Tasks = s.GetByIds(ctx, ids)
 	}
 
 	return response, nil

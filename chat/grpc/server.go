@@ -55,7 +55,7 @@ func (s *Server) ListenAsync() {
 
 func (s *Server) CreateUser(ctx context.Context, rq *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
 
-	rs, err := s.domain.CreateUser(&domain.CreateUserRequest{
+	rs, err := s.domain.CreateUser(ctx, &domain.CreateUserRequest{
 		Username: rq.Username,
 		Email:    rq.Email,
 	})
@@ -69,7 +69,7 @@ func (s *Server) CreateUser(ctx context.Context, rq *pb.CreateUserRequest) (*pb.
 
 func (s *Server) CreateClientChannel(ctx context.Context, rq *pb.CreateClientChannelRequest) (*pb.CreateClientChannelResponse, error) {
 
-	rs, err := s.domain.CreateClientChannel(&domain.CreateClientChannelRequest{
+	rs, err := s.domain.CreateClientChannel(ctx, &domain.CreateClientChannelRequest{
 		ClientUserId: rq.ClientUserId,
 		DisplayName:  rq.DisplayName,
 		Name:         rq.Name,
@@ -84,7 +84,7 @@ func (s *Server) CreateClientChannel(ctx context.Context, rq *pb.CreateClientCha
 }
 
 func (s *Server) Subscribe(ctx context.Context, rq *pb.SubscribeRequest) (*pb.SubscribeResponse, error) {
-	err := s.domain.SubscribeUser(&domain.SubscribeUserRequest{
+	err := s.domain.SubscribeUser(ctx, &domain.SubscribeUserRequest{
 		UserId:    rq.UserId,
 		ChannelId: rq.ChannelId,
 	})
@@ -96,7 +96,7 @@ func (s *Server) Subscribe(ctx context.Context, rq *pb.SubscribeRequest) (*pb.Su
 
 func (s *Server) GetChannelsForUserAndMembers(ctx context.Context, rq *pb.GetChannelsForUserAndMembersRequest) (*pb.GetChannelsForUserAndMembersResponse, error) {
 
-	channels, err := s.domain.GetChannelsForUserAndMembers(&domain.GetChannelsForUserAndMembersRequest{
+	channels, err := s.domain.GetChannelsForUserAndMembers(ctx, &domain.GetChannelsForUserAndMembersRequest{
 		UserId:        rq.UserId,
 		TeamName:      rq.TeamName,
 		MemberUserIds: rq.MemberUserIds,
@@ -111,7 +111,7 @@ func (s *Server) GetChannelsForUserAndMembers(ctx context.Context, rq *pb.GetCha
 
 func (s *Server) GetUsersStatuses(ctx context.Context, rq *pb.GetUsersStatusesRequest) (*pb.GetUserStatusesResponse, error) {
 
-	rs, err := s.domain.GetUsersStatuses(&domain.GetUsersStatusesRequest{UserIds: rq.MMUserIds})
+	rs, err := s.domain.GetUsersStatuses(ctx, &domain.GetUsersStatusesRequest{UserIds: rq.MMUserIds})
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func (s *Server) Post(ctx context.Context, rq *pb.PostRequest) (*pb.PostResponse
 
 	}
 
-	err := s.domain.Posts(dPosts)
+	err := s.domain.Posts(ctx, dPosts)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func (s *Server) Post(ctx context.Context, rq *pb.PostRequest) (*pb.PostResponse
 }
 
 func (s *Server) AskBot(ctx context.Context, rq *pb.AskBotRequest) (*pb.AskBotResponse, error) {
-	rs, err := s.domain.AskBot(&domain.AskBotRequest{
+	rs, err := s.domain.AskBot(ctx, &domain.AskBotRequest{
 		From:    rq.From,
 		Message: rq.Message,
 	})
@@ -208,7 +208,7 @@ func (s *Server) AskBot(ctx context.Context, rq *pb.AskBotRequest) (*pb.AskBotRe
 }
 
 func (s *Server) DeleteUser(ctx context.Context, rq *pb.DeleteUserRequest) (*pb.DeleteUserResponse, error) {
-	err := s.domain.DeleteUser(rq.MMUserId)
+	err := s.domain.DeleteUser(ctx, rq.MMUserId)
 	if err != nil {
 		return nil, err
 	}

@@ -18,9 +18,9 @@ func newImpl() *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) Get() (*kit.Config, error) {
+func (u *serviceImpl) Get(ctx context.Context) (*kit.Config, error) {
 
-	rs, err := u.ConfigServiceClient.Get(context.Background(), &pb.ConfigRequest{})
+	rs, err := u.ConfigServiceClient.Get(ctx, &pb.ConfigRequest{})
 	if err != nil {
 		log.Err(err, true)
 		return nil, err

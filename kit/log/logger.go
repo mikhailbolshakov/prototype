@@ -86,3 +86,9 @@ func Err(err error, stack bool) {
 
 }
 
+func Fatal(err error) {
+	buf := make([]byte, 1<<16)
+	runtime.Stack(buf, false)
+	logger.Fatalln(err.Error(), fmt.Sprintf("%s", buf))
+}
+

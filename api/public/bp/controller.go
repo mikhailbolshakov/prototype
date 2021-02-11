@@ -24,12 +24,12 @@ func NewController(bpService public.BpService) Controller {
 	}
 }
 
-func (c *ctrlImpl) StartProcess(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) StartProcess(w http.ResponseWriter, r *http.Request) {
 
 	rq := &StartProcessRequest{}
-	decoder := json.NewDecoder(request.Body)
+	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(rq); err != nil {
-		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
+		c.RespondError(w, http.StatusBadRequest, errors.New("invalid request"))
 		return
 	}
 
@@ -38,13 +38,13 @@ func (c *ctrlImpl) StartProcess(writer http.ResponseWriter, request *http.Reques
 		varsB, _ = json.Marshal(rq.Vars)
 	}
 
-	if rsPb, err := c.bpService.StartProcess(&pb.StartProcessRequest{
+	if rsPb, err := c.bpService.StartProcess(r.Context(), &pb.StartProcessRequest{
 		ProcessId: rq.ProcessId,
 		Vars:      varsB,
 	}); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+		c.RespondError(w, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, &StartProcessResponse{Id: rsPb.Id})
+		c.RespondOK(w, &StartProcessResponse{Id: rsPb.Id})
 	}
 
 }

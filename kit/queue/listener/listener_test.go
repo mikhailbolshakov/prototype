@@ -1,8 +1,10 @@
 package listener
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"log"
 	"math/rand"
@@ -16,14 +18,16 @@ type TestMsg struct {
 
 func Test(t *testing.T) {
 
-	publisher := &stan.Stan{}
-	err := publisher.Open(fmt.Sprintf("test_publisher_%d", rand.Intn(99999)))
+	ctx := context.Background()
+
+	publisher := stan.New()
+	err := publisher.Open(ctx, fmt.Sprintf("test_publisher_%d", rand.Intn(99999)))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	subscriber := &stan.Stan{}
-	err = subscriber.Open(fmt.Sprintf("test_subscriber_%d", rand.Intn(99999)))
+	subscriber := stan.New()
+	err = subscriber.Open(ctx, fmt.Sprintf("test_subscriber_%d", rand.Intn(99999)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +68,7 @@ func Test(t *testing.T) {
 
 	m := &TestMsg{"value1"}
 	b, _ := json.Marshal(m)
-	if err := publisher.Publish("test.topic", b); err != nil {
+	if err := publisher.Publish(ctx, "test.topic", &queue.Message{Payload: b}); err != nil {
 		t.Fatal(err)
 	}
 

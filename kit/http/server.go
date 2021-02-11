@@ -66,11 +66,22 @@ func (s *Server) SetWsUpgrader(upgradeSetter WsUpgrader) {
 }
 
 func (s *Server) SetAuthMiddleware(mdws ...mux.MiddlewareFunc) {
-
 	for _, m := range mdws {
 		s.AuthRouter.Use(m)
 	}
+}
 
+func (s *Server) SetNoAuthMiddleware(mdws ...mux.MiddlewareFunc) {
+	for _, m := range mdws {
+		s.NoAuthRouter.Use(m)
+	}
+}
+
+func (s *Server) SetMiddleware(mdws ...mux.MiddlewareFunc) {
+	for _, m := range mdws {
+		s.NoAuthRouter.Use(m)
+		s.AuthRouter.Use(m)
+	}
 }
 
 func (s *Server) Open() error {

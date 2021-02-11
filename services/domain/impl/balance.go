@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/xtgo/uuid"
@@ -24,32 +25,32 @@ type balanceServiceImpl struct {
 	userService domain.UserService
 }
 
-func (s *balanceServiceImpl) userIdName(input string) string {
+func (s *balanceServiceImpl) userIdName(ctx context.Context, input string) string {
 
 	if _, err := uuid.Parse(input); err == nil {
 		return input
 	} else {
-		return s.userService.Get(input).Id
+		return s.userService.Get(ctx, input).Id
 	}
 
 }
 
-func (s *balanceServiceImpl) Add(rq *domain.ModifyBalanceRequest) (*domain.UserBalance, error) {
+func (s *balanceServiceImpl) Add(ctx context.Context, rq *domain.ModifyBalanceRequest) (*domain.UserBalance, error) {
 
-	userId := s.userIdName(rq.UserId)
+	userId := s.userIdName(ctx, rq.UserId)
 
-	types := s.GetTypes()
+	types := s.GetTypes(ctx)
 	if _, ok := types[rq.ServiceTypeId]; !ok {
 		return nil, errors.New(fmt.Sprintf("service type %s isn't supported", rq.ServiceTypeId))
 	}
 
-	balances, err := s.storage.GetBalanceForServiceType(userId, rq.ServiceTypeId, nil)
+	balances, err := s.storage.GetBalanceForServiceType(ctx, userId, rq.ServiceTypeId, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(balances) == 0 {
-		_, err = s.storage.CreateBalance(&domain.BalanceItem{
+		_, err = s.storage.CreateBalance(ctx, &domain.BalanceItem{
 			Id:            kit.NewId(),
 			UserId:        userId,
 			ServiceTypeId: rq.ServiceTypeId,
@@ -61,7 +62,7 @@ func (s *balanceServiceImpl) Add(rq *domain.ModifyBalanceRequest) (*domain.UserB
 	} else if len(balances) == 1 {
 		b := balances[0]
 		b.Total = b.Total + rq.Quantity
-		_, err = s.storage.UpdateBalance(b)
+		_, err = s.storage.UpdateBalance(ctx, b)
 		if err != nil {
 			return nil, err
 		}
@@ -69,17 +70,17 @@ func (s *balanceServiceImpl) Add(rq *domain.ModifyBalanceRequest) (*domain.UserB
 		return nil, errors.New("balance is corrupted")
 	}
 
-	return s.get(userId, nil)
+	return s.get(ctx, userId, nil)
 }
 
-func (s *balanceServiceImpl) toUserBalance(userId string, items []*domain.BalanceItem) *domain.UserBalance {
+func (s *balanceServiceImpl) toUserBalance(ctx context.Context, userId string, items []*domain.BalanceItem) *domain.UserBalance {
 
 	rs := &domain.UserBalance{
 		UserId:  userId,
 		Balance: map[domain.ServiceType]domain.Balance{},
 	}
 
-	types := s.GetTypes()
+	types := s.GetTypes(ctx)
 
 	for _, d := range items {
 		rs.Balance[types[d.ServiceTypeId]] = domain.Balance{
@@ -95,23 +96,23 @@ func (s *balanceServiceImpl) toUserBalance(userId string, items []*domain.Balanc
 
 }
 
-func (s *balanceServiceImpl) get(userId string, at *time.Time) (*domain.UserBalance, error) {
+func (s *balanceServiceImpl) get(ctx context.Context, userId string, at *time.Time) (*domain.UserBalance, error) {
 
-	balanceItems, err := s.storage.GetBalance(userId, at)
+	balanceItems, err := s.storage.GetBalance(ctx, userId, at)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.toUserBalance(userId, balanceItems), nil
+	return s.toUserBalance(ctx, userId, balanceItems), nil
 }
 
-func (s *balanceServiceImpl) Get(rq *domain.GetBalanceRequest) (*domain.UserBalance, error) {
-	return s.get(s.userIdName(rq.UserId), nil)
+func (s *balanceServiceImpl) Get(ctx context.Context, rq *domain.GetBalanceRequest) (*domain.UserBalance, error) {
+	return s.get(ctx, s.userIdName(ctx, rq.UserId), nil)
 }
 
-func (s *balanceServiceImpl) GetTypes() map[string]domain.ServiceType {
+func (s *balanceServiceImpl) GetTypes(ctx context.Context) map[string]domain.ServiceType {
 
-	typesDto := s.storage.GetTypes()
+	typesDto := s.storage.GetTypes(ctx)
 	res := make(map[string]domain.ServiceType, len(typesDto))
 
 	for _, t := range typesDto {
@@ -125,16 +126,16 @@ func (s *balanceServiceImpl) GetTypes() map[string]domain.ServiceType {
 
 }
 
-func (s *balanceServiceImpl) WriteOff(rq *domain.ModifyBalanceRequest) (*domain.UserBalance, error) {
+func (s *balanceServiceImpl) WriteOff(ctx context.Context, rq *domain.ModifyBalanceRequest) (*domain.UserBalance, error) {
 
-	userId := s.userIdName(rq.UserId)
+	userId := s.userIdName(ctx, rq.UserId)
 
-	types := s.GetTypes()
+	types := s.GetTypes(ctx)
 	if _, ok := types[rq.ServiceTypeId]; !ok {
 		return nil, errors.New(fmt.Sprintf("service type %s isn't supported", rq.ServiceTypeId))
 	}
 
-	balances, err := s.storage.GetBalanceForServiceType(userId, rq.ServiceTypeId, nil)
+	balances, err := s.storage.GetBalanceForServiceType(ctx, userId, rq.ServiceTypeId, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +153,7 @@ func (s *balanceServiceImpl) WriteOff(rq *domain.ModifyBalanceRequest) (*domain.
 		b.Locked = b.Locked - rq.Quantity
 		b.Delivered = b.Delivered + rq.Quantity
 
-		_, err = s.storage.UpdateBalance(b)
+		_, err = s.storage.UpdateBalance(ctx, b)
 		if err != nil {
 			return nil, err
 		}
@@ -160,19 +161,19 @@ func (s *balanceServiceImpl) WriteOff(rq *domain.ModifyBalanceRequest) (*domain.
 		return nil, errors.New("balance is corrupted")
 	}
 
-	return s.get(userId, nil)
+	return s.get(ctx, userId, nil)
 }
 
-func (s *balanceServiceImpl) Lock(rq *domain.ModifyBalanceRequest) (*domain.UserBalance, error) {
+func (s *balanceServiceImpl) Lock(ctx context.Context, rq *domain.ModifyBalanceRequest) (*domain.UserBalance, error) {
 
-	userId := s.userIdName(rq.UserId)
+	userId := s.userIdName(ctx, rq.UserId)
 
-	types := s.GetTypes()
+	types := s.GetTypes(ctx)
 	if _, ok := types[rq.ServiceTypeId]; !ok {
 		return nil, errors.New(fmt.Sprintf("service type %s isn't supported", rq.ServiceTypeId))
 	}
 
-	balances, err := s.storage.GetBalanceForServiceType(userId, rq.ServiceTypeId, nil)
+	balances, err := s.storage.GetBalanceForServiceType(ctx, userId, rq.ServiceTypeId, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +188,7 @@ func (s *balanceServiceImpl) Lock(rq *domain.ModifyBalanceRequest) (*domain.User
 		}
 
 		b.Locked = b.Locked + rq.Quantity
-		_, err = s.storage.UpdateBalance(b)
+		_, err = s.storage.UpdateBalance(ctx, b)
 		if err != nil {
 			return nil, err
 		}
@@ -195,19 +196,19 @@ func (s *balanceServiceImpl) Lock(rq *domain.ModifyBalanceRequest) (*domain.User
 		return nil, errors.New("balance is corrupted")
 	}
 
-	return s.get(userId, nil)
+	return s.get(ctx, userId, nil)
 }
 
-func (s *balanceServiceImpl) Cancel(rq *domain.ModifyBalanceRequest) (*domain.UserBalance, error) {
+func (s *balanceServiceImpl) Cancel(ctx context.Context, rq *domain.ModifyBalanceRequest) (*domain.UserBalance, error) {
 
-	userId := s.userIdName(rq.UserId)
+	userId := s.userIdName(ctx, rq.UserId)
 
-	types := s.GetTypes()
+	types := s.GetTypes(ctx)
 	if _, ok := types[rq.ServiceTypeId]; !ok {
 		return nil, errors.New(fmt.Sprintf("service type %s isn't supported", rq.ServiceTypeId))
 	}
 
-	balances, err := s.storage.GetBalanceForServiceType(userId, rq.ServiceTypeId, nil)
+	balances, err := s.storage.GetBalanceForServiceType(ctx, userId, rq.ServiceTypeId, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +223,7 @@ func (s *balanceServiceImpl) Cancel(rq *domain.ModifyBalanceRequest) (*domain.Us
 		}
 
 		b.Locked = b.Locked - rq.Quantity
-		_, err = s.storage.UpdateBalance(b)
+		_, err = s.storage.UpdateBalance(ctx, b)
 		if err != nil {
 			return nil, err
 		}
@@ -230,5 +231,5 @@ func (s *balanceServiceImpl) Cancel(rq *domain.ModifyBalanceRequest) (*domain.Us
 		return nil, errors.New("balance is corrupted")
 	}
 
-	return s.get(userId, nil)
+	return s.get(ctx, userId, nil)
 }

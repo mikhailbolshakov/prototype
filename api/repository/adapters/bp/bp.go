@@ -14,7 +14,7 @@ func newServiceImpl() *serviceImpl {
 	return a
 }
 
-func (s *serviceImpl) StartProcess(rq *pb.StartProcessRequest) (*pb.StartProcessResponse, error) {
-	return s.ProcessClient.StartProcess(context.Background(), rq)
+func (s *serviceImpl) StartProcess(ctx context.Context, rq *pb.StartProcessRequest) (*pb.StartProcessResponse, error) {
+	return s.ProcessClient.StartProcess(ctx, rq)
 }
 

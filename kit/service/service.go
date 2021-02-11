@@ -1,7 +1,9 @@
 package service
 
+import "context"
+
 type Service interface {
-	Init() error
-	ListenAsync() error
-	Close()
+	Init(ctx context.Context) error
+	ListenAsync(ctx context.Context) error
+	Close(ctx context.Context)
 }

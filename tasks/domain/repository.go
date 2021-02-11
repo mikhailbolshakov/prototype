@@ -1,33 +1,34 @@
 package domain
 
 import (
+	"context"
 	kit "gitlab.medzdrav.ru/prototype/kit/config"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 )
 
 type TaskStorage interface {
-	Create(t *Task) (*Task, error)
-	Get(id string) *Task
-	GetByIds(id []string) []*Task
-	Update(t *Task) (*Task, error)
-	GetByChannel(channelId string) []*Task
-	CreateHistory(h *History) (*History, error)
-	Search(cr *SearchCriteria) (*SearchResponse, error)
-	SaveAssignmentLog(l *AssignmentLog) (*AssignmentLog, error)
-	GetAssignmentLog(c *AssignmentLogCriteria) (*AssignmentLogResponse, error)
-	GetHistory(taskId string) []*History
+	Create(ctx context.Context, t *Task) (*Task, error)
+	Get(ctx context.Context, id string) *Task
+	GetByIds(ctx context.Context, id []string) []*Task
+	Update(ctx context.Context, t *Task) (*Task, error)
+	GetByChannel(ctx context.Context, channelId string) []*Task
+	CreateHistory(ctx context.Context, h *History) (*History, error)
+	Search(ctx context.Context, cr *SearchCriteria) (*SearchResponse, error)
+	SaveAssignmentLog(ctx context.Context, l *AssignmentLog) (*AssignmentLog, error)
+	GetAssignmentLog(ctx context.Context, c *AssignmentLogCriteria) (*AssignmentLogResponse, error)
+	GetHistory(ctx context.Context, taskId string) []*History
 }
 
 type ChatService interface {
-	Post(message, channelId, userId string, ephemeral, fromBot bool) error
-	PredefinedPost(channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error
+	Post(ctx context.Context, message, channelId, userId string, ephemeral, fromBot bool) error
+	PredefinedPost(ctx context.Context, channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error
 }
 
 type CfgService interface {
-	Get() (*kit.Config, error)
+	Get(ctx context.Context) (*kit.Config, error)
 }
 
 type UserService interface {
-	Get(id, username string) *pb.User
-	Search(request *pb.SearchRequest) (*pb.SearchResponse, error)
+	Get(ctx context.Context, id, username string) *pb.User
+	Search(ctx context.Context, request *pb.SearchRequest) (*pb.SearchResponse, error)
 }

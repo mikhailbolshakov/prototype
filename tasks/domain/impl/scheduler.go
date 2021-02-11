@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-co-op/gocron"
 	"gitlab.medzdrav.ru/prototype/kit/common"
@@ -30,29 +31,29 @@ func NewScheduler(config domain.ConfigService, storage domain.TaskStorage) domai
 	}
 }
 
-func (r *reminderImpl) dueDateFunc(taskId string) {
+func (r *reminderImpl) dueDateFunc(ctx context.Context, taskId string) {
 
 	r.handlerMutex.RLock()
 	defer r.handlerMutex.RUnlock()
 
 	if r.dueDateHandler != nil {
-		r.dueDateHandler(taskId)
+		r.dueDateHandler(ctx, taskId)
 	}
 }
 
-func (r *reminderImpl) remindFunc(taskId string) {
+func (r *reminderImpl) remindFunc(ctx context.Context, taskId string) {
 
 	r.handlerMutex.RLock()
 	defer r.handlerMutex.RUnlock()
 
 	if r.reminderHandler != nil {
-		r.reminderHandler(taskId)
+		r.reminderHandler(ctx, taskId)
 	}
 }
 
-func (r *reminderImpl) ScheduleTask(ts *domain.Task) {
+func (r *reminderImpl) ScheduleTask(ctx context.Context, ts *domain.Task) {
 
-	if r.config.IsFinalStatus(ts.Type, ts.Status) {
+	if r.config.IsFinalStatus(ctx, ts.Type, ts.Status) {
 		return
 	}
 
@@ -101,10 +102,10 @@ func (r *reminderImpl) ScheduleTask(ts *domain.Task) {
 
 }
 
-func (r *reminderImpl) start() {
+func (r *reminderImpl) start(ctx context.Context, ) {
 
 	// TODO: retrieve tasks which have Reminder in the future
-	rs, err := r.storage.Search(&domain.SearchCriteria{
+	rs, err := r.storage.Search(ctx, &domain.SearchCriteria{
 		PagingRequest: &common.PagingRequest{
 			Size: 10000,
 		},
@@ -120,15 +121,15 @@ func (r *reminderImpl) start() {
 	log.DbgF("preparing reminders... found %d tasks", len(rs.Tasks))
 
 	for _, t := range rs.Tasks {
-		r.ScheduleTask(t)
+		r.ScheduleTask(ctx, t)
 	}
 
 	r.reminderScheduler.StartAsync()
 	r.dueDateScheduler.StartAsync()
 }
 
-func (r *reminderImpl) StartAsync() {
-	go r.start()
+func (r *reminderImpl) StartAsync(ctx context.Context) {
+	go r.start(ctx)
 }
 
 func (r *reminderImpl) SetReminderHandler(h domain.TaskSchedulerHandler) {

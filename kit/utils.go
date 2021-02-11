@@ -11,6 +11,10 @@ func NewId() string {
 	return uuid.NewV4().String()
 }
 
+func Nil() string {
+	return uuid.Nil.String()
+}
+
 func ToJson(v interface{}) (string, error) {
 	if v != nil {
 		var b, err = json.Marshal(v)

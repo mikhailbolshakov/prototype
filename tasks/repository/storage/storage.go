@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"github.com/google/uuid"
 	"gitlab.medzdrav.ru/prototype/kit"
 	"gitlab.medzdrav.ru/prototype/kit/common"
@@ -70,7 +71,7 @@ func newStorage(c *container) *taskStorageImpl {
 	return &taskStorageImpl{c: c}
 }
 
-func (s *taskStorageImpl) Create(task *domain.Task) (*domain.Task, error) {
+func (s *taskStorageImpl) Create(ctx context.Context, task *domain.Task) (*domain.Task, error) {
 
 	dto := s.toTaskDto(task)
 
@@ -90,7 +91,7 @@ func (s *taskStorageImpl) Create(task *domain.Task) (*domain.Task, error) {
 	return task, nil
 }
 
-func (s *taskStorageImpl) Get(id string) *domain.Task {
+func (s *taskStorageImpl) Get(ctx context.Context, id string) *domain.Task {
 
 	// TODO: get from Redis
 
@@ -105,7 +106,7 @@ func (s *taskStorageImpl) Get(id string) *domain.Task {
 	return s.toTaskDomain(task)
 }
 
-func (s *taskStorageImpl) Update(task *domain.Task) (*domain.Task, error) {
+func (s *taskStorageImpl) Update(ctx context.Context, task *domain.Task) (*domain.Task, error) {
 
 	dto := s.toTaskDto(task)
 
@@ -124,19 +125,19 @@ func (s *taskStorageImpl) Update(task *domain.Task) (*domain.Task, error) {
 	return task, nil
 }
 
-func (s *taskStorageImpl) GetByChannel(channelId string) []*domain.Task {
+func (s *taskStorageImpl) GetByChannel(ctx context.Context, channelId string) []*domain.Task {
 	var tasks []*task
 	s.c.Db.Instance.Where("channel_id = ?", channelId).Find(&tasks)
 	return s.toTasksDomain(tasks)
 }
 
-func (s *taskStorageImpl) GetByIds(ids []string) []*domain.Task {
+func (s *taskStorageImpl) GetByIds(ctx context.Context, ids []string) []*domain.Task {
 	var tasks []*task
 	s.c.Db.Instance.Find(&tasks, ids)
 	return s.toTasksDomain(tasks)
 }
 
-func (s *taskStorageImpl) CreateHistory(h *domain.History) (*domain.History, error) {
+func (s *taskStorageImpl) CreateHistory(ctx context.Context, h *domain.History) (*domain.History, error) {
 	dto := s.toHistoryDto(h)
 	result := s.c.Db.Instance.Create(dto)
 	if result.Error != nil {
@@ -145,13 +146,13 @@ func (s *taskStorageImpl) CreateHistory(h *domain.History) (*domain.History, err
 	return h, nil
 }
 
-func (s *taskStorageImpl) GetHistory(taskId string) []*domain.History {
+func (s *taskStorageImpl) GetHistory(ctx context.Context, taskId string) []*domain.History {
 	var dtos []*history
 	s.c.Db.Instance.Where("task_id = ?", taskId).Order("changed_at desc").Find(&dtos)
 	return s.toHistoriesDomain(dtos)
 }
 
-func (s *taskStorageImpl) SaveAssignmentLog(l *domain.AssignmentLog) (*domain.AssignmentLog, error) {
+func (s *taskStorageImpl) SaveAssignmentLog(ctx context.Context, l *domain.AssignmentLog) (*domain.AssignmentLog, error) {
 
 	dto := s.toAssgnLogDto(l)
 	if l.Id == "" {
@@ -165,7 +166,7 @@ func (s *taskStorageImpl) SaveAssignmentLog(l *domain.AssignmentLog) (*domain.As
 	return l, nil
 }
 
-func (s *taskStorageImpl) GetAssignmentLog(c *domain.AssignmentLogCriteria) (*domain.AssignmentLogResponse, error) {
+func (s *taskStorageImpl) GetAssignmentLog(ctx context.Context, c *domain.AssignmentLogCriteria) (*domain.AssignmentLogResponse, error) {
 
 	response := &domain.AssignmentLogResponse{
 		PagingResponse: &common.PagingResponse{

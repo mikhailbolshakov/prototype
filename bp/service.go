@@ -1,6 +1,7 @@
 package bp
 
 import (
+	"context"
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/bp/domain"
 	"gitlab.medzdrav.ru/prototype/bp/domain/client_law_request"
@@ -50,7 +51,7 @@ func New() service.Service {
 	s.configAdapter = config.NewAdapter()
 	s.configService = s.configAdapter.GetService()
 
-	s.queue = &stan.Stan{}
+	s.queue = stan.New()
 	s.queueListener = listener.NewQueueListener(s.queue)
 
 	s.servicesAdapter = services.NewAdapter()
@@ -80,7 +81,7 @@ func New() service.Service {
 	return s
 }
 
-func (s *serviceImpl) Init() error {
+func (s *serviceImpl) Init(ctx context.Context) error {
 
 	if err := s.configAdapter.Init(); err != nil {
 		return err
@@ -119,7 +120,7 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
-	if err := s.queue.Open(fmt.Sprintf("client_tasks_%d", rand.Intn(99999))); err != nil {
+	if err := s.queue.Open(ctx, fmt.Sprintf("client_tasks_%d", rand.Intn(99999))); err != nil {
 		return err
 	}
 
@@ -127,14 +128,14 @@ func (s *serviceImpl) Init() error {
 
 }
 
-func (s *serviceImpl) ListenAsync() error {
+func (s *serviceImpl) ListenAsync(ctx context.Context) error {
 
 	s.grpc.ListenAsync()
 	s.queueListener.ListenAsync()
 	return nil
 }
 
-func (s *serviceImpl) Close() {
+func (s *serviceImpl) Close(ctx context.Context) {
 	s.configAdapter.Close()
 	s.usersAdapter.Close()
 	s.chatAdapter.Close()

@@ -1,18 +1,18 @@
-1. Logging +/-
+1. Logging (trace id) +/-
 2. Translations
 3. Sessions +
 4. Socket hub +
 5. Cofiguration service (config + .env) +
 6. panic recover
 7. close all connections +
-8. Elastic Search
+8. Elastic Search +/-
 9. Cache
 10. Error handling
 11. Check session expiration
 12. Transfer sessions between nodes
 13. Consts
 14. Api/Protobuf versioning
-15. Queue at Most Once/at least Once
+15. Queue at Most Once/at least Once +
 16. Task config: implement storage instead of mock
 17. Monitoring
 18. Validation (go-playground/validator)
@@ -21,3 +21,4 @@
 21. Cluster mode (support simple leader election based on Redis)
 22. Task assign from pool. Cluster support (should be executed on the only node)
 23. Think about moving auth+ws from api to a separate service
+24. gRPC tracing with mdw (config on service level)

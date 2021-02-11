@@ -1,11 +1,12 @@
 package impl
 
 import (
+	"context"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
 	"strings"
 )
 
-func (s *serviceImpl) AskBot(r *domain.AskBotRequest) (*domain.AskBotResponse, error) {
+func (s *serviceImpl) AskBot(ctx context.Context, r *domain.AskBotRequest) (*domain.AskBotResponse, error) {
 
 	rs := &domain.AskBotResponse{}
 

@@ -23,7 +23,7 @@ import (
 type serviceImpl struct {
 	*kitHttp.Server
 	keycloak        gocloak.GoCloak
-	mdw             auth.Middleware
+	authMdw         auth.Middleware
 	hub             session.Hub
 	userAdapter     usersRep.Adapter
 	userService     public.UserService
@@ -60,9 +60,7 @@ func New() service.Service {
 	return s
 }
 
-func (s *serviceImpl) Init() error {
-
-	ctx := context.Background()
+func (s *serviceImpl) Init(ctx context.Context) error {
 
 	if err := s.configAdapter.Init(); err != nil {
 		return err
@@ -80,7 +78,7 @@ func (s *serviceImpl) Init() error {
 	}
 
 	s.keycloak = gocloak.NewClient(c.Keycloak.Url)
-	s.mdw = auth.NewMdw(ctx, s.keycloak, authClient, "", "")
+	s.authMdw = auth.NewMdw(ctx, s.keycloak, authClient, "", "")
 
 	authService := auth.New(ctx, s.keycloak, authClient)
 
@@ -102,7 +100,9 @@ func (s *serviceImpl) Init() error {
 	// the first middleware checks session by X-SESSION-ID header and if correct sets Authorization Bearer with Access Token
 	// then the mdw which checks standard Bearer token takes its action
 	// TODO: currently if a token expires we don't remove session immediately, but we must
-	s.Server.SetAuthMiddleware(s.hub.SessionMiddleware, s.mdw.CheckToken)
+	s.Server.SetAuthMiddleware(s.hub.SessionMiddleware, s.authMdw.CheckToken)
+	// middleware for routes that don't require auth and don't have sessions like login (hm... we have to think it over)
+	s.Server.SetNoAuthMiddleware(s.hub.NoSessionMiddleware)
 
 	if err := s.userAdapter.Init(c); err != nil {
 		return err
@@ -123,7 +123,7 @@ func (s *serviceImpl) Init() error {
 	return nil
 }
 
-func (s *serviceImpl) ListenAsync() error {
+func (s *serviceImpl) ListenAsync(ctx context.Context) error {
 
 	go func() {
 		log.Fatal(s.Open())
@@ -132,7 +132,7 @@ func (s *serviceImpl) ListenAsync() error {
 	return nil
 }
 
-func (s *serviceImpl) Close() {
+func (s *serviceImpl) Close(context.Context) {
 	s.bpAdapter.Close()
 	s.servAdapter.Close()
 	s.userAdapter.Close()

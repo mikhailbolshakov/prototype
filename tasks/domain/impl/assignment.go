@@ -54,13 +54,13 @@ type daemonImpl struct {
 	storage     domain.TaskStorage
 }
 
-func (d *daemonImpl) assign(tt *assignmentTask) error {
+func (d *daemonImpl) assign(ctx context.Context, tt *assignmentTask) error {
 
 	logSuccess := func(log *domain.AssignmentLog) {
 		log.Status = "success"
 		t := time.Now().UTC()
 		log.FinishTime = &t
-		_, _ = d.storage.SaveAssignmentLog(log)
+		_, _ = d.storage.SaveAssignmentLog(ctx, log)
 	}
 
 	logFail := func(log *domain.AssignmentLog, err error) {
@@ -68,12 +68,12 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 		log.Error = err.Error()
 		t := time.Now().UTC()
 		log.FinishTime = &t
-		_, _ = d.storage.SaveAssignmentLog(log)
+		_, _ = d.storage.SaveAssignmentLog(ctx, log)
 	}
 
 	for _, rule := range tt.cfg.AssignmentRules {
 
-		l, _ := d.storage.SaveAssignmentLog(&domain.AssignmentLog{
+		l, _ := d.storage.SaveAssignmentLog(ctx, &domain.AssignmentLog{
 			StartTime:       time.Now().UTC(),
 			Status:          "in-progress",
 			RuleCode:        rule.Code,
@@ -86,7 +86,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 		log.DbgF("assignment rule is fired %v", rule)
 
 		// search users for the assignee pool
-		usersRs, err := d.userService.Search(&pb.SearchRequest{
+		usersRs, err := d.userService.Search(ctx, &pb.SearchRequest{
 			Paging: &pb.PagingRequest{
 				Size:  100,
 				Index: 1,
@@ -114,7 +114,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 			Assignee: rule.Source.Assignee,
 			Type:     tt.taskType,
 		}
-		rs, err := d.taskService.Search(cr)
+		rs, err := d.taskService.Search(ctx, cr)
 		if err != nil {
 			logFail(l, err)
 			log.Err(err, true)
@@ -154,7 +154,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 			delete(usersPool, userToAssign.Username)
 
 			// assign task to user
-			t, err = d.taskService.SetAssignee(t.Id, &domain.Assignee{
+			t, err = d.taskService.SetAssignee(ctx, t.Id, &domain.Assignee{
 				UserId: userToAssign.Id,
 			})
 			if err != nil {
@@ -167,13 +167,13 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 			// if rule specifies a target status then make transition
 			if rule.Target != nil && rule.Target.Status != nil {
 
-				tr, err := d.cfgService.FindTransition(t.Type, t.Status, rule.Target.Status)
+				tr, err := d.cfgService.FindTransition(ctx, t.Type, t.Status, rule.Target.Status)
 				if err != nil {
 					logFail(l, err)
 					log.Err(err, true)
 					return err
 				}
-				t, err = d.taskService.MakeTransition(t.Id, tr.Id)
+				t, err = d.taskService.MakeTransition(ctx, t.Id, tr.Id)
 				if err != nil {
 					logFail(l, err)
 					log.Err(err, true)
@@ -192,7 +192,7 @@ func (d *daemonImpl) assign(tt *assignmentTask) error {
 
 }
 
-func (d *daemonImpl) Run() {
+func (d *daemonImpl) Run(ctx context.Context) {
 
 	for _, t := range d.taskTypes {
 
@@ -207,7 +207,7 @@ func (d *daemonImpl) Run() {
 				select {
 				// TODO: configuration
 				case <-time.Tick(time.Second * 20):
-					if err := d.assign(tt); err != nil {
+					if err := d.assign(ctx, tt); err != nil {
 						return
 					}
 				case <-tt.ctx.Done():
@@ -223,7 +223,7 @@ func (d *daemonImpl) Run() {
 
 }
 
-func (d *daemonImpl) Stop() error {
+func (d *daemonImpl) Stop(ctx context.Context) error {
 
 	for _, t := range d.taskTypes {
 		if t.getRun() {
@@ -234,15 +234,14 @@ func (d *daemonImpl) Stop() error {
 	return nil
 }
 
-func (d *daemonImpl) Init() error {
+func (d *daemonImpl) Init(ctx context.Context) error {
 
 	d.taskTypes = []*assignmentTask{}
 
-	for _, cfg := range d.cfgService.GetAll() {
+	for _, cfg := range d.cfgService.GetAll(ctx) {
 
 		if cfg.AssignmentRules != nil && len(cfg.AssignmentRules) > 0 {
 
-			ctx := context.Background()
 			ctx, cancel := context.WithCancel(ctx)
 
 			d.taskTypes = append(d.taskTypes, &assignmentTask{

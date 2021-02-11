@@ -1,25 +1,26 @@
 package domain
 
 import (
+	"context"
 	kit "gitlab.medzdrav.ru/prototype/kit/config"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"time"
 )
 
 type Storage interface {
-	CreateBalance(b *BalanceItem) (*BalanceItem, error)
-	UpdateBalance(b *BalanceItem) (*BalanceItem, error)
-	GetBalance(userId string, at *time.Time) ([]*BalanceItem, error)
-	GetBalanceForServiceType(userId string, serviceTypeId string, at *time.Time) ([]*BalanceItem, error)
-	GetTypes() []ServiceType
-	CreateDelivery(d *Delivery) (*Delivery, error)
-	UpdateDelivery(d *Delivery) (*Delivery, error)
-	UpdateDetails(deliveryId string, details map[string]interface{}) (*Delivery, error)
-	GetDelivery(id string) *Delivery
+	CreateBalance(ctx context.Context, b *BalanceItem) (*BalanceItem, error)
+	UpdateBalance(ctx context.Context, b *BalanceItem) (*BalanceItem, error)
+	GetBalance(ctx context.Context, userId string, at *time.Time) ([]*BalanceItem, error)
+	GetBalanceForServiceType(ctx context.Context, userId string, serviceTypeId string, at *time.Time) ([]*BalanceItem, error)
+	GetTypes(ctx context.Context) []ServiceType
+	CreateDelivery(ctx context.Context, d *Delivery) (*Delivery, error)
+	UpdateDelivery(ctx context.Context, d *Delivery) (*Delivery, error)
+	UpdateDetails(ctx context.Context, deliveryId string, details map[string]interface{}) (*Delivery, error)
+	GetDelivery(ctx context.Context, id string) *Delivery
 }
 
 type UserService interface {
-	Get(id string) *pb.User
+	Get(ctx context.Context, id string) *pb.User
 }
 
 type ConfigService interface {
@@ -27,5 +28,5 @@ type ConfigService interface {
 }
 
 type BpService interface {
-	StartProcess(processId string, vars map[string]interface{}) (string, error)
+	StartProcess(ctx context.Context, processId string, vars map[string]interface{}) (string, error)
 }

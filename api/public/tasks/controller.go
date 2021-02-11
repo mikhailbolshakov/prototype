@@ -35,61 +35,61 @@ func NewController(taskService public.TaskService) Controller {
 	}
 }
 
-func (c *ctrlImpl) New(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) New(w http.ResponseWriter, r *http.Request) {
 
 	rq := &NewTaskRequest{}
-	decoder := json.NewDecoder(request.Body)
+	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(rq); err != nil {
-		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
+		c.RespondError(w, http.StatusBadRequest, errors.New("invalid request"))
 		return
 	}
 
-	if rsPb, err := c.taskService.New(c.toTaskRqPb(rq)); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+	if rsPb, err := c.taskService.New(r.Context(), c.toTaskRqPb(rq)); err != nil {
+		c.RespondError(w, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.toTaskApi(rsPb))
+		c.RespondOK(w, c.toTaskApi(rsPb))
 	}
 
 }
 
-func (c *ctrlImpl) MakeTransition(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) MakeTransition(w http.ResponseWriter, r *http.Request) {
 
-	taskId := mux.Vars(request)["id"]
-	transitionId := mux.Vars(request)["transitionId"]
+	taskId := mux.Vars(r)["id"]
+	transitionId := mux.Vars(r)["transitionId"]
 
-	if t, err := c.taskService.MakeTransition(&pb.MakeTransitionRequest{
+	if t, err := c.taskService.MakeTransition(r.Context(), &pb.MakeTransitionRequest{
 		TaskId:       taskId,
 		TransitionId: transitionId,
 	}); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+		c.RespondError(w, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.toTaskApi(t))
+		c.RespondOK(w, c.toTaskApi(t))
 	}
 }
 
-func (c *ctrlImpl) GetById(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) GetById(w http.ResponseWriter, r *http.Request) {
 
-	taskId := mux.Vars(request)["id"]
+	taskId := mux.Vars(r)["id"]
 
-	if rsPb, err := c.taskService.GetById(taskId); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+	if rsPb, err := c.taskService.GetById(r.Context(), taskId); err != nil {
+		c.RespondError(w, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.toTaskApi(rsPb))
+		c.RespondOK(w, c.toTaskApi(rsPb))
 	}
 }
 
-func (c *ctrlImpl) SetAssignee(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) SetAssignee(w http.ResponseWriter, r *http.Request) {
 
-	taskId := mux.Vars(request)["id"]
+	taskId := mux.Vars(r)["id"]
 
 	rq := &Assignee{}
-	decoder := json.NewDecoder(request.Body)
+	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(rq); err != nil {
-		c.RespondError(writer, http.StatusBadRequest, errors.New("invalid request"))
+		c.RespondError(w, http.StatusBadRequest, errors.New("invalid request"))
 		return
 	}
 
-	if rsPb, err := c.taskService.SetAssignee(&pb.SetAssigneeRequest{
+	if rsPb, err := c.taskService.SetAssignee(r.Context(), &pb.SetAssigneeRequest{
 		TaskId: taskId,
 		Assignee: &pb.Assignee{
 			Type:     rq.Type,
@@ -99,115 +99,115 @@ func (c *ctrlImpl) SetAssignee(writer http.ResponseWriter, request *http.Request
 			At:       grpc.TimeToPbTS(rq.At),
 		},
 	}); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+		c.RespondError(w, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.toTaskApi(rsPb))
+		c.RespondOK(w, c.toTaskApi(rsPb))
 	}
 }
 
-func (c *ctrlImpl) Search(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) Search(w http.ResponseWriter, r *http.Request) {
 
 	rq := &pb.SearchRequest{
 		Paging: &pb.PagingRequest{},
 		Status: &pb.Status{
-			Status:    request.FormValue("status"),
-			Substatus: request.FormValue("substatus"),
+			Status:    r.FormValue("status"),
+			Substatus: r.FormValue("substatus"),
 		},
 		Assignee: &pb.Assignee{
-			Group:    request.FormValue("group"),
-			Username: request.FormValue("username"),
-			UserId:   request.FormValue("userId"),
+			Group:    r.FormValue("group"),
+			Username: r.FormValue("username"),
+			UserId:   r.FormValue("userId"),
 		},
 		Type: &pb.Type{
-			Type:    request.FormValue("type"),
-			Subtype: request.FormValue("subtype"),
+			Type:    r.FormValue("type"),
+			Subtype: r.FormValue("subtype"),
 		},
-		Num: request.FormValue("num"),
+		Num: r.FormValue("num"),
 	}
 
-	if sizeTxt := request.FormValue("limit"); sizeTxt != "" {
+	if sizeTxt := r.FormValue("limit"); sizeTxt != "" {
 		size, e := strconv.Atoi(sizeTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("limit: "+e.Error()))
+			c.RespondError(w, http.StatusBadRequest, fmt.Errorf("limit: "+e.Error()))
 			return
 		}
 		rq.Paging.Size = int32(size)
 	}
 
-	if indexTxt := request.FormValue("offset"); indexTxt != "" {
+	if indexTxt := r.FormValue("offset"); indexTxt != "" {
 		index, e := strconv.Atoi(indexTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("offset: "+e.Error()))
+			c.RespondError(w, http.StatusBadRequest, fmt.Errorf("offset: "+e.Error()))
 			return
 		}
 		rq.Paging.Index = int32(index)
 	}
 
-	if rsPb, err := c.taskService.Search(rq); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+	if rsPb, err := c.taskService.Search(r.Context(), rq); err != nil {
+		c.RespondError(w, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.toSrchRsApi(rsPb))
+		c.RespondOK(w, c.toSrchRsApi(rsPb))
 	}
 
 }
 
-func (c *ctrlImpl) AssignmentLog(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) AssignmentLog(w http.ResponseWriter, r *http.Request) {
 
 	rq := &pb.AssignmentLogRequest{
 		Paging: &pb.PagingRequest{},
 	}
 
-	if startBeforeTxt := request.FormValue("startBefore"); startBeforeTxt != "" {
+	if startBeforeTxt := r.FormValue("startBefore"); startBeforeTxt != "" {
 		startBefore, e := time.Parse(time.RFC3339, startBeforeTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("startBefore: "+e.Error()))
+			c.RespondError(w, http.StatusBadRequest, fmt.Errorf("startBefore: "+e.Error()))
 			return
 		}
 		rq.StartTimeBefore = grpc.TimeToPbTS(&startBefore)
 	}
 
-	if startAfterTxt := request.FormValue("startAfter"); startAfterTxt != "" {
+	if startAfterTxt := r.FormValue("startAfter"); startAfterTxt != "" {
 		startAfter, e := time.Parse(time.RFC3339, startAfterTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("startAfter: "+e.Error()))
+			c.RespondError(w, http.StatusBadRequest, fmt.Errorf("startAfter: "+e.Error()))
 			return
 		}
 		rq.StartTimeAfter = grpc.TimeToPbTS(&startAfter)
 	}
 
-	if sizeTxt := request.FormValue("limit"); sizeTxt != "" {
+	if sizeTxt := r.FormValue("limit"); sizeTxt != "" {
 		size, e := strconv.Atoi(sizeTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("limit: "+e.Error()))
+			c.RespondError(w, http.StatusBadRequest, fmt.Errorf("limit: "+e.Error()))
 			return
 		}
 		rq.Paging.Size = int32(size)
 	}
 
-	if indexTxt := request.FormValue("offset"); indexTxt != "" {
+	if indexTxt := r.FormValue("offset"); indexTxt != "" {
 		index, e := strconv.Atoi(indexTxt)
 		if e != nil {
-			c.RespondError(writer, http.StatusBadRequest, fmt.Errorf("offset: "+e.Error()))
+			c.RespondError(w, http.StatusBadRequest, fmt.Errorf("offset: "+e.Error()))
 			return
 		}
 		rq.Paging.Index = int32(index)
 	}
 
-	if rsPb, err := c.taskService.GetAssignmentLog(rq); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+	if rsPb, err := c.taskService.GetAssignmentLog(r.Context(), rq); err != nil {
+		c.RespondError(w, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.toAssgnLogRsApi(rsPb))
+		c.RespondOK(w, c.toAssgnLogRsApi(rsPb))
 	}
 
 }
 
-func (c *ctrlImpl) GetHistory(writer http.ResponseWriter, request *http.Request) {
+func (c *ctrlImpl) GetHistory(w http.ResponseWriter, r *http.Request) {
 
-	taskId := mux.Vars(request)["id"]
+	taskId := mux.Vars(r)["id"]
 
-	if rsPb, err := c.taskService.GetHistory(taskId); err != nil {
-		c.RespondError(writer, http.StatusInternalServerError, err)
+	if rsPb, err := c.taskService.GetHistory(r.Context(), taskId); err != nil {
+		c.RespondError(w, http.StatusInternalServerError, err)
 	} else {
-		c.RespondOK(writer, c.toHistApi(rsPb))
+		c.RespondOK(w, c.toHistApi(rsPb))
 	}
 }

@@ -15,8 +15,8 @@ func newImpl() *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) Post(message, channelId, userId string, ephemeral, fromBot bool) error {
-	_, err := u.PostsClient.Post(context.Background(), &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
+func (u *serviceImpl) Post(ctx context.Context, message, channelId, userId string, ephemeral, fromBot bool) error {
+	_, err := u.PostsClient.Post(ctx, &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
 		Message:        message,
 		ToUserId:       userId,
 		ChannelId:      channelId,
@@ -26,14 +26,14 @@ func (u *serviceImpl) Post(message, channelId, userId string, ephemeral, fromBot
 	return err
 }
 
-func (u *serviceImpl) PredefinedPost(channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error {
+func (u *serviceImpl) PredefinedPost(ctx context.Context, channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error {
 
 	var paramsB []byte
 	if params != nil {
 		paramsB, _ = json.Marshal(params)
 	}
 
-	_, err := u.PostsClient.Post(context.Background(), &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
+	_, err := u.PostsClient.Post(ctx, &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
 		ToUserId:       userId,
 		ChannelId:      channelId,
 		Ephemeral:      ephemeral,

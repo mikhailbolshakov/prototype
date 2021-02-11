@@ -34,7 +34,7 @@ func (h *hubImpl) Set(authRouter, noAuthRouter *mux.Router) {
 			return
 		}
 
-		rs, err := h.NewSession(&NewSessionRequest{
+		rs, err := h.NewSession(r.Context(), &NewSessionRequest{
 			Username:  rq.Username,
 			Password:  rq.Password,
 			ChatLogin: true,

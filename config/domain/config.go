@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"errors"
 	"github.com/sherifabdlnaby/configuro"
 	kit "gitlab.medzdrav.ru/prototype/kit/config"
@@ -8,9 +9,9 @@ import (
 )
 
 type ConfigService interface {
-	Load() error
-	Get() (*kit.Config, error)
-	GrpcSettings() *kit.Grpc
+	Load(ctx context.Context) error
+	Get(ctx context.Context) (*kit.Config, error)
+	GrpcSettings(ctx context.Context) *kit.Grpc
 }
 
 type serviceImpl struct {
@@ -22,7 +23,7 @@ func New() ConfigService {
 	return &serviceImpl{}
 }
 
-func (s *serviceImpl) Load() error {
+func (s *serviceImpl) Load(context.Context) error {
 
 	s.Lock()
 	defer s.Unlock()
@@ -44,7 +45,7 @@ func (s *serviceImpl) Load() error {
 	return nil
 }
 
-func (s *serviceImpl) Get() (*kit.Config, error) {
+func (s *serviceImpl) Get(context.Context) (*kit.Config, error) {
 
 	s.RLock()
 	defer s.RUnlock()
@@ -57,7 +58,7 @@ func (s *serviceImpl) Get() (*kit.Config, error) {
 
 }
 
-func (s *serviceImpl) GrpcSettings() *kit.Grpc {
+func (s *serviceImpl) GrpcSettings(context.Context) *kit.Grpc {
 
 	s.RLock()
 	defer s.RUnlock()

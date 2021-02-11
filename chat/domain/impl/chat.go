@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"context"
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
 )
@@ -18,17 +19,17 @@ func NewService(mmService domain.MattermostService) domain.Service {
 	return s
 }
 
-func (s *serviceImpl) GetChannelsForUserAndMembers(rq *domain.GetChannelsForUserAndMembersRequest) ([]string, error) {
-	return s.mmService.GetChannelsForUserAndMembers(rq)
+func (s *serviceImpl) GetChannelsForUserAndMembers(ctx context.Context, rq *domain.GetChannelsForUserAndMembersRequest) ([]string, error) {
+	return s.mmService.GetChannelsForUserAndMembers(ctx, rq)
 }
 
-func (s *serviceImpl) GetUsersStatuses(rq *domain.GetUsersStatusesRequest) (*domain.GetUsersStatusesResponse, error) {
-	return s.mmService.GetUserStatuses(rq)
+func (s *serviceImpl) GetUsersStatuses(ctx context.Context, rq *domain.GetUsersStatusesRequest) (*domain.GetUsersStatusesResponse, error) {
+	return s.mmService.GetUserStatuses(ctx, rq)
 }
 
-func (s *serviceImpl) CreateUser(rq *domain.CreateUserRequest) (*domain.CreateUserResponse, error) {
+func (s *serviceImpl) CreateUser(ctx context.Context, rq *domain.CreateUserRequest) (*domain.CreateUserResponse, error) {
 
-	userId, err := s.mmService.CreateUser(rq)
+	userId, err := s.mmService.CreateUser(ctx, rq)
 
 	if err != nil {
 		return nil, err
@@ -37,16 +38,16 @@ func (s *serviceImpl) CreateUser(rq *domain.CreateUserRequest) (*domain.CreateUs
 	return &domain.CreateUserResponse{Id: userId}, nil
 }
 
-func (s *serviceImpl) CreateClientChannel(rq *domain.CreateClientChannelRequest) (*domain.CreateClientChannelResponse, error) {
+func (s *serviceImpl) CreateClientChannel(ctx context.Context, rq *domain.CreateClientChannelRequest) (*domain.CreateClientChannelResponse, error) {
 
-	channelId, err := s.mmService.CreateClientChannel(rq)
+	channelId, err := s.mmService.CreateClientChannel(ctx, rq)
 	if err != nil {
 		return nil, err
 	}
 
 	if rq.Subscribers != nil && len(rq.Subscribers) > 0 {
 		for _, sbUserId := range rq.Subscribers {
-			err = s.mmService.SubscribeUser(sbUserId, channelId)
+			err = s.mmService.SubscribeUser(ctx, sbUserId, channelId)
 			if err != nil {
 				return nil, err
 			}
@@ -56,15 +57,15 @@ func (s *serviceImpl) CreateClientChannel(rq *domain.CreateClientChannelRequest)
 	return &domain.CreateClientChannelResponse{ChannelId: channelId}, nil
 }
 
-func (s *serviceImpl) SubscribeUser(rq *domain.SubscribeUserRequest) error {
-	return s.mmService.SubscribeUser(rq.UserId, rq.ChannelId)
+func (s *serviceImpl) SubscribeUser(ctx context.Context, rq *domain.SubscribeUserRequest) error {
+	return s.mmService.SubscribeUser(ctx, rq.UserId, rq.ChannelId)
 }
 
-func (s *serviceImpl) DeleteUser(userId string) error {
-	return s.mmService.DeleteUser(userId)
+func (s *serviceImpl) DeleteUser(ctx context.Context, userId string) error {
+	return s.mmService.DeleteUser(ctx, userId)
 }
 
-func (s *serviceImpl) Posts(posts []*domain.Post) error {
+func (s *serviceImpl) Posts(ctx context.Context, posts []*domain.Post) error {
 
 	var err error
 	for _, post := range posts {
@@ -74,13 +75,13 @@ func (s *serviceImpl) Posts(posts []*domain.Post) error {
 		}
 
 		if post.PredefinedPost != nil && post.PredefinedPost.Code != "" {
-			post, err = s.predefinedPost(post)
+			post, err = s.predefinedPost(ctx, post)
 			if err != nil {
 				return err
 			}
 		}
 
-		if err := s.mmService.Post(post.ChannelId, post.Message, post.ToUserId, post.Ephemeral, post.FromBot, post.Attachments); err != nil {
+		if err := s.mmService.Post(ctx, post.ChannelId, post.Message, post.ToUserId, post.Ephemeral, post.FromBot, post.Attachments); err != nil {
 			return err
 		}
 

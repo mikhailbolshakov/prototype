@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
@@ -34,7 +35,7 @@ func New() service.Service {
 	s.configAdapter = config.NewAdapter()
 	s.configService = s.configAdapter.GetService()
 
-	s.queue = &stan.Stan{}
+	s.queue = stan.New()
 
 	s.bpAdapter = bp.NewAdapter()
 	bpService := s.bpAdapter.GetService()
@@ -51,7 +52,7 @@ func New() service.Service {
 	return s
 }
 
-func (s *serviceImpl) Init() error {
+func (s *serviceImpl) Init(ctx context.Context) error {
 
 	if err := s.configAdapter.Init(); err != nil {
 		return err
@@ -78,7 +79,7 @@ func (s *serviceImpl) Init() error {
 		return err
 	}
 
-	if err := s.queue.Open(fmt.Sprintf("client_tasks_%d", rand.Intn(99999))); err != nil {
+	if err := s.queue.Open(ctx, fmt.Sprintf("client_tasks_%d", rand.Intn(99999))); err != nil {
 		return err
 	}
 
@@ -86,12 +87,12 @@ func (s *serviceImpl) Init() error {
 
 }
 
-func (s *serviceImpl) ListenAsync() error {
+func (s *serviceImpl) ListenAsync(ctx context.Context) error {
 	s.grpc.ListenAsync()
 	return nil
 }
 
-func (s *serviceImpl) Close() {
+func (s *serviceImpl) Close(ctx context.Context) {
 	s.bpAdapter.Close()
 	s.configAdapter.Close()
 	s.usersAdapter.Close()

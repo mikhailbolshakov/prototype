@@ -16,9 +16,7 @@ func newImpl() *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) GetByChannelId(channelId string) []*pb.Task {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func (u *serviceImpl) GetByChannelId(ctx context.Context, channelId string) []*pb.Task {
 	rs, err := u.GetByChannel(ctx, &pb.GetByChannelRequest{ChannelId: channelId})
 	if err != nil {
 		log.Printf("error: %v", err)
@@ -27,9 +25,7 @@ func (u *serviceImpl) GetByChannelId(channelId string) []*pb.Task {
 	return rs.Tasks
 }
 
-func (u *serviceImpl) MakeTransition(rq *pb.MakeTransitionRequest) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func (u *serviceImpl) MakeTransition(ctx context.Context, rq *pb.MakeTransitionRequest) error {
 	_, err := u.TasksClient.MakeTransition(ctx, rq)
 	if err != nil {
 		log.Printf("error: %v", err)
@@ -38,11 +34,11 @@ func (u *serviceImpl) MakeTransition(rq *pb.MakeTransitionRequest) error {
 	return nil
 }
 
-func (u *serviceImpl) New(rq *pb.NewTaskRequest) (*pb.Task, error) {
-	return u.TasksClient.New(context.Background(), rq)
+func (u *serviceImpl) New(ctx context.Context, rq *pb.NewTaskRequest) (*pb.Task, error) {
+	return u.TasksClient.New(ctx, rq)
 }
 
-func (u *serviceImpl) Search(rq *pb.SearchRequest) ([]*pb.Task, error) {
+func (u *serviceImpl) Search(ctx context.Context, rq *pb.SearchRequest) ([]*pb.Task, error) {
 
 	if rq.Status == nil {
 		rq.Status = &pb.Status{}
@@ -60,7 +56,7 @@ func (u *serviceImpl) Search(rq *pb.SearchRequest) ([]*pb.Task, error) {
 		rq.Paging = &pb.PagingRequest{}
 	}
 
-	if rs, err := u.TasksClient.Search(context.Background(), rq); err != nil {
+	if rs, err := u.TasksClient.Search(ctx, rq); err != nil {
 		return nil, err
 	} else {
 		return rs.Tasks, nil

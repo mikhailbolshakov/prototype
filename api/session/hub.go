@@ -25,13 +25,14 @@ type NewSessionResponse struct {
 }
 
 type Hub interface {
-	NewSession(*NewSessionRequest) (*NewSessionResponse, error)
+	NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error)
 	Logout(userId string) error
 	GetById(id string) Session
 	GetByUserId(userId string) []Session
 	SetupWsConnection(sessionId string, wsConn *websocket.Conn) error
 	GetLoginRouteSetter() http.RouteSetter
 	SessionMiddleware(next net_http.Handler) net_http.Handler
+	NoSessionMiddleware(next net_http.Handler) net_http.Handler
 }
 
 type hubImpl struct {
@@ -61,9 +62,9 @@ func NewHub(cfg *kitConfig.Config, srv *http.Server, auth auth.Service, userServ
 	return h
 }
 
-func (h *hubImpl) NewSession(rq *NewSessionRequest) (*NewSessionResponse, error) {
+func (h *hubImpl) NewSession(ctx context.Context, rq *NewSessionRequest) (*NewSessionResponse, error) {
 
-	usr := h.userService.Get(rq.Username)
+	usr := h.userService.Get(ctx, rq.Username)
 	if usr == nil || usr.Id == "" {
 		return nil, fmt.Errorf("no user found %s", rq.Username)
 	}
@@ -99,7 +100,7 @@ func (h *hubImpl) NewSession(rq *NewSessionRequest) (*NewSessionResponse, error)
 		return nil, err
 	}
 
-	s := newSession(usr.Id, mmClient).setJWT(jwt)
+	s := newSession(usr.Id, usr.Username, mmClient).setJWT(jwt)
 	sessionId := s.getId()
 
 	func() {

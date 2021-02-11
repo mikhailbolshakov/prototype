@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"gitlab.medzdrav.ru/prototype/config/domain"
 	"gitlab.medzdrav.ru/prototype/config/grpc"
 	"gitlab.medzdrav.ru/prototype/kit/service"
@@ -19,15 +20,15 @@ func New() service.Service {
 	return s
 }
 
-func (s *serviceImpl) Init() error {
-	return s.domain.Load()
+func (s *serviceImpl) Init(ctx context.Context) error {
+	return s.domain.Load(ctx)
 }
 
-func (s *serviceImpl) ListenAsync() error {
-	s.grpc.ListenAsync()
+func (s *serviceImpl) ListenAsync(ctx context.Context) error {
+	s.grpc.ListenAsync(ctx)
 	return nil
 }
 
-func (s *serviceImpl) Close() {
+func (s *serviceImpl) Close(context.Context) {
 	s.grpc.Close()
 }

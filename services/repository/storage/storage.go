@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	kit "gitlab.medzdrav.ru/prototype/kit/storage"
 	"gitlab.medzdrav.ru/prototype/services/domain"
@@ -43,7 +44,7 @@ func newStorage(c *container) *storageImpl {
 	return &storageImpl{c}
 }
 
-func (s *storageImpl) CreateBalance(b *domain.BalanceItem) (*domain.BalanceItem, error) {
+func (s *storageImpl) CreateBalance(ctx context.Context, b *domain.BalanceItem) (*domain.BalanceItem, error) {
 
 	dto := s.toBalanceItemDto(b)
 
@@ -60,7 +61,7 @@ func (s *storageImpl) CreateBalance(b *domain.BalanceItem) (*domain.BalanceItem,
 
 }
 
-func (s *storageImpl) UpdateBalance(b *domain.BalanceItem) (*domain.BalanceItem, error) {
+func (s *storageImpl) UpdateBalance(ctx context.Context, b *domain.BalanceItem) (*domain.BalanceItem, error) {
 
 	dto := s.toBalanceItemDto(b)
 
@@ -76,7 +77,7 @@ func (s *storageImpl) UpdateBalance(b *domain.BalanceItem) (*domain.BalanceItem,
 
 }
 
-func (s *storageImpl) GetBalance(userId string, at *time.Time) ([]*domain.BalanceItem, error) {
+func (s *storageImpl) GetBalance(ctx context.Context, userId string, at *time.Time) ([]*domain.BalanceItem, error) {
 
 	var balances []*balanceItem
 	result := s.c.Db.Instance.Where("client_id = ?", userId).Find(&balances)
@@ -89,7 +90,7 @@ func (s *storageImpl) GetBalance(userId string, at *time.Time) ([]*domain.Balanc
 
 }
 
-func (s *storageImpl) GetBalanceForServiceType(userId string, serviceTypeId string, at *time.Time) ([]*domain.BalanceItem, error) {
+func (s *storageImpl) GetBalanceForServiceType(ctx context.Context, userId string, serviceTypeId string, at *time.Time) ([]*domain.BalanceItem, error) {
 
 	var balances []*balanceItem
 	result := s.c.Db.Instance.
@@ -104,14 +105,14 @@ func (s *storageImpl) GetBalanceForServiceType(userId string, serviceTypeId stri
 	return s.toBalanceItemsDomain(balances), nil
 }
 
-func (s *storageImpl) GetTypes() []domain.ServiceType {
+func (s *storageImpl) GetTypes(ctx context.Context) []domain.ServiceType {
 	// TODO: cache
 	var types []serviceType
 	s.c.Db.Instance.Find(&types)
 	return s.toServiceTypesDomain(types)
 }
 
-func (s *storageImpl) CreateDelivery(d *domain.Delivery) (*domain.Delivery, error) {
+func (s *storageImpl) CreateDelivery(ctx context.Context, d *domain.Delivery) (*domain.Delivery, error) {
 	dto := s.toDeliveryDto(d)
 	t := time.Now().UTC()
 	dto.CreatedAt, dto.UpdatedAt = t, t
@@ -122,7 +123,7 @@ func (s *storageImpl) CreateDelivery(d *domain.Delivery) (*domain.Delivery, erro
 	return d, nil
 }
 
-func (s *storageImpl) UpdateDelivery(d *domain.Delivery) (*domain.Delivery, error) {
+func (s *storageImpl) UpdateDelivery(ctx context.Context, d *domain.Delivery) (*domain.Delivery, error) {
 	dto := s.toDeliveryDto(d)
 	dto.UpdatedAt = time.Now().UTC()
 	result := s.c.Db.Instance.Save(dto)
@@ -132,7 +133,7 @@ func (s *storageImpl) UpdateDelivery(d *domain.Delivery) (*domain.Delivery, erro
 	return d, nil
 }
 
-func (s *storageImpl) UpdateDetails(deliveryId string, details map[string]interface{}) (*domain.Delivery, error) {
+func (s *storageImpl) UpdateDetails(ctx context.Context, deliveryId string, details map[string]interface{}) (*domain.Delivery, error) {
 
 	dt := "{}"
 	if details != nil {
@@ -145,10 +146,10 @@ func (s *storageImpl) UpdateDetails(deliveryId string, details map[string]interf
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return s.GetDelivery(deliveryId), nil
+	return s.GetDelivery(ctx, deliveryId), nil
 }
 
-func (s *storageImpl) GetDelivery(id string) *domain.Delivery {
+func (s *storageImpl) GetDelivery(ctx context.Context, id string) *domain.Delivery {
 	res := &delivery{Id: id}
 	s.c.Db.Instance.First(res)
 	return s.toDeliveryDomain(res)

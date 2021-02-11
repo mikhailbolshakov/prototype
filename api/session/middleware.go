@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
 	"net/http"
 )
 
@@ -27,7 +28,32 @@ func (h *hubImpl) SessionMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		newCtx := kitContext.NewRequestCtx().
+			WithNewRequestId().
+			WithSessionId(sessionId).
+			WithUser(session.getUserId(), session.getUsername()).
+			ToContext(r.Context())
+
+		r = r.WithContext(newCtx)
+
+		// Currently we check token only on API level
 		r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", session.getAccessToken()))
+
+		next.ServeHTTP(w, r)
+	}
+
+	return http.HandlerFunc(f)
+}
+
+func (h *hubImpl) NoSessionMiddleware(next http.Handler) http.Handler {
+
+	f := func(w http.ResponseWriter, r *http.Request) {
+
+		newCtx := kitContext.NewRequestCtx().
+			WithNewRequestId().
+			ToContext(r.Context())
+
+		r = r.WithContext(newCtx)
 
 		next.ServeHTTP(w, r)
 	}

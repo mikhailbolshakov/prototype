@@ -1,10 +1,9 @@
 package domain
 
 import (
+	"context"
 	"time"
 )
-
-
 
 const (
 	ST_EXPERT_ONLINE_CONSULTATION = "expert-online-consultation"
@@ -65,24 +64,24 @@ type Delivery struct {
 
 type UserBalanceService interface {
 	// get available service types
-	GetTypes() map[string]ServiceType
+	GetTypes(ctx context.Context) map[string]ServiceType
 	// adds service to balance
-	Add(rq *ModifyBalanceRequest) (*UserBalance, error)
+	Add(ctx context.Context, rq *ModifyBalanceRequest) (*UserBalance, error)
 	// requests a balance
-	Get(rq *GetBalanceRequest) (*UserBalance, error)
+	Get(ctx context.Context, rq *GetBalanceRequest) (*UserBalance, error)
 	// write off services
-	WriteOff(rq *ModifyBalanceRequest) (*UserBalance, error)
+	WriteOff(ctx context.Context, rq *ModifyBalanceRequest) (*UserBalance, error)
 	// lock service
-	Lock(rq *ModifyBalanceRequest) (*UserBalance, error)
+	Lock(ctx context.Context, rq *ModifyBalanceRequest) (*UserBalance, error)
 	// cancel locked service
-	Cancel(rq *ModifyBalanceRequest) (*UserBalance, error)
+	Cancel(ctx context.Context, rq *ModifyBalanceRequest) (*UserBalance, error)
 }
 
 type DeliveryService interface {
 	// delivery user service
-	Delivery(rq *DeliveryRequest) (*Delivery, error)
-	Complete(deliveryId string, finishTime *time.Time) (*Delivery, error)
-	Cancel(deliveryId string, cancelTime *time.Time) (*Delivery, error)
-	Get(deliveryId string) *Delivery
-	UpdateDetails(deliveryId string, details map[string]interface{}) (*Delivery, error)
+	Delivery(ctx context.Context, rq *DeliveryRequest) (*Delivery, error)
+	Complete(ctx context.Context, deliveryId string, finishTime *time.Time) (*Delivery, error)
+	Cancel(ctx context.Context, deliveryId string, cancelTime *time.Time) (*Delivery, error)
+	Get(ctx context.Context, deliveryId string) *Delivery
+	UpdateDetails(ctx context.Context, deliveryId string, details map[string]interface{}) (*Delivery, error)
 }

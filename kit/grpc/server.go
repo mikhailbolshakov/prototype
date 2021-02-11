@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"fmt"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -13,10 +14,9 @@ type Server struct {
 
 func NewServer() (*Server, error) {
 
-	var opts []grpc.ServerOption
-
 	s := &Server{
-		Srv: grpc.NewServer(opts...),
+		Srv: grpc.NewServer(grpc_middleware.WithUnaryServerChain(
+			ContextUnaryServerInterceptor())),
 	}
 
 	return s, nil

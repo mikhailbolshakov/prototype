@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,7 +31,7 @@ func NewUserService(storage domain.UserStorage, chatService domain.ChatService, 
 	return s
 }
 
-func (u *userServiceImpl) newClient(user *domain.User) (*domain.User, error) {
+func (u *userServiceImpl) newClient(ctx context.Context, user *domain.User) (*domain.User, error) {
 
 	if user.ClientDetails == nil {
 		return nil, fmt.Errorf("details isn't populated properly")
@@ -67,7 +68,7 @@ func (u *userServiceImpl) newClient(user *domain.User) (*domain.User, error) {
 
 }
 
-func (u *userServiceImpl) newConsultant(user *domain.User) (*domain.User, error) {
+func (u *userServiceImpl) newConsultant(ctx context.Context, user *domain.User) (*domain.User, error) {
 
 	if user.ConsultantDetails == nil {
 		return nil, fmt.Errorf("details isn't populated properly")
@@ -92,7 +93,7 @@ func (u *userServiceImpl) newConsultant(user *domain.User) (*domain.User, error)
 
 }
 
-func (u *userServiceImpl) newExpert(user *domain.User) (*domain.User, error) {
+func (u *userServiceImpl) newExpert(ctx context.Context, user *domain.User) (*domain.User, error) {
 
 	if user.ExpertDetails == nil {
 		return nil, fmt.Errorf("details isn't populated properly")
@@ -117,7 +118,7 @@ func (u *userServiceImpl) newExpert(user *domain.User) (*domain.User, error) {
 
 }
 
-func (u *userServiceImpl) Create(user *domain.User) (*domain.User, error) {
+func (u *userServiceImpl) Create(ctx context.Context, user *domain.User) (*domain.User, error) {
 
 	user.Id = kit.NewId()
 	user.Status = domain.USER_STATUS_DRAFT
@@ -125,11 +126,11 @@ func (u *userServiceImpl) Create(user *domain.User) (*domain.User, error) {
 	var err error
 	switch user.Type {
 	case domain.USER_TYPE_CLIENT:
-		user, err = u.newClient(user)
+		user, err = u.newClient(ctx, user)
 	case domain.USER_TYPE_CONSULTANT:
-		user, err = u.newConsultant(user)
+		user, err = u.newConsultant(ctx, user)
 	case domain.USER_TYPE_EXPERT:
-		user, err = u.newExpert(user)
+		user, err = u.newExpert(ctx, user)
 	case domain.USER_TYPE_SUPERVISOR:
 		return nil, errors.New("not implemented")
 	default:
@@ -140,58 +141,61 @@ func (u *userServiceImpl) Create(user *domain.User) (*domain.User, error) {
 	}
 
 	// check username uniqueness
-	if usr := u.storage.GetByUsername(user.Username); usr != nil && usr.Id != "" {
+	if usr := u.storage.GetByUsername(ctx, user.Username); usr != nil && usr.Id != "" {
 		return nil, fmt.Errorf("username %s already exists", user.Username)
 	}
 
 	// save to storage
-	user, err = u.storage.CreateUser(user)
+	user, err = u.storage.CreateUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}
 
-	u.Publish(user, "users.draft-created")
+	// publish message
+	if err := u.Publish(ctx, user, "users.draft-created"); err != nil {
+		return nil, err
+	}
 
 	return user, nil
 
 }
 
-func (u *userServiceImpl) GetByUsername(username string) *domain.User {
-	return u.storage.GetByUsername(username)
+func (u *userServiceImpl) GetByUsername(ctx context.Context, username string) *domain.User {
+	return u.storage.GetByUsername(ctx, username)
 }
 
-func (u *userServiceImpl) GetByMMId(mmId string) *domain.User {
-	return u.storage.GetByMMId(mmId)
+func (u *userServiceImpl) GetByMMId(ctx context.Context, mmId string) *domain.User {
+	return u.storage.GetByMMId(ctx, mmId)
 }
 
-func (u *userServiceImpl) Get(id string) *domain.User {
-	return u.storage.Get(id)
+func (u *userServiceImpl) Get(ctx context.Context, id string) *domain.User {
+	return u.storage.Get(ctx, id)
 }
 
-func (u *userServiceImpl) Activate(userId string) (*domain.User, error) {
+func (u *userServiceImpl) Activate(ctx context.Context, userId string) (*domain.User, error) {
 
-	user := u.storage.Get(userId)
+	user := u.storage.Get(ctx, userId)
 	if user == nil {
 		return nil, fmt.Errorf("user with id %s not found", userId)
 	}
 
-	return u.storage.UpdateStatus(userId, domain.USER_STATUS_ACTIVE, false)
+	return u.storage.UpdateStatus(ctx, userId, domain.USER_STATUS_ACTIVE, false)
 
 }
 
-func (u *userServiceImpl) Delete(userId string) (*domain.User, error) {
+func (u *userServiceImpl) Delete(ctx context.Context, userId string) (*domain.User, error) {
 
-	user := u.storage.Get(userId)
+	user := u.storage.Get(ctx, userId)
 	if user == nil {
 		return nil, fmt.Errorf("user with id %s not found", userId)
 	}
 
-	return u.storage.UpdateStatus(userId, domain.USER_STATUS_DELETED, true)
+	return u.storage.UpdateStatus(ctx, userId, domain.USER_STATUS_DELETED, true)
 }
 
-func (u *userServiceImpl) SetClientDetails(userId string, details *domain.ClientDetails) (*domain.User, error) {
+func (u *userServiceImpl) SetClientDetails(ctx context.Context, userId string, details *domain.ClientDetails) (*domain.User, error) {
 
-	user := u.storage.Get(userId)
+	user := u.storage.Get(ctx, userId)
 	if user == nil {
 		return nil, fmt.Errorf("user with id %s not found", userId)
 	}
@@ -205,32 +209,32 @@ func (u *userServiceImpl) SetClientDetails(userId string, details *domain.Client
 		return nil, err
 	}
 
-	return u.storage.UpdateDetails(userId, string(detB))
+	return u.storage.UpdateDetails(ctx, userId, string(detB))
 
 }
 
-func (u *userServiceImpl) SetMMUserId(userId, mmId string) (*domain.User, error) {
+func (u *userServiceImpl) SetMMUserId(ctx context.Context, userId, mmId string) (*domain.User, error) {
 
-	user := u.storage.Get(userId)
+	user := u.storage.Get(ctx, userId)
 	if user == nil {
 		return nil, fmt.Errorf("user with id %s not found", userId)
 	}
 
-	return u.storage.UpdateMMId(userId, mmId)
+	return u.storage.UpdateMMId(ctx, userId, mmId)
 
 }
 
-func (u *userServiceImpl) SetKKUserId(userId, kkId string) (*domain.User, error) {
+func (u *userServiceImpl) SetKKUserId(ctx context.Context, userId, kkId string) (*domain.User, error) {
 
-	user := u.storage.Get(userId)
+	user := u.storage.Get(ctx, userId)
 	if user == nil {
 		return nil, fmt.Errorf("user with id %s not found", userId)
 	}
 
-	return u.storage.UpdateKKId(userId, kkId)
+	return u.storage.UpdateKKId(ctx, userId, kkId)
 }
 
-func (u *userServiceImpl) Search(cr *domain.SearchCriteria) (*domain.SearchResponse, error) {
+func (u *userServiceImpl) Search(ctx context.Context, cr *domain.SearchCriteria) (*domain.SearchResponse, error) {
 
 	if cr.PagingRequest == nil {
 		cr.PagingRequest = &common.PagingRequest{}
@@ -244,7 +248,7 @@ func (u *userServiceImpl) Search(cr *domain.SearchCriteria) (*domain.SearchRespo
 		cr.Index = 1
 	}
 
-	response, err := u.storage.Search(cr)
+	response, err := u.storage.Search(ctx, cr)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +264,7 @@ func (u *userServiceImpl) Search(cr *domain.SearchCriteria) (*domain.SearchRespo
 			mmUserIds = append(mmUserIds, u.MMUserId)
 		}
 
-		if mmStatuses, err := u.chatService.GetUsersStatuses(&pb.GetUsersStatusesRequest{MMUserIds: mmUserIds}); err == nil {
+		if mmStatuses, err := u.chatService.GetUsersStatuses(ctx, &pb.GetUsersStatusesRequest{MMUserIds: mmUserIds}); err == nil {
 
 			for _, user := range response.Users {
 

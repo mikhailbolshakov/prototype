@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"time"
 )
@@ -99,15 +100,15 @@ type SearchResponse struct {
 }
 
 type UserService interface {
-	Create(user *User) (*User, error)
-	GetByUsername(username string) *User
-	GetByMMId(mmId string) *User
-	Get(id string) *User
-	Activate(userId string) (*User, error)
-	Delete(userId string) (*User, error)
-	SetClientDetails(userId string, details *ClientDetails) (*User, error)
-	SetMMUserId(userId, mmId string) (*User, error)
-	SetKKUserId(userId, kkId string) (*User, error)
-	Search(cr *SearchCriteria) (*SearchResponse, error)
+	Create(ctx context.Context, user *User) (*User, error)
+	GetByUsername(ctx context.Context, username string) *User
+	GetByMMId(ctx context.Context, mmId string) *User
+	Get(ctx context.Context, id string) *User
+	Activate(ctx context.Context, userId string) (*User, error)
+	Delete(ctx context.Context, userId string) (*User, error)
+	SetClientDetails(ctx context.Context, userId string, details *ClientDetails) (*User, error)
+	SetMMUserId(ctx context.Context, userId, mmId string) (*User, error)
+	SetKKUserId(ctx context.Context, userId, kkId string) (*User, error)
+	Search(ctx context.Context, cr *SearchCriteria) (*SearchResponse, error)
 }
 

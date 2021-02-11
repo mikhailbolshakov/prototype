@@ -15,7 +15,7 @@ func newServiceImpl() *serviceImpl {
 	return a
 }
 
-func (s *serviceImpl) StartProcess(processId string, vars map[string]interface{}) (string, error) {
+func (s *serviceImpl) StartProcess(ctx context.Context, processId string, vars map[string]interface{}) (string, error) {
 
 	var varsb []byte
 
@@ -23,7 +23,7 @@ func (s *serviceImpl) StartProcess(processId string, vars map[string]interface{}
 		varsb, _ = json.Marshal(vars)
 	}
 
-	rs, err := s.ProcessClient.StartProcess(context.Background(), &pb.StartProcessRequest{
+	rs, err := s.ProcessClient.StartProcess(ctx, &pb.StartProcessRequest{
 		ProcessId: processId,
 		Vars:      varsb,
 	})

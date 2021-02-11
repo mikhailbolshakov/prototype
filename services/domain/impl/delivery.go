@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
@@ -35,24 +36,24 @@ type deliveryServiceImpl struct {
 	bpService   domain.BpService
 }
 
-func (s *deliveryServiceImpl) userIdName(input string) string {
+func (s *deliveryServiceImpl) userIdName(ctx context.Context, input string) string {
 	if _, err := uuid.Parse(input); err == nil {
 		return input
 	} else {
-		return s.userService.Get(input).Id
+		return s.userService.Get(ctx, input).Id
 	}
 }
 
-func (d *deliveryServiceImpl) Delivery(rq *domain.DeliveryRequest) (*domain.Delivery, error) {
+func (d *deliveryServiceImpl) Delivery(ctx context.Context, rq *domain.DeliveryRequest) (*domain.Delivery, error) {
 
-	userId := d.userIdName(rq.UserId)
+	userId := d.userIdName(ctx, rq.UserId)
 
-	st, ok := d.balance.GetTypes()[rq.ServiceTypeId]
+	st, ok := d.balance.GetTypes(ctx)[rq.ServiceTypeId]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("service type %s isn't supported", rq.ServiceTypeId))
 	}
 
-	if userBalance, err := d.balance.Get(&domain.GetBalanceRequest{UserId: userId}); err == nil {
+	if userBalance, err := d.balance.Get(ctx, &domain.GetBalanceRequest{UserId: userId}); err == nil {
 
 		if b, ok := userBalance.Balance[st]; ok {
 
@@ -69,7 +70,7 @@ func (d *deliveryServiceImpl) Delivery(rq *domain.DeliveryRequest) (*domain.Deli
 	}
 
 	// lock service
-	if _, err := d.balance.Lock(&domain.ModifyBalanceRequest{
+	if _, err := d.balance.Lock(ctx, &domain.ModifyBalanceRequest{
 		UserId:        userId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Quantity:      1,
@@ -89,18 +90,18 @@ func (d *deliveryServiceImpl) Delivery(rq *domain.DeliveryRequest) (*domain.Deli
 	}
 
 	// save to storage
-	delivery, err := d.storage.CreateDelivery(delivery)
+	delivery, err := d.storage.CreateDelivery(ctx, delivery)
 	if err != nil {
 		return nil, err
 	}
 
 	// execute a handler for corresponding task
-	if st, ok := d.balance.GetTypes()[rq.ServiceTypeId]; ok {
+	if st, ok := d.balance.GetTypes(ctx)[rq.ServiceTypeId]; ok {
 		if st.DeliveryWfId != "" {
 			// start WF
 			variables := make(map[string]interface{})
 			variables["deliveryId"] = delivery.Id
-			_, err := d.bpService.StartProcess(st.DeliveryWfId, variables)
+			_, err := d.bpService.StartProcess(ctx, st.DeliveryWfId, variables)
 			if err != nil {
 				return nil, err
 			}
@@ -112,7 +113,7 @@ func (d *deliveryServiceImpl) Delivery(rq *domain.DeliveryRequest) (*domain.Deli
 	}
 
 	// update storage
-	delivery, err = d.storage.UpdateDelivery(delivery)
+	delivery, err = d.storage.UpdateDelivery(ctx, delivery)
 	if err != nil {
 		return nil, err
 	}
@@ -120,13 +121,13 @@ func (d *deliveryServiceImpl) Delivery(rq *domain.DeliveryRequest) (*domain.Deli
 	return delivery, nil
 }
 
-func (d *deliveryServiceImpl) Get(deliveryId string) *domain.Delivery {
-	return d.storage.GetDelivery(deliveryId)
+func (d *deliveryServiceImpl) Get(ctx context.Context, deliveryId string) *domain.Delivery {
+	return d.storage.GetDelivery(ctx, deliveryId)
 }
 
-func (d *deliveryServiceImpl) Complete(deliveryId string, finishTime *time.Time) (*domain.Delivery, error) {
+func (d *deliveryServiceImpl) Complete(ctx context.Context, deliveryId string, finishTime *time.Time) (*domain.Delivery, error) {
 
-	delivery := d.storage.GetDelivery(deliveryId)
+	delivery := d.storage.GetDelivery(ctx, deliveryId)
 	delivery.Status = "completed"
 	if finishTime != nil {
 		delivery.FinishTime = finishTime
@@ -135,12 +136,12 @@ func (d *deliveryServiceImpl) Complete(deliveryId string, finishTime *time.Time)
 		delivery.FinishTime = &t
 	}
 
-	delivery, err := d.storage.UpdateDelivery(delivery)
+	delivery, err := d.storage.UpdateDelivery(ctx, delivery)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = d.balance.WriteOff(&domain.ModifyBalanceRequest{
+	_, err = d.balance.WriteOff(ctx, &domain.ModifyBalanceRequest{
 		UserId:        delivery.UserId,
 		ServiceTypeId: delivery.ServiceTypeId,
 		Quantity:      1,
@@ -153,9 +154,9 @@ func (d *deliveryServiceImpl) Complete(deliveryId string, finishTime *time.Time)
 
 }
 
-func (d *deliveryServiceImpl) Cancel(deliveryId string, cancelTime *time.Time) (*domain.Delivery, error) {
+func (d *deliveryServiceImpl) Cancel(ctx context.Context, deliveryId string, cancelTime *time.Time) (*domain.Delivery, error) {
 
-	delivery := d.storage.GetDelivery(deliveryId)
+	delivery := d.storage.GetDelivery(ctx, deliveryId)
 	delivery.Status = "canceled"
 	if cancelTime != nil {
 		delivery.FinishTime = cancelTime
@@ -164,9 +165,9 @@ func (d *deliveryServiceImpl) Cancel(deliveryId string, cancelTime *time.Time) (
 		delivery.FinishTime = &t
 	}
 
-	return d.storage.UpdateDelivery(delivery)
+	return d.storage.UpdateDelivery(ctx, delivery)
 }
 
-func (d *deliveryServiceImpl) UpdateDetails(deliveryId string, details map[string]interface{}) (*domain.Delivery, error) {
-	return d.storage.UpdateDetails(deliveryId, details)
+func (d *deliveryServiceImpl) UpdateDetails(ctx context.Context, deliveryId string, details map[string]interface{}) (*domain.Delivery, error) {
+	return d.storage.UpdateDetails(ctx, deliveryId, details)
 }

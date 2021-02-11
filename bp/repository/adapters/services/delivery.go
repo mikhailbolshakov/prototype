@@ -36,9 +36,9 @@ func fromPb(d *pb.Delivery) *domain.Delivery {
 	}
 }
 
-func (u *deliveryServiceImpl) Create(userId, serviceTypeId string, details map[string]interface{}) (*domain.Delivery, error){
+func (u *deliveryServiceImpl) Create(ctx context.Context, userId, serviceTypeId string, details map[string]interface{}) (*domain.Delivery, error){
 	v, _ := json.Marshal(details)
-	if d, err := u.DeliveryServiceClient.Create(context.Background(), &pb.DeliveryRequest{
+	if d, err := u.DeliveryServiceClient.Create(ctx, &pb.DeliveryRequest{
 		UserId:        userId,
 		ServiceTypeId: serviceTypeId,
 		Details:       v,
@@ -49,33 +49,33 @@ func (u *deliveryServiceImpl) Create(userId, serviceTypeId string, details map[s
 	}
 }
 
-func (u *deliveryServiceImpl) GetDelivery(deliveryId string) (*domain.Delivery, error){
-	if d, err := u.DeliveryServiceClient.GetDelivery(context.Background(), &pb.GetDeliveryRequest{Id: deliveryId}); err == nil {
+func (u *deliveryServiceImpl) GetDelivery(ctx context.Context, deliveryId string) (*domain.Delivery, error){
+	if d, err := u.DeliveryServiceClient.GetDelivery(ctx, &pb.GetDeliveryRequest{Id: deliveryId}); err == nil {
 		return fromPb(d), nil
 	} else {
 		return nil, err
 	}
 }
 
-func (u *deliveryServiceImpl) Cancel(deliveryId string, cancelTime *time.Time) (*domain.Delivery, error){
-	if d, err := u.DeliveryServiceClient.Cancel(context.Background(), &pb.CancelDeliveryRequest{Id: deliveryId, CancelTime: grpc.TimeToPbTS(cancelTime)}); err == nil {
+func (u *deliveryServiceImpl) Cancel(ctx context.Context, deliveryId string, cancelTime *time.Time) (*domain.Delivery, error){
+	if d, err := u.DeliveryServiceClient.Cancel(ctx, &pb.CancelDeliveryRequest{Id: deliveryId, CancelTime: grpc.TimeToPbTS(cancelTime)}); err == nil {
 		return fromPb(d), nil
 	} else {
 		return nil, err
 	}
 }
 
-func (u *deliveryServiceImpl) Complete(deliveryId string, completeTime *time.Time) (*domain.Delivery, error){
-	if d, err := u.DeliveryServiceClient.Complete(context.Background(), &pb.CompleteDeliveryRequest{Id: deliveryId, CompleteTime: grpc.TimeToPbTS(completeTime)}); err == nil {
+func (u *deliveryServiceImpl) Complete(ctx context.Context, deliveryId string, completeTime *time.Time) (*domain.Delivery, error){
+	if d, err := u.DeliveryServiceClient.Complete(ctx, &pb.CompleteDeliveryRequest{Id: deliveryId, CompleteTime: grpc.TimeToPbTS(completeTime)}); err == nil {
 		return fromPb(d), nil
 	} else {
 		return nil, err
 	}
 }
 
-func (u *deliveryServiceImpl) UpdateDetails(id string, details map[string]interface{}) (*domain.Delivery, error) {
+func (u *deliveryServiceImpl) UpdateDetails(ctx context.Context, id string, details map[string]interface{}) (*domain.Delivery, error) {
 	v, _ := json.Marshal(details)
-	if d, err := u.DeliveryServiceClient.UpdateDetails(context.Background(), &pb.UpdateDetailsRequest{
+	if d, err := u.DeliveryServiceClient.UpdateDetails(ctx, &pb.UpdateDetailsRequest{
 		Id:      id,
 		Details: v,
 	}); err == nil {

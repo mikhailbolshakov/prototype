@@ -58,7 +58,7 @@ func (s *Server) ListenAsync() {
 }
 
 func (s *Server) Add(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
-	rs, err := s.balanceService.Add(&domain.ModifyBalanceRequest{
+	rs, err := s.balanceService.Add(ctx, &domain.ModifyBalanceRequest{
 		UserId:        rq.UserId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Quantity:      int(rq.Quantity),
@@ -72,7 +72,7 @@ func (s *Server) Add(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.Use
 
 func (s *Server) GetBalance(ctx context.Context, rq *pb.GetBalanceRequest) (*pb.UserBalance, error) {
 
-	rs, err := s.balanceService.Get(&domain.GetBalanceRequest{
+	rs, err := s.balanceService.Get(ctx, &domain.GetBalanceRequest{
 		UserId:        rq.UserId,
 	})
 	if err != nil {
@@ -84,7 +84,7 @@ func (s *Server) GetBalance(ctx context.Context, rq *pb.GetBalanceRequest) (*pb.
 
 func (s *Server) WriteOff(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
 
-	rs, err := s.balanceService.WriteOff(&domain.ModifyBalanceRequest{
+	rs, err := s.balanceService.WriteOff(ctx, &domain.ModifyBalanceRequest{
 		UserId:        rq.UserId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Quantity:      int(rq.Quantity),
@@ -97,7 +97,7 @@ func (s *Server) WriteOff(ctx context.Context, rq *pb.ChangeServicesRequest) (*p
 }
 
 func (s *Server) Lock(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
-	rs, err := s.balanceService.Lock(&domain.ModifyBalanceRequest{
+	rs, err := s.balanceService.Lock(ctx, &domain.ModifyBalanceRequest{
 		UserId:        rq.UserId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Quantity:      int(rq.Quantity),
@@ -111,7 +111,7 @@ func (s *Server) Lock(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.Us
 
 func (s *Server) CancelLock(ctx context.Context, rq *pb.ChangeServicesRequest) (*pb.UserBalance, error) {
 
-	rs, err := s.balanceService.Cancel(&domain.ModifyBalanceRequest{
+	rs, err := s.balanceService.Cancel(ctx, &domain.ModifyBalanceRequest{
 		UserId:        rq.UserId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Quantity:      int(rq.Quantity),
@@ -124,12 +124,12 @@ func (s *Server) CancelLock(ctx context.Context, rq *pb.ChangeServicesRequest) (
 }
 
 func (s *Server) GetDelivery(ctx context.Context, rq *pb.GetDeliveryRequest) (*pb.Delivery, error) {
-	return s.toDeliveryPb(s.deliveryService.Get(rq.Id)), nil
+	return s.toDeliveryPb(s.deliveryService.Get(ctx, rq.Id)), nil
 }
 
 func (s *Server) Cancel(ctx context.Context, rq *pb.CancelDeliveryRequest) (*pb.Delivery, error) {
 
-	d, err := s.deliveryService.Cancel(rq.Id, kitGrpc.PbTSToTime(rq.CancelTime))
+	d, err := s.deliveryService.Cancel(ctx, rq.Id, kitGrpc.PbTSToTime(rq.CancelTime))
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (s *Server) Cancel(ctx context.Context, rq *pb.CancelDeliveryRequest) (*pb.
 }
 
 func (s *Server) Complete(ctx context.Context, rq *pb.CompleteDeliveryRequest) (*pb.Delivery, error) {
-	d, err := s.deliveryService.Complete(rq.Id, kitGrpc.PbTSToTime(rq.CompleteTime))
+	d, err := s.deliveryService.Complete(ctx, rq.Id, kitGrpc.PbTSToTime(rq.CompleteTime))
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (s *Server) UpdateDetails(ctx context.Context, rq *pb.UpdateDetailsRequest)
 		return nil, err
 	}
 
-	d, err := s.deliveryService.UpdateDetails(rq.Id, details)
+	d, err := s.deliveryService.UpdateDetails(ctx, rq.Id, details)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (s *Server) Create(ctx context.Context, rq *pb.DeliveryRequest) (*pb.Delive
 		return nil, err
 	}
 
-	d, err := s.deliveryService.Delivery(&domain.DeliveryRequest{
+	d, err := s.deliveryService.Delivery(ctx, &domain.DeliveryRequest{
 		UserId:        rq.UserId,
 		ServiceTypeId: rq.ServiceTypeId,
 		Details:       details,

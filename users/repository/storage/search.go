@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/users/domain"
@@ -12,7 +13,7 @@ func (s *storageImpl) ensureIndex() error {
 }
 
 // TODO: ES
-func (s *storageImpl) Search(cr *domain.SearchCriteria) (*domain.SearchResponse, error) {
+func (s *storageImpl) Search(ctx context.Context, cr *domain.SearchCriteria) (*domain.SearchResponse, error) {
 
 	response := &domain.SearchResponse{
 		PagingResponse: &common.PagingResponse{

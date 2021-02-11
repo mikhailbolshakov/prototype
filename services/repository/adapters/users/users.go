@@ -14,9 +14,7 @@ func newImpl() *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) Get(id string) *pb.User {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func (u *serviceImpl) Get(ctx context.Context, id string) *pb.User {
 	user, _ := u.UsersClient.Get(ctx, &pb.GetByIdRequest{Id: id})
 	return user
 }
