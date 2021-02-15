@@ -31,10 +31,10 @@ func (u *serviceImpl) CreateUser(ctx context.Context, rq *pb.CreateUserRequest) 
 
 func (u *serviceImpl) CreateClientChannel(ctx context.Context, rq *pb.CreateClientChannelRequest) (*pb.CreateClientChannelResponse, error) {
 	rs, err := u.ChannelsClient.CreateClientChannel(ctx, &pb.CreateClientChannelRequest{
-		ClientUserId: rq.ClientUserId,
-		Name:         rq.Name,
-		DisplayName:  rq.DisplayName,
-		Subscribers:  rq.Subscribers,
+		ChatUserId:  rq.ChatUserId,
+		Name:        rq.Name,
+		DisplayName: rq.DisplayName,
+		Subscribers: rq.Subscribers,
 	})
 	if err != nil {
 		log.Printf("error: %v", err)

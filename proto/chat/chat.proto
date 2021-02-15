@@ -3,21 +3,34 @@ syntax = "proto3";
 package chat;
 option go_package = "proto/chat";
 
+// on behalf of whom an operation is executed
+message From {
+  enum WhoEnum {
+    ADMIN = 0;
+    BOT = 1;
+    USER = 2;
+  }
+  WhoEnum Who = 1;
+  // obligatory if Who = USER
+  // keep in mind only currently logged users can be used
+  string ChatUserId = 2;
+}
+
 message CreateUserRequest {
   string Username = 1;
   string Email = 2;
 }
 message CreateUserResponse {
-  string Id = 1;
+  string ChatUserId = 1;
 }
 
 message UserStatus {
   string Status = 1;
-  string MMUserId = 2;
+  string ChatUserId = 2;
 }
 
 message GetUsersStatusesRequest {
-  repeated string MMUserIds = 1;
+  repeated string ChatUserIds = 1;
 }
 
 message GetUserStatusesResponse {
@@ -25,31 +38,57 @@ message GetUserStatusesResponse {
 }
 
 message DeleteUserRequest {
-  string MMUserId = 1;
+  string ChatUserId = 1;
 }
 
 message DeleteUserResponse {}
+
+message SetStatusRequest {
+  From From = 1;
+  UserStatus UserStatus = 2;
+}
+
+message SetStatusResponse{}
+
+message LoginRequest {
+  string UserId = 1;
+  string ChatUserId = 2;
+  string Username = 3;
+}
+
+message LoginResponse {
+  string ChatSessionId = 1;
+}
+
+message LogoutRequest {
+  string ChatUserId = 1;
+}
+
+message LogoutResponse {}
 
 service Users {
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
   rpc GetUsersStatuses(GetUsersStatusesRequest) returns (GetUserStatusesResponse) {}
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
+  rpc SetStatus(SetStatusRequest) returns (SetStatusResponse) {}
+  rpc Login(LoginRequest) returns (LoginResponse) {}
+  rpc Logout(LogoutRequest) returns (LogoutResponse) {}
 }
 
 message CreateClientChannelRequest {
-  string ClientUserId = 1;
+  string ChatUserId = 1;
   string Name = 2;
   string DisplayName = 3;
   repeated string Subscribers = 4;
 }
+
 message CreateClientChannelResponse {
-  string ChannelId = 2;
+  string ChannelId = 1;
 }
 
 message GetChannelsForUserAndMembersRequest {
-  string UserId = 1;
-  string TeamName = 2;
-  repeated string MemberUserIds = 3;
+  string ChatUserId = 1;
+  repeated string MemberChatUserIds = 2;
 }
 
 message GetChannelsForUserAndMembersResponse {
@@ -57,7 +96,7 @@ message GetChannelsForUserAndMembersResponse {
 }
 
 message SubscribeRequest {
-  string UserId = 1;
+  string ChatUserId = 1;
   string ChannelId = 2;
 }
 
@@ -91,11 +130,11 @@ message Attachment {
 }
 
 message Post {
-  string Message = 1;
-  string ToUserId = 2;
-  string ChannelId = 3;
-  bool Ephemeral = 4;
-  bool FromBot = 5;
+  From From = 1;
+  string Message = 2;
+  string ToChatUserId = 3;
+  string ChannelId = 4;
+  bool Ephemeral = 5;
   repeated Attachment Attachments = 6;
   PredefinedPost PredefinedPost = 7;
 }

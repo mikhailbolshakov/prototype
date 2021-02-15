@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	"net/http"
 	"time"
 )
@@ -84,8 +85,10 @@ func (s *Server) SetMiddleware(mdws ...mux.MiddlewareFunc) {
 	}
 }
 
-func (s *Server) Open() error {
-	return s.Srv.ListenAndServe()
+func (s *Server) Listen() {
+	go func() {
+		log.Err(s.Srv.ListenAndServe(), true)
+	}()
 }
 
 func (s *Server) Close() {

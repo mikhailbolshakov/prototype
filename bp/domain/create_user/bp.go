@@ -47,7 +47,7 @@ func (bp *bpImpl) Init() error {
 }
 
 func (bp *bpImpl) SetQueueListeners(ql listener.QueueListener) {
-	ql.Add("users.draft-created", bp.userDraftCreatedHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "users.draft-created", bp.userDraftCreatedHandler)
 }
 
 func (bp *bpImpl) GetId() string {
@@ -166,9 +166,9 @@ func (bp *bpImpl) createMMChannel(client worker.JobClient, job entities.Job) {
 		lastName := user.ClientDetails.LastName
 
 		channelId, err := bp.chatService.CreateClientChannel(ctx, &pbChat.CreateClientChannelRequest{
-			ClientUserId: user.MMId,
-			Name:         user.MMId,
-			DisplayName:  fmt.Sprintf("Общие вопросы (клиент %s %s)", firstName, lastName),
+			ChatUserId:  user.MMId,
+			Name:        user.MMId,
+			DisplayName: fmt.Sprintf("Общие вопросы (клиент %s %s)", firstName, lastName),
 		})
 		if err != nil {
 			err = bp.SendError(job.GetKey(), "err-create-mm-channel", err.Error())
@@ -224,7 +224,7 @@ func (bp *bpImpl) sendHello(client worker.JobClient, job entities.Job) {
 
 		if user.ClientDetails != nil {
 			msg := fmt.Sprintf("Добрый день, **%s %s**\nДобро пожаловать!!!", user.ClientDetails.FirstName, user.ClientDetails.MiddleName)
-			if err := bp.chatService.Post(ctx, msg, channelId, "", false, true); err != nil {
+			if err := bp.chatService.Post(ctx, msg, channelId, "", false); err != nil {
 				zeebe.FailJob(client, job, err)
 				return
 			}

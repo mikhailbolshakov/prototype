@@ -51,3 +51,11 @@ type UserService interface {
 	CreateExpert(ctx context.Context, request *userPb.CreateExpertRequest) (*userPb.User, error)
 	Search(ctx context.Context, request *userPb.SearchRequest) (*userPb.SearchResponse, error)
 }
+
+type ChatService interface {
+	SetStatus(ctx context.Context, userId, status string) error
+	Login(ctx context.Context, userId, username, chatUserId string) (string, error)
+	Logout(ctx context.Context, chatUserId string) error
+	Post(ctx context.Context, fromUserId, channelId, message string) error
+	EphemeralPost(ctx context.Context, fromUserId, toUserId, channelId, message string) error
+}

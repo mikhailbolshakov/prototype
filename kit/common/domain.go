@@ -11,7 +11,7 @@ type BaseService struct {
 	Queue queue.Queue
 }
 
-func (s *BaseService) Publish(ctx context.Context, o interface{}, topic string) error {
+func (s *BaseService) Publish(ctx context.Context, o interface{}, qt queue.QueueType, topic string) error {
 
 	m := &queue.Message{ Payload: o	}
 
@@ -21,6 +21,6 @@ func (s *BaseService) Publish(ctx context.Context, o interface{}, topic string) 
 		return fmt.Errorf("cannot publish to queue topic %s, context invalid", topic)
 	}
 
-	return s.Queue.Publish(ctx, topic, m)
+	return s.Queue.Publish(ctx, qt, topic, m)
 
 }

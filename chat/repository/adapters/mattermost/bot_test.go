@@ -20,13 +20,13 @@ func Test_CreateBot(t *testing.T) {
 	}
 
 	bot, rs := admin.RestApi.CreateBot(&model.Bot{Username: "test1.bot", DisplayName: "test", Description: "test"})
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		t.Fatal(err)
 	}
 	log.Printf("bot created %s\n", bot.UserId)
 
 	uat, rs := admin.RestApi.CreateUserAccessToken(bot.UserId, "bot token")
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		t.Fatal(err)
 	}
 	log.Printf("token: %s\n", uat.Token)
@@ -47,7 +47,7 @@ func Test_GetBotToken(t *testing.T) {
 	}
 
 	bots, rs := admin.RestApi.GetBots(0, 100, "")
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		t.Fatal(err)
 	}
 
@@ -63,7 +63,7 @@ func Test_GetBotToken(t *testing.T) {
 	}
 
 	tokens, rs := admin.RestApi.GetUserAccessTokensForUser(testBot.UserId, 0, 100)
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		t.Fatal(err)
 	}
 
@@ -91,7 +91,7 @@ func Test_DeleteBot(t *testing.T) {
 	}
 
 	bots, rs := admin.RestApi.GetBots(0, 100, "")
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		t.Fatal(err)
 	}
 
@@ -107,12 +107,12 @@ func Test_DeleteBot(t *testing.T) {
 	}
 
 	_, rs = admin.RestApi.DisableBot(testBot.UserId)
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		t.Fatal(err)
 	}
 
 	_, rs = admin.RestApi.DeleteUser(testBot.UserId)
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		t.Fatal(err)
 	}
 
@@ -124,7 +124,7 @@ func Test_BotLoginWithAccessToken(t *testing.T) {
 	a := model.NewAPIv4Client("http://localhost:8065")
 	a.SetOAuthToken(token)
 	bot, rs := a.GetMe("")
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		t.Fatal(err)
 	}
 	log.Printf("bot username %s\n", bot.Username)

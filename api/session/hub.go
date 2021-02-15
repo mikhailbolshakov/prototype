@@ -2,13 +2,16 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"gitlab.medzdrav.ru/prototype/api/public"
-	"gitlab.medzdrav.ru/prototype/kit/chat/mattermost"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	"gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
+	"gitlab.medzdrav.ru/prototype/kit/log"
+	"gitlab.medzdrav.ru/prototype/kit/queue"
+	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	"golang.org/x/sync/errgroup"
 	net_http "net/http"
 	"sync"
@@ -26,13 +29,15 @@ type NewSessionResponse struct {
 
 type Hub interface {
 	NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error)
-	Logout(userId string) error
+	Logout(ctx context.Context, userId string) error
 	GetById(id string) Session
 	GetByUserId(userId string) []Session
 	SetupWsConnection(sessionId string, wsConn *websocket.Conn) error
 	GetLoginRouteSetter() http.RouteSetter
 	SessionMiddleware(next net_http.Handler) net_http.Handler
 	NoSessionMiddleware(next net_http.Handler) net_http.Handler
+	GetChatWsEventsHandler() listener.QueueMessageHandler
+	GetMonitor() SessionMonitor
 }
 
 type hubImpl struct {
@@ -42,16 +47,19 @@ type hubImpl struct {
 	userSessions map[string][]Session
 	auth         auth.Service
 	userService  public.UserService
+	chatService  public.ChatService
 	httpServer   *http.Server
 	cfg          *kitConfig.Config
+	queue        queue.Queue
 }
 
-func NewHub(cfg *kitConfig.Config, srv *http.Server, auth auth.Service, userService public.UserService) Hub {
+func NewHub(cfg *kitConfig.Config, srv *http.Server, auth auth.Service, userService public.UserService, chatService public.ChatService) Hub {
 
 	h := &hubImpl{
 		httpServer:   srv,
 		auth:         auth,
 		userService:  userService,
+		chatService:  chatService,
 		sessions:     map[string]Session{},
 		userSessions: map[string][]Session{},
 		cfg:          cfg,
@@ -70,7 +78,7 @@ func (h *hubImpl) NewSession(ctx context.Context, rq *NewSessionRequest) (*NewSe
 	}
 
 	var jwt *auth.JWT
-	var mmClient *mattermost.Client
+	var chatSessionId string
 
 	grp, _ := errgroup.WithContext(context.Background())
 	grp.Go(func() error {
@@ -85,13 +93,7 @@ func (h *hubImpl) NewSession(ctx context.Context, rq *NewSessionRequest) (*NewSe
 	if rq.ChatLogin {
 		grp.Go(func() error {
 			var err error
-			mmClient, err = mattermost.Login(&mattermost.Params{
-				Url:     h.cfg.Mattermost.Url,
-				WsUrl:   h.cfg.Mattermost.Ws,
-				Account: rq.Username,
-				Pwd:     rq.Password,
-				OpenWS:  true,
-			})
+			chatSessionId, err = h.chatService.Login(ctx, usr.Id, usr.Username, usr.MMId)
 			return err
 		})
 	}
@@ -100,7 +102,7 @@ func (h *hubImpl) NewSession(ctx context.Context, rq *NewSessionRequest) (*NewSe
 		return nil, err
 	}
 
-	s := newSession(usr.Id, usr.Username, mmClient).setJWT(jwt)
+	s := newSession(usr.Id, usr.Username, usr.MMId, chatSessionId, h.chatService).setJWT(jwt)
 	sessionId := s.getId()
 
 	func() {
@@ -119,15 +121,60 @@ func (h *hubImpl) NewSession(ctx context.Context, rq *NewSessionRequest) (*NewSe
 
 	}()
 
+	log.TrcF("[hub] new session %v", s)
+
 	return &NewSessionResponse{SessionId: sessionId}, nil
 }
 
-func (h *hubImpl) Logout(userId string) error {
+func (h *hubImpl) GetChatWsEventsHandler() listener.QueueMessageHandler {
+
+	type ChatIncomingWsEventPayload struct {
+		UserId     string
+		ChatUserId string
+		Event      string
+		Data       map[string]interface{}
+	}
+
+	return func(msg []byte) error {
+
+		var pl *ChatIncomingWsEventPayload
+		_, err := queue.Decode(context.Background(), msg, &pl)
+		if err != nil {
+			return err
+		}
+
+		log.TrcF("[hub] chat ws message %v", string(msg))
+
+		if pl == nil {
+			return fmt.Errorf("[hub] invalid chat message")
+		}
+
+		h.RLock()
+		defer h.RUnlock()
+
+		usrSessions := h.GetByUserId(pl.UserId)
+		if usrSessions == nil || len(usrSessions) == 0 {
+			return fmt.Errorf("[hub] cannot send chat message to ws. user sessions not found. user=%s", pl.UserId)
+		}
+
+		msgToUser, _ := json.Marshal(pl)
+
+		for _, s := range usrSessions {
+			if err := s.sendWsMessage(msgToUser); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+}
+
+func (h *hubImpl) Logout(ctx context.Context, userId string) error {
 	h.Lock()
 	defer h.Unlock()
 
 	for _, s := range h.userSessions[userId] {
-		s.close()
+		s.close(ctx)
 		delete(h.sessions, s.getId())
 	}
 
@@ -181,4 +228,8 @@ func (h *hubImpl) SetupWsConnection(sessionId string, wsConn *websocket.Conn) er
 	}
 
 	return nil
+}
+
+func (h *hubImpl) GetMonitor() SessionMonitor {
+	return h
 }

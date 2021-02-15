@@ -29,9 +29,11 @@ func (h *hubImpl) SessionMiddleware(next http.Handler) http.Handler {
 		}
 
 		newCtx := kitContext.NewRequestCtx().
+			Rest().
 			WithNewRequestId().
 			WithSessionId(sessionId).
 			WithUser(session.getUserId(), session.getUsername()).
+			WithChatUserId(session.getChatUserId()).
 			ToContext(r.Context())
 
 		r = r.WithContext(newCtx)
@@ -50,6 +52,7 @@ func (h *hubImpl) NoSessionMiddleware(next http.Handler) http.Handler {
 	f := func(w http.ResponseWriter, r *http.Request) {
 
 		newCtx := kitContext.NewRequestCtx().
+			Rest().
 			WithNewRequestId().
 			ToContext(r.Context())
 

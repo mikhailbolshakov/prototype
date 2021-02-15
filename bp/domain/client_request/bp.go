@@ -60,9 +60,9 @@ func (bp *bpImpl) Init() error {
 }
 
 func (bp *bpImpl) SetQueueListeners(ql listener.QueueListener) {
-	ql.Add("tasks.assigned", bp.TaskAssignedMessageHandler)
-	ql.Add("tasks.solved", bp.TaskSolvedMessageHandler)
-	ql.Add("mm.posts", bp.MattermostPostMessageHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "tasks.assigned", bp.TaskAssignedMessageHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "tasks.solved", bp.TaskSolvedMessageHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "mm.posts", bp.MattermostPostMessageHandler)
 }
 
 func (bp *bpImpl) GetId() string {
@@ -110,7 +110,7 @@ func (bp *bpImpl) executeBotTaskHandler(client worker.JobClient, job entities.Jo
 	variables["botSucceeded"] = rs.Found
 
 	if rs.Found {
-		if err := bp.chatService.Post(ctx, rs.Answer, channelId, "", false, true); err != nil {
+		if err := bp.chatService.Post(ctx, rs.Answer, channelId, "", false); err != nil {
 			zeebe.FailJob(client, job, err)
 			return
 		}
@@ -219,7 +219,7 @@ func (bp *bpImpl) createClientRequestTaskHandler(client worker.JobClient, job en
 		return
 	}
 
-	if err := bp.chatService.PredefinedPost(ctx, channelId, user.MMId, "client.new-request", true, true, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(ctx, channelId, user.MMId, "client.new-request", true, map[string]interface{}{
 		"client.name": fmt.Sprintf("%s", user.ClientDetails.FirstName),
 	}); err != nil {
 		zeebe.FailJob(client, job, err)
@@ -279,7 +279,7 @@ func (bp *bpImpl) sendMessageTaskAssignedHandler(client worker.JobClient, job en
 	user := bp.userService.Get(ctx, userId)
 	assignee := bp.userService.Get(ctx, assigneeUsername)
 
-	if err := bp.chatService.PredefinedPost(ctx, channelId, user.MMId, "client.request-assigned", true, true, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(ctx, channelId, user.MMId, "client.request-assigned", true, map[string]interface{}{
 		"consultant.first-name": assignee.ConsultantDetails.FirstName,
 		"consultant.last-name":  assignee.ConsultantDetails.LastName,
 		"consultant.url":        assignee.ConsultantDetails.PhotoUrl,
@@ -288,7 +288,7 @@ func (bp *bpImpl) sendMessageTaskAssignedHandler(client worker.JobClient, job en
 		return
 	}
 
-	if err := bp.chatService.PredefinedPost(ctx, channelId, assignee.MMId, "consultant.request-assigned", true, true, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(ctx, channelId, assignee.MMId, "consultant.request-assigned", true, map[string]interface{}{
 		"client.first-name": user.ClientDetails.FirstName,
 		"client.last-name":  user.ClientDetails.LastName,
 		"client.phone":      user.ClientDetails.Phone,
@@ -320,7 +320,7 @@ func (bp *bpImpl) sendMessageNoAvailableConsultantHandler(client worker.JobClien
 	channelId := variables["channelId"].(string)
 	user := bp.userService.Get(ctx, userId)
 
-	if err := bp.chatService.PredefinedPost(ctx, channelId, user.MMId, "client.no-consultant-available", true, true, nil); err != nil {
+	if err := bp.chatService.PredefinedPost(ctx, channelId, user.MMId, "client.no-consultant-available", true, nil); err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
@@ -385,10 +385,11 @@ func (bp *bpImpl) MattermostPostMessageHandler(payload []byte) error {
 
 }
 
-func (bp *bpImpl) TaskAssignedMessageHandler(payload []byte) error {
+func (bp *bpImpl) TaskAssignedMessageHandler(msg []byte) error {
 
 	task := &domain.Task{}
-	if err := json.Unmarshal(payload, task); err != nil {
+	_, err := queue.Decode(nil, msg, task)
+	if err != nil {
 		return err
 	}
 
@@ -413,13 +414,13 @@ func (bp *bpImpl) TaskSolvedMessageHandler(msg []byte) error {
 	if task.Type.Type == TASK_TYPE_CLIENT && task.Type.SubType == TASK_SUBTYPE_COMMON_RQ {
 
 		msg := fmt.Sprintf("Консультация %s завершена", task.Num)
-		if err := bp.chatService.Post(ctx, msg, task.ChannelId, "", false, true); err != nil {
+		if err := bp.chatService.Post(ctx, msg, task.ChannelId, "", false); err != nil {
 			log.Println(err)
 			return err
 		}
 
 		user := bp.userService.Get(ctx, task.Reported.UserId)
-		if err := bp.chatService.PredefinedPost(ctx, task.ChannelId, user.Id, "client.feedback", false, true, nil); err != nil {
+		if err := bp.chatService.PredefinedPost(ctx, task.ChannelId, user.Id, "client.feedback", false, nil); err != nil {
 			log.Println(err)
 			return err
 		}

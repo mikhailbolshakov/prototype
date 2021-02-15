@@ -141,7 +141,7 @@ func (w *wsImpl) read() {
 
 	for {
 		_, message, err := w.conn.ReadMessage()
-		log.TrcF("[ws] message received %s", string(message))
+		log.TrcF("[ws] message received %s\n", string(message))
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Err(err, true)
@@ -151,6 +151,7 @@ func (w *wsImpl) read() {
 			return
 		}
 
+		// check message
 		if string(message) == "ping" {
 			w.sendChan <- []byte("pong")
 		} else {

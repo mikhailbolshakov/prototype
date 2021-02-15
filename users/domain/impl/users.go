@@ -152,7 +152,7 @@ func (u *userServiceImpl) Create(ctx context.Context, user *domain.User) (*domai
 	}
 
 	// publish message
-	if err := u.Publish(ctx, user, "users.draft-created"); err != nil {
+	if err := u.Publish(ctx, user, queue.QUEUE_TYPE_AT_LEAST_ONCE, "users.draft-created"); err != nil {
 		return nil, err
 	}
 
@@ -254,23 +254,23 @@ func (u *userServiceImpl) Search(ctx context.Context, cr *domain.SearchCriteria)
 	}
 
 	if len(response.Users) > 0 && cr.OnlineStatuses != nil && len(cr.OnlineStatuses) > 0 {
-		var mmUserIds []string
+		var chatUserIds []string
 		modifiedResponse := &domain.SearchResponse{Users: []*domain.User{}, PagingResponse: &common.PagingResponse{
 			Total: response.Total,
 			Index: response.Index,
 		}}
 
 		for _, u := range response.Users {
-			mmUserIds = append(mmUserIds, u.MMUserId)
+			chatUserIds = append(chatUserIds, u.MMUserId)
 		}
 
-		if mmStatuses, err := u.chatService.GetUsersStatuses(ctx, &pb.GetUsersStatusesRequest{MMUserIds: mmUserIds}); err == nil {
+		if mmStatuses, err := u.chatService.GetUsersStatuses(ctx, &pb.GetUsersStatusesRequest{ChatUserIds: chatUserIds}); err == nil {
 
 			for _, user := range response.Users {
 
 				for _, mmSt := range mmStatuses.Statuses {
 
-					if mmSt.MMUserId == user.MMUserId {
+					if mmSt.ChatUserId == user.MMUserId {
 
 						for _, criteriaStatus := range cr.OnlineStatuses {
 

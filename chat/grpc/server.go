@@ -36,7 +36,7 @@ func New(domain domain.Service) *Server {
 	return s
 }
 
-func  (s *Server) Init(c *kitConfig.Config) error {
+func (s *Server) Init(c *kitConfig.Config) error {
 	usersCfg := c.Services["chat"]
 	s.host = usersCfg.Grpc.Host
 	s.port = usersCfg.Grpc.Port
@@ -62,18 +62,34 @@ func (s *Server) CreateUser(ctx context.Context, rq *pb.CreateUserRequest) (*pb.
 	if err != nil {
 		return nil, err
 	}
-	response := &pb.CreateUserResponse{Id: rs.Id}
+	response := &pb.CreateUserResponse{ChatUserId: rs.Id}
 
+	return response, nil
+}
+
+func (s *Server) SetStatus(ctx context.Context, rq *pb.SetStatusRequest) (*pb.SetStatusResponse, error) {
+
+	domainRq := &domain.SetUserStatusRequest{
+		ChatUserId: rq.UserStatus.ChatUserId,
+		Status:     rq.UserStatus.Status,
+		From:       s.toFromDomain(rq.From),
+	}
+
+	err := s.domain.SetStatus(ctx, domainRq)
+	if err != nil {
+		return nil, err
+	}
+	response := &pb.SetStatusResponse{}
 	return response, nil
 }
 
 func (s *Server) CreateClientChannel(ctx context.Context, rq *pb.CreateClientChannelRequest) (*pb.CreateClientChannelResponse, error) {
 
 	rs, err := s.domain.CreateClientChannel(ctx, &domain.CreateClientChannelRequest{
-		ClientUserId: rq.ClientUserId,
-		DisplayName:  rq.DisplayName,
-		Name:         rq.Name,
-		Subscribers:  rq.Subscribers,
+		ChatUserId:  rq.ChatUserId,
+		DisplayName: rq.DisplayName,
+		Name:        rq.Name,
+		Subscribers: rq.Subscribers,
 	})
 	if err != nil {
 		return nil, err
@@ -85,8 +101,8 @@ func (s *Server) CreateClientChannel(ctx context.Context, rq *pb.CreateClientCha
 
 func (s *Server) Subscribe(ctx context.Context, rq *pb.SubscribeRequest) (*pb.SubscribeResponse, error) {
 	err := s.domain.SubscribeUser(ctx, &domain.SubscribeUserRequest{
-		UserId:    rq.UserId,
-		ChannelId: rq.ChannelId,
+		ChatUserId: rq.ChatUserId,
+		ChannelId:  rq.ChannelId,
 	})
 	if err != nil {
 		return nil, err
@@ -97,9 +113,8 @@ func (s *Server) Subscribe(ctx context.Context, rq *pb.SubscribeRequest) (*pb.Su
 func (s *Server) GetChannelsForUserAndMembers(ctx context.Context, rq *pb.GetChannelsForUserAndMembersRequest) (*pb.GetChannelsForUserAndMembersResponse, error) {
 
 	channels, err := s.domain.GetChannelsForUserAndMembers(ctx, &domain.GetChannelsForUserAndMembersRequest{
-		UserId:        rq.UserId,
-		TeamName:      rq.TeamName,
-		MemberUserIds: rq.MemberUserIds,
+		UserId:        rq.ChatUserId,
+		MemberUserIds: rq.MemberChatUserIds,
 	})
 	if err != nil {
 		return nil, err
@@ -111,15 +126,15 @@ func (s *Server) GetChannelsForUserAndMembers(ctx context.Context, rq *pb.GetCha
 
 func (s *Server) GetUsersStatuses(ctx context.Context, rq *pb.GetUsersStatusesRequest) (*pb.GetUserStatusesResponse, error) {
 
-	rs, err := s.domain.GetUsersStatuses(ctx, &domain.GetUsersStatusesRequest{UserIds: rq.MMUserIds})
+	rs, err := s.domain.GetUsersStatuses(ctx, &domain.GetUsersStatusesRequest{ChatUserIds: rq.ChatUserIds})
 	if err != nil {
 		return nil, err
 	}
 	response := &pb.GetUserStatusesResponse{Statuses: []*pb.UserStatus{}}
 	for _, s := range rs.Statuses {
 		response.Statuses = append(response.Statuses, &pb.UserStatus{
-			Status:   s.Status,
-			MMUserId: s.UserId,
+			Status:     s.Status,
+			ChatUserId: s.ChatUserId,
 		})
 	}
 	return response, nil
@@ -132,12 +147,12 @@ func (s *Server) Post(ctx context.Context, rq *pb.PostRequest) (*pb.PostResponse
 	for _, post := range rq.Posts {
 
 		dPost := &domain.Post{
-			Message:     post.Message,
-			ToUserId:    post.ToUserId,
-			ChannelId:   post.ChannelId,
-			Ephemeral:   post.Ephemeral,
-			FromBot:     post.FromBot,
-			Attachments: []*domain.PostAttachment{},
+			Message:      post.Message,
+			ToChatUserId: post.ToChatUserId,
+			ChannelId:    post.ChannelId,
+			Ephemeral:    post.Ephemeral,
+			From:         s.toFromDomain(post.From),
+			Attachments:  []*domain.PostAttachment{},
 		}
 
 		if post.PredefinedPost != nil && post.PredefinedPost.Code != "" {
@@ -208,9 +223,31 @@ func (s *Server) AskBot(ctx context.Context, rq *pb.AskBotRequest) (*pb.AskBotRe
 }
 
 func (s *Server) DeleteUser(ctx context.Context, rq *pb.DeleteUserRequest) (*pb.DeleteUserResponse, error) {
-	err := s.domain.DeleteUser(ctx, rq.MMUserId)
+	err := s.domain.DeleteUser(ctx, rq.ChatUserId)
 	if err != nil {
 		return nil, err
 	}
 	return &pb.DeleteUserResponse{}, nil
+}
+
+func (s *Server) Login(ctx context.Context, rq *pb.LoginRequest) (*pb.LoginResponse, error) {
+	rs, err := s.domain.Login(ctx, &domain.LoginRequest{
+		UserId:     rq.UserId,
+		Username:   rq.Username,
+		ChatUserId: rq.ChatUserId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &pb.LoginResponse{ChatSessionId: rs.ChatSessionId}, nil
+}
+func (s *Server) Logout(ctx context.Context, rq *pb.LogoutRequest) (*pb.LogoutResponse, error) {
+
+	err := s.domain.Logout(ctx, &domain.LogoutRequest{
+		ChatUserId: rq.ChatUserId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &pb.LogoutResponse{}, nil
 }

@@ -1,157 +1,97 @@
 package session
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/adacta-ru/mattermost-server/v6/model"
+	"context"
+	"gitlab.medzdrav.ru/prototype/api/public"
 	"gitlab.medzdrav.ru/prototype/kit"
-	"gitlab.medzdrav.ru/prototype/kit/chat/mattermost"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 type Session interface {
 	setWs(ws Ws) Session
+	sendWsMessage(msg []byte) error
 	setJWT(jwt *auth.JWT) Session
 	isWs() bool
 	getId() string
 	getUserId() string
 	getUsername() string
+	getChatUserId() string
 	getAccessToken() string
-	close()
+	getChatSessionId() string
+	getStartAt() time.Time
+	getSentWsMessages() uint32
+	close(ctx context.Context)
 }
 
 type sessionImpl struct {
-	Id           string
-	AccessToken  string
-	RefreshToken string
-	ExpiresIn    int
-	UserId       string
-	Username     string
-	mmClient     *mattermost.Client
-	ws           Ws
+	id             string
+	accessToken    string
+	refreshToken   string
+	expiresIn      int
+	userId         string
+	username       string
+	chatUserId     string
+	chatSessionId  string
+	startAt        time.Time
+	chatService    public.ChatService
+	sentWsMessages uint32
+	ws             Ws
 	sync.RWMutex
-	closeMMws chan struct{}
 }
 
-func newSession(userId, username string, mmClient *mattermost.Client) Session {
-	s := &sessionImpl{
-		Id:        kit.NewId(),
-		UserId:    userId,
-		Username:  username,
-		mmClient:  mmClient,
-		closeMMws: make(chan struct{}),
-	}
+func newSession(userId, username, chatUserId string, chatSessionId string, chatService public.ChatService) Session {
 
-	// start listening MM ws
-	if s.mmClient != nil {
-		s.listenMMSocket()
+	s := &sessionImpl{
+		id:            kit.NewId(),
+		userId:        userId,
+		username:      username,
+		chatUserId:    chatUserId,
+		chatSessionId: chatSessionId,
+		chatService:   chatService,
+		startAt:       time.Now().UTC(),
 	}
 
 	return s
 }
 
-func (s *sessionImpl) forwardEventFromMM(event *model.WebSocketEvent) {
-
-	log.TrcF("[mm-ws] event=%s data=%v", event.EventType(), event.ToJson())
-
-	s.RLock()
-	defer s.RUnlock()
-
-	if s.ws != nil {
-		msg, _ := json.Marshal(event)
-		s.ws.send(msg)
-	}
-
-}
-
-func (s *sessionImpl) forwardResponseFromMM(response *model.WebSocketResponse) {
-	log.TrcF("[mm-ws] event=%s data=%v", response.EventType(), response.ToJson())
-
-	s.RLock()
-	defer s.RUnlock()
-
-	if s.ws != nil {
-		msg, _ := json.Marshal(response)
-		s.ws.send(msg)
-	}
-
-}
-
-func (s *sessionImpl) listenMMSocket() {
-
-	go s.mmClient.WsApi.Listen()
-	go func() {
-		for {
-			select {
-			case event := <-s.mmClient.WsApi.EventChannel:
-				s.forwardEventFromMM(event)
-			case response := <-s.mmClient.WsApi.ResponseChannel:
-				s.forwardResponseFromMM(response)
-			case _ = <-s.mmClient.WsApi.PingTimeoutChannel:
-				log.Trc("[mm-ws] ping")
-			case <-s.closeMMws:
-				log.Trc("[mm-ws] close", s.mmClient.User.Email)
-				s.mmClient.WsApi.Close()
-				s.mmClient.RestApi.ClearOAuthToken()
-				return
-			}
-		}
-	}()
-}
-
 func (s *sessionImpl) getId() string {
-	s.RLock()
-	defer s.RUnlock()
-	return s.Id
+	return s.id
 }
 
 func (s *sessionImpl) getUserId() string {
+	return s.userId
+}
+
+func (s *sessionImpl) getChatUserId() string {
+	return s.chatUserId
+}
+
+func (s *sessionImpl) getChatSessionId() string {
+	// lock because chat session id isn't immutable
+	// it could be changed if reconnect occurs
 	s.RLock()
 	defer s.RUnlock()
-	return s.UserId
+	return s.chatSessionId
+}
+
+func (s *sessionImpl) getStartAt() time.Time {
+	return s.startAt
+}
+
+func (s *sessionImpl) getSentWsMessages() uint32 {
+	return atomic.LoadUint32(&s.sentWsMessages)
 }
 
 func (s *sessionImpl) getUsername() string {
-	s.RLock()
-	defer s.RUnlock()
-	return s.Username
+	return s.username
 }
 
 func (s *sessionImpl) getAccessToken() string {
-	s.RLock()
-	defer s.RUnlock()
-	return s.AccessToken
-}
-
-func (s *sessionImpl) forwardToMM(msg []byte) {
-
-	if s.mmClient == nil {
-		log.Dbg("[ws] received message to MM, but mm client is nil")
-		return
-	}
-
-	var m map[string]interface{}
-	if err := json.Unmarshal(msg, &m); err != nil {
-		log.Err(err, true)
-		return
-	}
-
-	action, ok := m["action"]
-	if !ok {
-		log.Err(fmt.Errorf("[ws] message to MM must have 'action'"), false)
-		return
-	}
-
-	if data, ok := m["data"]; !ok {
-		log.Err(fmt.Errorf("[ws] message to MM must have 'data'"), false)
-		return
-	} else {
-		s.mmClient.WsApi.SendMessage(action.(string), data.(map[string]interface{}))
-		log.TrcF("[ws] resent to MM: %s", string(msg))
-	}
-
+	return s.accessToken
 }
 
 func (s *sessionImpl) wsListen(ws Ws) {
@@ -166,10 +106,25 @@ func (s *sessionImpl) wsListen(ws Ws) {
 			s.Unlock()
 			return
 		case msg := <-receivedEventChan:
-			//TODO: we have to distinguish between MM message and ours
-			s.forwardToMM(msg)
+			//TODO: here we have to forward message to Chat service if we need
+			log.TrcF("message forward to chat: %v", msg)
 		}
 	}
+}
+
+func (s *sessionImpl) sendWsMessage(msg []byte) error {
+
+	log.TrcF("[session][ws] message sending to user=%s msg=%s", s.userId, string(msg))
+
+	// check if WS connection is open
+	if s.isWs() {
+		s.ws.send(msg)
+		// increment sent message counter
+		atomic.AddUint32(&s.sentWsMessages, 1)
+	} else {
+		log.InfF("[session][ws] cannot send WS message. no client connection")
+	}
+	return nil
 }
 
 func (s *sessionImpl) setWs(ws Ws) Session {
@@ -188,11 +143,9 @@ func (s *sessionImpl) setWs(ws Ws) Session {
 }
 
 func (s *sessionImpl) setJWT(jwt *auth.JWT) Session {
-	s.Lock()
-	defer s.Unlock()
-	s.AccessToken = jwt.AccessToken
-	s.RefreshToken = jwt.RefreshToken
-	s.ExpiresIn = jwt.ExpiresIn
+	s.accessToken = jwt.AccessToken
+	s.refreshToken = jwt.RefreshToken
+	s.expiresIn = jwt.ExpiresIn
 	return s
 }
 
@@ -202,13 +155,18 @@ func (s *sessionImpl) isWs() bool {
 	return s.ws != nil
 }
 
-func (s *sessionImpl) close() {
+func (s *sessionImpl) close(ctx context.Context) {
 
 	s.Lock()
 	defer s.Unlock()
 
-	if s.mmClient != nil {
-		s.closeMMws <- struct{}{}
+	if s.chatSessionId != "" {
+		go func() {
+			err := s.chatService.Logout(ctx, s.chatUserId)
+			if err != nil {
+				log.Err(err, true)
+			}
+		}()
 	}
 
 	if s.ws != nil {

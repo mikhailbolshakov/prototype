@@ -59,7 +59,7 @@ func (h *hubImpl) Set(authRouter, noAuthRouter *mux.Router) {
 			return
 		}
 
-		if err := h.Logout(userId); err != nil {
+		if err := h.Logout(r.Context(), userId); err != nil {
 			h.RespondError(w, http.StatusInternalServerError, err)
 			return
 		}

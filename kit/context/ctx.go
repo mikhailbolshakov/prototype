@@ -3,6 +3,7 @@ package context
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/mitchellh/mapstructure"
 	"gitlab.medzdrav.ru/prototype/kit"
 	"google.golang.org/grpc/metadata"
@@ -18,9 +19,12 @@ type RequestContext struct {
 	// user ID
 	Uid string `json:"uid"`
 	// username
-	Un  string `json:"un"`
+	Un string `json:"un"`
+	// chat user id
+	Cid string `json:"cid"`
+	// client type
+	Cl string `json:"cl"`
 }
-
 
 func NewRequestCtx() *RequestContext {
 	return &RequestContext{}
@@ -38,6 +42,14 @@ func (r *RequestContext) GetUserId() string {
 	return r.Uid
 }
 
+func (r *RequestContext) GetChatUserId() string {
+	return r.Cid
+}
+
+func (r *RequestContext) GetClientType() string {
+	return r.Cl
+}
+
 func (r *RequestContext) GetUsername() string {
 	return r.Un
 }
@@ -49,6 +61,8 @@ func (r *RequestContext) Empty() *RequestContext {
 		Sid: kit.Nil(),
 		Uid: kit.Nil(),
 		Un:  "",
+		Cid: "",
+		Cl:  "none",
 	}
 }
 
@@ -64,6 +78,36 @@ func (r *RequestContext) WithNewRequestId() *RequestContext {
 
 func (r *RequestContext) WithSessionId(sessionId string) *RequestContext {
 	r.Sid = sessionId
+	return r
+}
+
+func (r *RequestContext) WithChatUserId(chatUserId string) *RequestContext {
+	r.Cid = chatUserId
+	return r
+}
+
+func (r *RequestContext) Rest() *RequestContext {
+	r.Cl = "rest"
+	return r
+}
+
+func (r *RequestContext) Test() *RequestContext {
+	r.Cl = "test"
+	return r
+}
+
+func (r *RequestContext) Batch() *RequestContext {
+	r.Cl = "batch"
+	return r
+}
+
+func (r *RequestContext) Queue() *RequestContext {
+	r.Cl = "queue"
+	return r
+}
+
+func (r *RequestContext) Client(client string) *RequestContext {
+	r.Cl = client
 	return r
 }
 
@@ -85,6 +129,13 @@ func Request(context context.Context) (*RequestContext, bool) {
 		return r, true
 	}
 	return &RequestContext{}, false
+}
+
+func MustRequest(context context.Context) (*RequestContext, error) {
+	if r, ok := context.Value(requestContextKey{}).(*RequestContext); ok {
+		return r, nil
+	}
+	return &RequestContext{}, fmt.Errorf("context invalid")
 }
 
 func FromContextToGrpcMD(ctx context.Context) (metadata.MD, bool) {
@@ -116,4 +167,3 @@ func FromMap(ctx context.Context, mp map[string]interface{}) (context.Context, e
 	}
 	return r.ToContext(ctx), nil
 }
-

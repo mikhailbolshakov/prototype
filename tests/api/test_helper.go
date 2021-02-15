@@ -9,10 +9,11 @@ import (
 
 const (
 	BASE_URL    = "http://localhost:8000"
+	WS_URL      = "ws://localhost:8000/ws"
 	APPJSON     = "application/json"
 	MM_URL      = "http://localhost:8065"
 	DEFAULT_PWD = "12345"
-	TEST_USER  = "79032221002"
+	TEST_USER   = "79032221002"
 )
 
 type TestHelper struct {
@@ -23,9 +24,9 @@ func NewTestHelper() *TestHelper {
 	return &TestHelper{}
 }
 
-func (h *TestHelper) POST (url string, payload []byte) ([]byte, error) {
+func (h *TestHelper) do(url string, verb string, payload []byte) ([]byte, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
+	req, err := http.NewRequest(verb, url, bytes.NewReader(payload))
 	if err != nil {
 		return nil, err
 	}
@@ -48,6 +49,14 @@ func (h *TestHelper) POST (url string, payload []byte) ([]byte, error) {
 
 	return data, nil
 
+}
+
+func (h *TestHelper) POST(url string, payload []byte) ([]byte, error) {
+	return h.do(url, "POST", payload)
+}
+
+func (h *TestHelper) PUT(url string, payload []byte) ([]byte, error) {
+	return h.do(url, "PUT", payload)
 }
 
 func (h *TestHelper) GET(url string) ([]byte, error) {

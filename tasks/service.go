@@ -103,8 +103,8 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 func (s *serviceImpl) ListenAsync(ctx context.Context) error {
 
 	s.grpc.ListenAsync()
-	//s.assignTasksDaemon.Run()
-	//s.scheduler.StartAsync()
+	s.assignTasksDaemon.Run(ctx)
+	s.scheduler.StartAsync(ctx)
 
 	return nil
 }

@@ -1,37 +1,43 @@
 package listener
 
 import (
+	"fmt"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
-	"log"
 	"sync"
 )
 
 type QueueMessageHandler func(payload []byte) error
 
 type QueueListener interface {
-	Add(topic string, h ...QueueMessageHandler)
+	Add(qt queue.QueueType, topic string, h ...QueueMessageHandler)
 	ListenAsync()
 	Stop()
 	Clear()
 }
 
-func NewQueueListener(queue queue.Queue) QueueListener {
+func NewQueueListener(q queue.Queue) QueueListener {
+
+	th := map[queue.QueueType]map[string][]QueueMessageHandler{}
+	th[queue.QUEUE_TYPE_AT_LEAST_ONCE] = make(map[string][]QueueMessageHandler)
+	th[queue.QUEUE_TYPE_AT_MOST_ONCE] = make(map[string][]QueueMessageHandler)
+
 	return &queueListener{
-		topicHandlers: make(map[string][]QueueMessageHandler),
+		topicHandlers: th,
 		listening:     false,
-		queue:         queue,
+		queue:         q,
 	}
 }
 
 type queueListener struct {
 	sync.RWMutex
 	queue         queue.Queue
-	topicHandlers map[string][]QueueMessageHandler
+	topicHandlers map[queue.QueueType]map[string][]QueueMessageHandler
 	quit          chan struct{}
 	listening     bool
 }
 
-func (q *queueListener) Add(topic string, h ...QueueMessageHandler) {
+func (q *queueListener) Add(qt queue.QueueType, topic string, h ...QueueMessageHandler) {
 
 	q.Stop()
 
@@ -39,7 +45,7 @@ func (q *queueListener) Add(topic string, h ...QueueMessageHandler) {
 	defer q.Unlock()
 
 	var handlers []QueueMessageHandler
-	handlers, ok := q.topicHandlers[topic]
+	handlers, ok := q.topicHandlers[qt][topic]
 	if !ok {
 		handlers = []QueueMessageHandler{}
 	}
@@ -47,35 +53,35 @@ func (q *queueListener) Add(topic string, h ...QueueMessageHandler) {
 	for _, hnd := range h {
 		handlers = append(handlers, hnd)
 	}
-	q.topicHandlers[topic] = handlers
+	q.topicHandlers[qt][topic] = handlers
 
 }
 
 func (q *queueListener) ListenAsync() {
 
-	for topic, handlers := range q.topicHandlers {
-		handlers := handlers
-		go func(t string, hnds []QueueMessageHandler) {
-			c := make(chan []byte)
-			_ = q.queue.Subscribe(t, c)
-			for {
-				select {
-				case msg := <-c:
-					for _, h := range hnds {
-						m := msg
-						h := h
-						go func() {
-							if err := h(m); err != nil {
-								log.Printf("[ERROR] %v handler error %v", t, err)
-							}
-						}()
+	for queueType, topicHandlers := range q.topicHandlers{
+		for topic, handlers := range topicHandlers {
+			go func(qt queue.QueueType, tp string, hnds []QueueMessageHandler) {
+				c := make(chan []byte)
+				_ = q.queue.Subscribe(qt, tp, c)
+				for {
+					select {
+					case msg := <-c:
+						for _, h := range hnds {
+							m := msg
+							h := h
+							go func() {
+								if err := h(m); err != nil {
+									log.Err(fmt.Errorf("[queue-listener] %v handler error %s", tp, err.Error()), true)
+								}
+							}()
+						}
+					case <-q.quit:
+						return
 					}
-				case <-q.quit:
-					return
 				}
-			}
-		}(topic, handlers)
-
+			}(queueType, topic, handlers)
+		}
 	}
 
 }
@@ -98,5 +104,6 @@ func (q *queueListener) Clear() {
 	q.quit <- struct{}{}
 	q.Lock()
 	defer q.Unlock()
-	q.topicHandlers = make(map[string][]QueueMessageHandler)
+	q.topicHandlers[queue.QUEUE_TYPE_AT_LEAST_ONCE] = make(map[string][]QueueMessageHandler)
+	q.topicHandlers[queue.QUEUE_TYPE_AT_MOST_ONCE] = make(map[string][]QueueMessageHandler)
 }

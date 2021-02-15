@@ -14,11 +14,11 @@ func Test_CreateClient_Success(t *testing.T) {
 
 	var testHelper = NewTestHelper()
 
-	if _, err := testHelper.Login(TEST_USER); err != nil {
+	if _, _, err := testHelper.Login(TEST_USER); err != nil {
 		t.Fatal(err)
 	}
 
-	phone := fmt.Sprintf("%d", time.Now().Unix())
+	phone := fmt.Sprintf("%d", time.Now().UnixNano())
 	email := fmt.Sprintf("cl_%s@example.com", phone)
 
 	rq := users.CreateClientRequest{
@@ -42,13 +42,21 @@ func Test_CreateClient_Success(t *testing.T) {
 		fmt.Printf("test passed. username %s\n", user.Username)
 	}
 
+	if err := testHelper.Logout(TEST_USER); err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 func Test_CreateClient_DuplicateUsername_Error(t *testing.T) {
 
 	var testHelper = NewTestHelper()
 
-	phone := fmt.Sprintf("%d", time.Now().Unix())
+	if _, _, err := testHelper.Login(TEST_USER); err != nil {
+		t.Fatal(err)
+	}
+
+	phone := fmt.Sprintf("%d", time.Now().UnixNano())
 	email := fmt.Sprintf("cl_%s@example.com", phone)
 
 	rq := users.CreateClientRequest{
@@ -81,13 +89,21 @@ func Test_CreateClient_DuplicateUsername_Error(t *testing.T) {
 		}
 	}
 
+	if err := testHelper.Logout(TEST_USER); err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 func Test_CreateCommonConsultant_Success(t *testing.T) {
 
 	var testHelper = NewTestHelper()
 
-	email := fmt.Sprintf("med_%d@example.com", time.Now().Unix())
+	if _, _, err := testHelper.Login(TEST_USER); err != nil {
+		t.Fatal(err)
+	}
+
+	email := fmt.Sprintf("med_%d@example.com", time.Now().UnixNano())
 
 	rq := users.CreateConsultantRequest{
 		FirstName:  "Test",
@@ -109,13 +125,21 @@ func Test_CreateCommonConsultant_Success(t *testing.T) {
 		fmt.Printf("test passed. username %s\n", user.Username)
 	}
 
+	if err := testHelper.Logout(TEST_USER); err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 func Test_CreateMedConsultant_Success(t *testing.T) {
 
 	var testHelper = NewTestHelper()
 
-	email := fmt.Sprintf("med_%d@example.com", time.Now().Unix())
+	if _, _, err := testHelper.Login(TEST_USER); err != nil {
+		t.Fatal(err)
+	}
+
+	email := fmt.Sprintf("med_%d@example.com", time.Now().UnixNano())
 
 	rq := users.CreateConsultantRequest{
 		FirstName:  "Test",
@@ -137,13 +161,21 @@ func Test_CreateMedConsultant_Success(t *testing.T) {
 		fmt.Printf("test passed. username %s\n", user.Username)
 	}
 
+	if err := testHelper.Logout(TEST_USER); err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 func Test_CreateLawConsultant_Success(t *testing.T) {
 
 	var testHelper = NewTestHelper()
 
-	email := fmt.Sprintf("lw_%d@example.com", time.Now().Unix())
+	if _, _, err := testHelper.Login(TEST_USER); err != nil {
+		t.Fatal(err)
+	}
+
+	email := fmt.Sprintf("lw_%d@example.com", time.Now().UnixNano())
 
 	rq := users.CreateConsultantRequest{
 		FirstName:  "Test",
@@ -163,6 +195,50 @@ func Test_CreateLawConsultant_Success(t *testing.T) {
 		t.Fatal(err)
 	} else {
 		fmt.Printf("test passed. username %s\n", user.Username)
+	}
+
+	if err := testHelper.Logout(TEST_USER); err != nil {
+		t.Fatal(err)
+	}
+
+}
+
+func Test_CreateConsultant_EmptyGroups_Error(t *testing.T) {
+
+	var testHelper = NewTestHelper()
+
+	if _, _, err := testHelper.Login(TEST_USER); err != nil {
+		t.Fatal(err)
+	}
+
+	email := fmt.Sprintf("lw_%d@example.com", time.Now().UnixNano())
+
+	rq := users.CreateConsultantRequest{
+		FirstName:  "Test",
+		MiddleName: "Test",
+		LastName:   "Test",
+		Email:      email,
+		PhotoUrl:   "https://lextime-tomsk.ru/uploads/employee/4-fef5bb6fd5.png",
+		Groups: []string{},
+	}
+
+	rqJ, _ := json.Marshal(rq)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 5)
+	defer cancel()
+
+	if _, err := testHelper.CreateUserAndEnsureActive(ctx, "consultant", rqJ); err != nil {
+		if strings.Contains(err.Error(), "groups aren't specified") {
+			fmt.Println("test passed")
+		} else {
+			t.Fatal(err)
+		}
+	} else {
+		t.Fatal("error expected")
+	}
+
+	if err := testHelper.Logout(TEST_USER); err != nil {
+		t.Fatal(err)
 	}
 
 }

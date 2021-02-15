@@ -4,14 +4,15 @@ import (
 	"context"
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
+	"gitlab.medzdrav.ru/prototype/chat/domain/impl"
 	"gitlab.medzdrav.ru/prototype/chat/grpc"
 	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/mattermost"
+	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
-	"gitlab.medzdrav.ru/prototype/chat/domain/impl"
 	"math/rand"
 )
 
@@ -23,6 +24,9 @@ type serviceImpl struct {
 	configService     domain.ConfigService
 	queue             queue.Queue
 	queueListener     listener.QueueListener
+	chatSessionHub    mattermost.ChatSessionHub
+	userService       domain.UserService
+	userAdapter       users.Adapter
 }
 
 func New() service.Service {
@@ -32,14 +36,11 @@ func New() service.Service {
 	s.configAdapter = config.NewAdapter()
 	s.configService = s.configAdapter.GetService()
 
+	s.userAdapter = users.NewAdapter()
+	s.userService = s.userAdapter.GetService()
+
 	s.queue = stan.New()
 	s.queueListener = listener.NewQueueListener(s.queue)
-
-	s.mattermostAdapter = mattermost.NewAdapter()
-	mattermostService := s.mattermostAdapter.GetService()
-
-	s.domainService = impl.NewService(mattermostService)
-	s.grpc = grpc.New(s.domainService)
 
 	return s
 }
@@ -55,7 +56,19 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.mattermostAdapter.Init(c); err != nil {
+	s.chatSessionHub = mattermost.NewHub(c, s.userService, s.queue)
+
+	s.mattermostAdapter = mattermost.NewAdapter(s.chatSessionHub)
+	mattermostService := s.mattermostAdapter.GetService()
+
+	s.domainService = impl.NewService(mattermostService)
+	s.grpc = grpc.New(s.domainService)
+
+	if err := s.mattermostAdapter.Init(ctx, c); err != nil {
+		return err
+	}
+
+	if err := s.userAdapter.Init(c); err != nil {
 		return err
 	}
 
@@ -81,7 +94,8 @@ func (s *serviceImpl) ListenAsync(ctx context.Context) error {
 
 func (s *serviceImpl) Close(ctx context.Context) {
 	s.configAdapter.Close()
-	s.mattermostAdapter.Close()
+	s.userAdapter.Close()
+	s.mattermostAdapter.Close(ctx)
 	s.grpc.Close()
 	_ = s.queue.Close()
 }

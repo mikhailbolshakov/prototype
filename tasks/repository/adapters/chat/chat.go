@@ -15,18 +15,18 @@ func newImpl() *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) Post(ctx context.Context, message, channelId, userId string, ephemeral, fromBot bool) error {
-	_, err := u.PostsClient.Post(ctx, &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
-		Message:        message,
-		ToUserId:       userId,
-		ChannelId:      channelId,
-		Ephemeral:      ephemeral,
-		FromBot:        fromBot,
+func (u *serviceImpl) Post(ctx context.Context, message, channelId, userId string, ephemeral bool) error {
+	_, err := u.PostsClient.Post(ctx, &pb.PostRequest{Posts: []*pb.Post{{
+		Message:      message,
+		ToChatUserId: userId,
+		ChannelId:    channelId,
+		Ephemeral:    ephemeral,
+		From:         &pb.From{Who: pb.From_BOT},
 	}}})
 	return err
 }
 
-func (u *serviceImpl) PredefinedPost(ctx context.Context, channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error {
+func (u *serviceImpl) PredefinedPost(ctx context.Context, channelId, userId, code string, ephemeral bool, params map[string]interface{}) error {
 
 	var paramsB []byte
 	if params != nil {
@@ -34,10 +34,10 @@ func (u *serviceImpl) PredefinedPost(ctx context.Context, channelId, userId, cod
 	}
 
 	_, err := u.PostsClient.Post(ctx, &pb.PostRequest{Posts: []*pb.Post{&pb.Post{
-		ToUserId:       userId,
-		ChannelId:      channelId,
-		Ephemeral:      ephemeral,
-		FromBot:        fromBot,
+		ToChatUserId: userId,
+		ChannelId:    channelId,
+		Ephemeral:    ephemeral,
+		From:         &pb.From{Who: pb.From_BOT},
 		PredefinedPost: &pb.PredefinedPost{
 			Code:   code,
 			Params: paramsB,

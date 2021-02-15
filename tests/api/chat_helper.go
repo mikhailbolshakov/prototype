@@ -1,25 +1,24 @@
 package api
 
-import "gitlab.medzdrav.ru/prototype/kit/chat/mattermost"
+import (
+	"encoding/json"
+	"fmt"
+	chatApi "gitlab.medzdrav.ru/prototype/api/public/chat"
+)
 
-func (h *TestHelper) ChatLogin(account string, goOnline bool) (*mattermost.Client, error) {
+func (h *TestHelper) SetStatus(userId, status string) error {
+	_, err := h.PUT(fmt.Sprintf("%s/api/chat/users/%s/status/%s", BASE_URL, userId, status), []byte{})
+	return err
+}
 
-	client, err := mattermost.Login(&mattermost.Params{
-		Url:     MM_URL,
-		Account: account,
-		Pwd:     DEFAULT_PWD,
-		OpenWS:  false,
-	})
-	if err != nil {
-		return nil, err
+func (h *TestHelper) MyPost(channelId, message string) error {
+
+	pr := &chatApi.PostRequest{
+		ChannelId: channelId,
+		Message:   message,
 	}
+	prJ, _ := json.Marshal(pr)
 
-	if goOnline {
-		if err := client.SetStatus(client.User.Id, "online"); err != nil {
-			return nil, err
-		}
-	}
-
-	return client, nil
-
+	_, err := h.POST(fmt.Sprintf("%s/api/chat/users/me/posts", BASE_URL), prJ)
+	return err
 }

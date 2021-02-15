@@ -123,6 +123,7 @@ func (c *ctrlImpl) Search(w http.ResponseWriter, r *http.Request) {
 			Subtype: r.FormValue("subtype"),
 		},
 		Num: r.FormValue("num"),
+		ChannelId: r.FormValue("channel"),
 	}
 
 	if sizeTxt := r.FormValue("limit"); sizeTxt != "" {

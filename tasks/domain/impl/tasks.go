@@ -63,7 +63,7 @@ func (t *serviceImpl) remindsSchedulerHandler(ctx context.Context, taskId string
 			msg = fmt.Sprintf("Напоминание по задаче %s", task.Num)
 		}
 
-		if err := t.chatService.Post(ctx, msg, task.ChannelId, "", false, true); err != nil {
+		if err := t.chatService.Post(ctx, msg, task.ChannelId, "", false); err != nil {
 			log.Err(err, true)
 			return
 		}
@@ -77,7 +77,7 @@ func (t *serviceImpl) dueDateSchedulerHandler(ctx context.Context, taskId string
 
 	task := t.Get(ctx, taskId)
 
-	if err := t.queue.Publish(ctx, "tasks.duedate", &queue.Message{Payload: task}); err != nil {
+	if err := t.queue.Publish(ctx, queue.QUEUE_TYPE_AT_LEAST_ONCE, "tasks.duedate", &queue.Message{Payload: task}); err != nil {
 		log.Err(err, true)
 		return
 	}
@@ -91,7 +91,7 @@ func (t *serviceImpl) dueDateSchedulerHandler(ctx context.Context, taskId string
 
 		msg := fmt.Sprintf("Уведомление о наступлении времени решения по задаче %s (%s)", task.Num, dueDateStr)
 
-		if err := t.chatService.Post(ctx, msg, task.ChannelId, "", false, true); err != nil {
+		if err := t.chatService.Post(ctx, msg, task.ChannelId, "", false); err != nil {
 			log.Err(err, true)
 			return
 		}
@@ -183,7 +183,7 @@ func (t *serviceImpl) New(ctx context.Context, task *domain.Task) (*domain.Task,
 	t.putHistory(ctx, task)
 
 	if tr.QueueTopic != "" {
-		if err := t.queue.Publish(ctx, tr.QueueTopic, &queue.Message{Payload: task}); err != nil {
+		if err := t.queue.Publish(ctx, queue.QUEUE_TYPE_AT_LEAST_ONCE, tr.QueueTopic, &queue.Message{Payload: task}); err != nil {
 			return nil, err
 		}
 	}
@@ -293,7 +293,7 @@ func (t *serviceImpl) MakeTransition(ctx context.Context, taskId, transitionId s
 	t.putHistory(ctx, task)
 
 	if targetTr.QueueTopic != "" {
-		if err := t.queue.Publish(ctx, targetTr.QueueTopic, &queue.Message{Payload: task}); err != nil {
+		if err := t.queue.Publish(ctx, queue.QUEUE_TYPE_AT_LEAST_ONCE, targetTr.QueueTopic, &queue.Message{Payload: task}); err != nil {
 			return nil, err
 		}
 	}

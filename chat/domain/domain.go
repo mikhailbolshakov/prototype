@@ -1,14 +1,35 @@
 package domain
 
-import "context"
+import (
+	"context"
+)
+
+type Who uint
+
+const (
+	ADMIN Who = iota
+	BOT
+	USER
+)
+
+type From struct {
+	Who        Who
+	ChatUserId string
+}
 
 type UserStatus struct {
-	UserId string
-	Status string
+	ChatUserId string
+	Status     string
+}
+
+type SetUserStatusRequest struct {
+	ChatUserId string
+	Status     string
+	From       *From
 }
 
 type GetUsersStatusesRequest struct {
-	UserIds []string
+	ChatUserIds []string
 }
 
 type GetUsersStatusesResponse struct {
@@ -16,7 +37,6 @@ type GetUsersStatusesResponse struct {
 }
 
 type CreateUserRequest struct {
-	TeamName string
 	Username string
 	Password string
 	Email    string
@@ -27,11 +47,11 @@ type CreateUserResponse struct {
 }
 
 type CreateClientChannelRequest struct {
-	ClientUserId string
-	TeamName     string
-	DisplayName  string
-	Name         string
-	Subscribers  []string
+	ChatUserId  string
+	TeamName    string
+	DisplayName string
+	Name        string
+	Subscribers []string
 }
 
 type CreateClientChannelResponse struct {
@@ -40,7 +60,6 @@ type CreateClientChannelResponse struct {
 
 type GetChannelsForUserAndMembersRequest struct {
 	UserId        string
-	TeamName      string
 	MemberUserIds []string
 }
 
@@ -91,17 +110,17 @@ type PostAttachment struct {
 
 type Post struct {
 	Message        string
-	ToUserId       string
+	ToChatUserId   string
 	ChannelId      string
 	Ephemeral      bool
-	FromBot        bool
+	From           *From
 	Attachments    []*PostAttachment
 	PredefinedPost *PredefinedPost
 }
 
 type SubscribeUserRequest struct {
-	UserId    string
-	ChannelId string
+	ChatUserId string
+	ChannelId  string
 }
 
 type AskBotRequest struct {
@@ -128,6 +147,36 @@ const (
 	TP_CLIENT_FEEDBACK                = "client.feedback"
 )
 
+const (
+	STATUS_OUT_OF_OFFICE = "ooo"
+	STATUS_OFFLINE       = "offline"
+	STATUS_AWAY          = "away"
+	STATUS_DND           = "dnd"
+	STATUS_ONLINE        = "online"
+)
+
+var UserStatusMap = map[string]struct{}{
+	STATUS_OUT_OF_OFFICE: {},
+	STATUS_OFFLINE:       {},
+	STATUS_AWAY:          {},
+	STATUS_DND:           {},
+	STATUS_ONLINE:        {},
+}
+
+type LoginRequest struct {
+	UserId     string
+	Username   string
+	ChatUserId string
+}
+
+type LoginResponse struct {
+	ChatSessionId string
+}
+
+type LogoutRequest struct {
+	ChatUserId string
+}
+
 type Service interface {
 	GetUsersStatuses(ctx context.Context, rq *GetUsersStatusesRequest) (*GetUsersStatusesResponse, error)
 	CreateUser(ctx context.Context, rq *CreateUserRequest) (*CreateUserResponse, error)
@@ -137,4 +186,7 @@ type Service interface {
 	DeleteUser(ctx context.Context, userId string) error
 	AskBot(ctx context.Context, request *AskBotRequest) (*AskBotResponse, error)
 	Posts(ctx context.Context, posts []*Post) error
+	SetStatus(ctx context.Context, rq *SetUserStatusRequest) error
+	Login(ctx context.Context, rq *LoginRequest) (*LoginResponse, error)
+	Logout(ctx context.Context, rq *LogoutRequest) error
 }

@@ -20,8 +20,8 @@ type TaskStorage interface {
 }
 
 type ChatService interface {
-	Post(ctx context.Context, message, channelId, userId string, ephemeral, fromBot bool) error
-	PredefinedPost(ctx context.Context, channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error
+	Post(ctx context.Context, message, channelId, userId string, ephemeral bool) error
+	PredefinedPost(ctx context.Context, channelId, userId, code string, ephemeral bool, params map[string]interface{}) error
 }
 
 type CfgService interface {

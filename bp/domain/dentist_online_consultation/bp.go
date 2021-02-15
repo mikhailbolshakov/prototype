@@ -66,8 +66,8 @@ func (bp *bpImpl) Init() error {
 }
 
 func (bp *bpImpl) SetQueueListeners(ql listener.QueueListener) {
-	ql.Add("tasks.duedate", bp.dueDateTaskHandler)
-	ql.Add("tasks.solved", bp.solvedTaskHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "tasks.duedate", bp.dueDateTaskHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "tasks.solved", bp.solvedTaskHandler)
 }
 
 func (bp *bpImpl) GetId() string {
@@ -114,7 +114,7 @@ func (bp *bpImpl) solvedTaskHandler(msg []byte) error {
 		_ = bp.SendMessage("msg-task-finished", task.Id, vars)
 
 		msg := fmt.Sprintf("Консультация %s завершена", task.Num)
-		if err := bp.chatService.Post(ctx, msg, task.ChannelId, "", false, true); err != nil {
+		if err := bp.chatService.Post(ctx, msg, task.ChannelId, "", false); err != nil {
 			return err
 		}
 
@@ -166,10 +166,10 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	} else {
 		//create a channel
 		channelId, err := bp.chatService.CreateClientChannel(ctx, &pbChat.CreateClientChannelRequest{
-			ClientUserId: user.MMId,
-			DisplayName:  "Консультация стоматолога",
-			Name:         kit.NewId(),
-			Subscribers:  []string{expert.MMId},
+			ChatUserId:  user.MMId,
+			DisplayName: "Консультация стоматолога",
+			Name:        kit.NewId(),
+			Subscribers: []string{expert.MMId},
 		})
 		if err != nil {
 			zeebe.FailJob(client, job, err)
@@ -187,15 +187,15 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 			Subtype: "dentist-consultation",
 		},
 		Reported: &pb.Reported{
-			UserId:   user.Id,
-			At:       grpc.TimeToPbTS(startTime),
+			UserId: user.Id,
+			At:     grpc.TimeToPbTS(startTime),
 		},
 		Description: "Консультация назначена при обращении к медконсультанту",
 		Title:       "Консультация со стоматологом",
 		DueDate:     grpc.TimeToPbTS(&consultationTime),
 		Assignee: &pb.Assignee{
-			UserId:  expert.Id,
-			At:    grpc.TimeToPbTS(startTime),
+			UserId: expert.Id,
+			At:     grpc.TimeToPbTS(startTime),
 		},
 		ChannelId: channelId,
 		Reminders: []*pb.Reminder{
@@ -230,7 +230,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 		dueDateStr = dueDate.Format("2006-01-02 15:04:05")
 	}
 
-	if err := bp.chatService.PredefinedPost(ctx, task.ChannelId, user.MMId, "client.new-expert-consultation", true, true, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(ctx, task.ChannelId, user.MMId, "client.new-expert-consultation", true, map[string]interface{}{
 		"expert.first-name": expert.ExpertDetails.FirstName,
 		"expert.last-name":  expert.ExpertDetails.LastName,
 		"due-date":          dueDateStr,
@@ -241,7 +241,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 		return
 	}
 
-	if err := bp.chatService.PredefinedPost(ctx, task.ChannelId, expert.MMId, "expert.new-expert-consultation", true, true, map[string]interface{}{
+	if err := bp.chatService.PredefinedPost(ctx, task.ChannelId, expert.MMId, "expert.new-expert-consultation", true, map[string]interface{}{
 		"client.first-name": user.ClientDetails.FirstName,
 		"client.last-name":  user.ClientDetails.LastName,
 		"client.phone":      user.ClientDetails.Phone,
@@ -351,14 +351,14 @@ func (bp *bpImpl) clientFeedbackHandler(client worker.JobClient, job entities.Jo
 			Type:    "client",
 			Subtype: "client-feedback",
 		},
-		Reported: &pb.Reported{UserId: expertUser.Id, At: grpc.TimeToPbTS(&startTime)},
+		Reported:    &pb.Reported{UserId: expertUser.Id, At: grpc.TimeToPbTS(&startTime)},
 		Description: fmt.Sprintf("Добрый день %s %s, просим заполнить обратную связь о консультации с экспертом %s %s", user.ClientDetails.FirstName, user.ClientDetails.LastName, expertUser.ExpertDetails.FirstName, expertUser.ExpertDetails.LastName),
 		Title:       fmt.Sprintf("Обратная связь о консультации %s", deliveryTasks[0].(string)),
 		Assignee: &pb.Assignee{
-			UserId:  user.Id,
-			At:    grpc.TimeToPbTS(&startTime),
+			UserId: user.Id,
+			At:     grpc.TimeToPbTS(&startTime),
 		},
-		DueDate: grpc.TimeToPbTS(&dueDate),
+		DueDate:   grpc.TimeToPbTS(&dueDate),
 		ChannelId: user.ClientDetails.CommonChannelId,
 		Reminders: []*pb.Reminder{
 			{

@@ -30,7 +30,7 @@ type UserStatus struct {
 	Status string
 }
 
-func handleResponse(rs *model.Response) error {
+func HandleResponse(rs *model.Response) error {
 
 	success := map[int]bool{
 		http.StatusOK:       true,
@@ -46,7 +46,7 @@ func handleResponse(rs *model.Response) error {
 
 func Login(p *Params) (*Client, error) {
 
-	cl := &Client{}
+	cl := &Client{Params: p}
 
 	cl.RestApi = model.NewAPIv4Client(p.Url)
 
@@ -55,13 +55,13 @@ func Login(p *Params) (*Client, error) {
 	if p.AccessToken != "" {
 		cl.RestApi.SetOAuthToken(p.AccessToken)
 		user, rs = cl.RestApi.GetUserByUsername(p.Account, "")
-		if err := handleResponse(rs); err != nil {
+		if err := HandleResponse(rs); err != nil {
 			return nil, err
 		}
 		cl.Token = p.AccessToken
 	} else {
 		user, rs = cl.RestApi.Login(p.Account, p.Pwd)
-		if err := handleResponse(rs); err != nil {
+		if err := HandleResponse(rs); err != nil {
 			return nil, err
 		}
 		cl.Token = rs.Header.Get("Token")
@@ -87,7 +87,7 @@ func (c *Client) SetStatus(userId, status string) error {
 		UserId:         userId,
 		Status:         status,
 	})
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return err
 	}
 
@@ -100,7 +100,7 @@ func (c *Client) SetStatus(userId, status string) error {
 
 func (c *Client) Logout() error {
 	_, rs := c.RestApi.Logout()
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return err
 	}
 	return nil
@@ -113,18 +113,18 @@ func (c *Client) CreateUser(teamName, username, password, email string) (string,
 		Password: password,
 		Email:    email,
 	})
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return "", err
 	}
 
 	// add to team
 	team, rs := c.RestApi.GetTeamByName(teamName, "")
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return "", err
 	}
 
 	_, rs = c.RestApi.AddTeamMember(team.Id, user.Id)
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return "", err
 	}
 
@@ -134,7 +134,7 @@ func (c *Client) CreateUser(teamName, username, password, email string) (string,
 func (c *Client) DeleteUser(userId string) error {
 
 	_, rs := c.RestApi.DeleteUser(userId)
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return err
 	}
 	log.Printf("user delete. Id: %s", userId)
@@ -146,7 +146,7 @@ func (c *Client) DeleteUser(userId string) error {
 func (c *Client) CreateUserChannel(channelType, teamName, userId, displayName, name string) (string, error) {
 
 	team, rs := c.RestApi.GetTeamByName(teamName, "")
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return "", err
 	}
 
@@ -156,12 +156,12 @@ func (c *Client) CreateUserChannel(channelType, teamName, userId, displayName, n
 		DisplayName: displayName,
 		Name:        name,
 	})
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return "", err
 	}
 
 	_, rs = c.RestApi.AddChannelMember(ch.Id, userId)
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return "", err
 	}
 
@@ -170,7 +170,7 @@ func (c *Client) CreateUserChannel(channelType, teamName, userId, displayName, n
 
 func (c *Client) SubscribeUser(channelId string, userId string) error {
 	_, rs := c.RestApi.AddChannelMember(channelId, userId)
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return err
 	}
 	return nil
@@ -192,7 +192,7 @@ func (c *Client) CreateEphemeralPost(channelId string, recipientUserId string, m
 		},
 	}
 	_, rs := c.RestApi.CreatePostEphemeral(ep)
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return err
 	}
 
@@ -214,7 +214,7 @@ func (c *Client) CreatePost(channelId string, message string, attachments []*mod
 	}
 
 	_, rs := c.RestApi.CreatePost(p)
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return err
 	}
 
@@ -225,7 +225,7 @@ func (c *Client) CreatePost(channelId string, message string, attachments []*mod
 func (c *Client) GetUsersStatuses(userIds []string) ([]*UserStatus, error) {
 
 	statuses, rs := c.RestApi.GetUsersStatusesByIds(userIds)
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return nil, err
 	}
 
@@ -243,7 +243,7 @@ func (c *Client) GetUsersStatuses(userIds []string) ([]*UserStatus, error) {
 func (c *Client) CreateDirectChannel(userId1, userId2 string) (string, error) {
 
 	ch, rs := c.RestApi.CreateGroupChannel([]string{userId1, userId2})
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return "", err
 	}
 
@@ -254,12 +254,12 @@ func (c *Client) CreateDirectChannel(userId1, userId2 string) (string, error) {
 func (c *Client) GetChannelsForUserAndMembers(userId, teamName string, memberUserIds []string) ([]string, error) {
 
 	team, rs := c.RestApi.GetTeamByName(teamName, "")
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return nil, err
 	}
 
 	channels, rs := c.RestApi.GetChannelsForTeamForUser(team.Id, userId, false, "")
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return nil, err
 	}
 
@@ -272,7 +272,7 @@ func (c *Client) GetChannelsForUserAndMembers(userId, teamName string, memberUse
 		}
 
 		chMembers, rs := c.RestApi.GetChannelMembers(ch.Id, 0, 1000, "")
-		if err := handleResponse(rs); err != nil {
+		if err := HandleResponse(rs); err != nil {
 			return nil, err
 		}
 
@@ -307,7 +307,7 @@ func (c *Client) GetChannelsForUserAndMembers(userId, teamName string, memberUse
 func (c *Client) CreateBotIfNotExists(username, displayName, description, ownerId string) (string, error) {
 
 	bots, rs := c.RestApi.GetBots(0, 1000, "")
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return "", err
 	}
 
@@ -323,9 +323,14 @@ func (c *Client) CreateBotIfNotExists(username, displayName, description, ownerI
 		Description: description,
 		OwnerId:     ownerId,
 	})
-	if err := handleResponse(rs); err != nil {
+	if err := HandleResponse(rs); err != nil {
 		return "", err
 	}
 
 	return b.UserId, nil
+}
+
+func (c *Client) UpdateStatus(userId, status string) error {
+	_, rs := c.RestApi.UpdateUserStatus(userId, &model.Status{UserId: userId, Status: status})
+	return HandleResponse(rs)
 }

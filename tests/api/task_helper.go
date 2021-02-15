@@ -67,6 +67,45 @@ func (h *TestHelper) GetTask(taskId string) (*taskApi.Task, error) {
 	return user, nil
 }
 
+func (h *TestHelper) SearchByChannel(channelId string) ([]*taskApi.Task, error) {
+
+	rs, err := h.GET(fmt.Sprintf("%s/api/tasks?channel=%s", BASE_URL, channelId))
+	if err != nil {
+		return nil, err
+	}
+
+	var sr *taskApi.SearchResponse
+	err = json.Unmarshal(rs, &sr)
+	if err != nil {
+		return nil, err
+	}
+
+	return sr.Tasks, nil
+}
+
+func (h *TestHelper) TaskAwaitByChannel(channelId string, timeout time.Duration) (*taskApi.Task, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	for {
+		select {
+
+		case <- time.After(time.Second * 5):
+			tasks, err := h.SearchByChannel(channelId)
+			if err != nil {
+				return nil, err
+			}
+			if len(tasks) > 0 {
+				return tasks[0], nil
+			}
+			fmt.Printf("search by channel %s, not found\n", channelId)
+		case <- ctx.Done():
+			return nil, fmt.Errorf("timeout")
+		}
+	}
+}
+
 func (h *TestHelper) AssignTaskAwait(taskId string, timeout time.Duration) (*taskApi.Task, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)

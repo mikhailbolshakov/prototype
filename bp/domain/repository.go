@@ -18,8 +18,8 @@ type ChatService interface {
 	CreateUser(ctx context.Context, rq *pbChat.CreateUserRequest) (string, error)
 	DeleteUser(ctx context.Context, userId string) error
 	AskBot(ctx context.Context, rq *pbChat.AskBotRequest) (*pbChat.AskBotResponse, error)
-	Post(ctx context.Context, message, channelId, userId string, ephemeral, fromBot bool) error
-	PredefinedPost(ctx context.Context, channelId, userId, code string, ephemeral, fromBot bool, params map[string]interface{}) error
+	Post(ctx context.Context, message, channelId, userId string, ephemeral bool) error
+	PredefinedPost(ctx context.Context, channelId, userId, code string, ephemeral bool, params map[string]interface{}) error
 }
 
 type ConfigService interface {

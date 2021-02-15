@@ -21,12 +21,18 @@ func Decode(parentCtx context.Context, msg []byte, payload interface{}) (context
 		return nil, err
 	}
 
-	err = mapstructure.Decode(m.Payload, &payload)
-	if err != nil {
-		return nil, err
+	_, ok := payload.(map[string]interface{})
+	// if target type isn't map[string]interface{} try to decode, otherwise it's already it
+	if !ok {
+		err = mapstructure.Decode(m.Payload, &payload)
+		if err != nil {
+			return nil, err
+		}
+		m.Payload = payload
+	} else {
+		payload = m.Payload
 	}
 
-	m.Payload = payload
 	if parentCtx == nil {
 		parentCtx = context.Background()
 	}
