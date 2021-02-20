@@ -3,7 +3,7 @@ package cache
 import (
 	"fmt"
 	"github.com/go-redis/redis"
-	"log"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	"time"
 )
 
@@ -20,6 +20,9 @@ type Params struct {
 }
 
 func Open(params *Params) (*Redis, error) {
+
+	l := log.L().Cmp("redis").Mth("open")
+
 	client := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", params.Host, params.Port),
 		Password: params.Password,
@@ -30,7 +33,7 @@ func Open(params *Params) (*Redis, error) {
 		return nil, err
 	}
 
-	log.Printf("Connected to Redis")
+	l.Inf("ok")
 	return &Redis{
 		Instance: client,
 		Ttl:      time.Duration(params.Ttl) * time.Second,

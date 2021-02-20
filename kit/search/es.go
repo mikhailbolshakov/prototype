@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/olivere/elastic/v7"
+	"gitlab.medzdrav.ru/prototype/kit"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"text/template"
 )
@@ -30,6 +31,8 @@ type esImpl struct {
 
 func NewEs(url string, trace bool) (Search, error) {
 
+	l := log.L().Cmp("es").Mth("new").F(log.FF{"url": url})
+
 	s := &esImpl{}
 
 	opts := []elastic.ClientOptionFunc{elastic.SetURL(url)}
@@ -42,7 +45,7 @@ func NewEs(url string, trace bool) (Search, error) {
 		return nil, err
 	}
 	s.client = cl
-	log.DbgF("connected to ES on %s", url)
+	l.Inf("ok")
 	return s, nil
 }
 
@@ -65,6 +68,8 @@ func (s *esImpl) createIndex(index string, mapping *Mapping) error {
 	}
 }}`
 
+	l := log.L().Cmp("es").Mth("create-index")
+
 	// here is a trick with closure to put commas correctly (avoid comma after the last item)
 	isLast := func() func() bool {
 		i := 0
@@ -84,7 +89,6 @@ func (s *esImpl) createIndex(index string, mapping *Mapping) error {
 
 	var body bytes.Buffer
 	err = tmpl.Execute(&body, mapping)
-	log.TrcF("[es] mapping: %s", body.String())
 	if err != nil {
 		return err
 	}
@@ -94,10 +98,14 @@ func (s *esImpl) createIndex(index string, mapping *Mapping) error {
 		return err
 	}
 
+	l.Dbg("index %s created", index)
+
 	return nil
 }
 
 func (s *esImpl) CreateIndexIfNotExists(index string, mapping *Mapping) error {
+
+	l := log.L().Cmp("es").Mth("create-index")
 
 	exists, err := s.client.IndexExists(index).Do(context.Background())
 	if err != nil {
@@ -105,10 +113,9 @@ func (s *esImpl) CreateIndexIfNotExists(index string, mapping *Mapping) error {
 	}
 
 	if exists {
-		log.DbgF("[es] index %s exists", index)
+		l.DbgF("index %s exists", index)
 		return nil
 	} else {
-		log.DbgF("[es] index %s doesn't exist, creating", index)
 		return s.createIndex(index, mapping)
 	}
 
@@ -116,7 +123,7 @@ func (s *esImpl) CreateIndexIfNotExists(index string, mapping *Mapping) error {
 
 func (s *esImpl) Index(index string, id string, data interface{}) error {
 
-	log.DbgF("[es] indexation: index=%s, id=%s, data=%v", index, id, data)
+	log.L().Cmp("es").Mth("indexation").F(log.FF{"index": index, "id": id}).Dbg().Trc(kit.Json(data))
 
 	_, err := s.client.Index().
 		Index(index).
@@ -134,7 +141,7 @@ func (s *esImpl) IndexAsync(index string, id string, data interface{}) {
 
 	go func() {
 
-		log.DbgF("[es] async indexation: index=%s, id=%s, data=%v", index, id, data)
+		l := log.L().Cmp("es").Mth("indexation").F(log.FF{"index": index, "id": id}).Dbg().Trc(kit.Json(data))
 
 		_, err := s.client.Index().
 			Index(index).
@@ -144,7 +151,7 @@ func (s *esImpl) IndexAsync(index string, id string, data interface{}) {
 			Refresh("false").
 			Do(context.Background())
 		if err != nil {
-			log.Err(err, true)
+			l.E(err).Err()
 		}
 
 	}()

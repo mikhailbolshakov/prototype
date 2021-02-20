@@ -33,3 +33,8 @@ func MillisFromTime(t time.Time) int64 {
 func TimeFromMillis(millis int64) time.Time {
 	return time.Unix(0, millis*int64(time.Millisecond))
 }
+
+func Json(i interface{}) string {
+	r, _ := json.Marshal(i)
+	return string(r)
+}

@@ -2,19 +2,22 @@ package tasks
 
 import (
 	"context"
-	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
 	"gitlab.medzdrav.ru/prototype/tasks/domain/impl"
 	"gitlab.medzdrav.ru/prototype/tasks/grpc"
+	"gitlab.medzdrav.ru/prototype/tasks/meta"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/tasks/repository/storage"
-	"math/rand"
 )
+
+// NodeId - node id of a service
+// TODO: not to hardcode. Should be defined by service discovery procedure
+var nodeId = "1"
 
 type serviceImpl struct {
 	taskService       domain.TaskService
@@ -88,7 +91,10 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, fmt.Sprintf("client_tasks_%d", rand.Intn(99999))); err != nil {
+	if err := s.queue.Open(ctx, meta.ServiceCode + nodeId, &queue.Options{
+		Url:       c.Nats.Url,
+		ClusterId: c.Nats.ClusterId,
+	}); err != nil {
 		return err
 	}
 
@@ -103,8 +109,8 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 func (s *serviceImpl) ListenAsync(ctx context.Context) error {
 
 	s.grpc.ListenAsync()
-	s.assignTasksDaemon.Run(ctx)
-	s.scheduler.StartAsync(ctx)
+	//s.assignTasksDaemon.Run(ctx)
+	//s.scheduler.StartAsync(ctx)
 
 	return nil
 }

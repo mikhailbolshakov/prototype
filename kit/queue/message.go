@@ -3,13 +3,12 @@ package queue
 import (
 	"context"
 	"encoding/json"
-	"github.com/mitchellh/mapstructure"
 	kitCtx "gitlab.medzdrav.ru/prototype/kit/context"
 )
 
 type Message struct {
-	Ctx     *kitCtx.RequestContext
-	Payload interface{}
+	Ctx     *kitCtx.RequestContext `json:"ctx"`
+	Payload interface{}            `json:"pl"`
 }
 
 func Decode(parentCtx context.Context, msg []byte, payload interface{}) (context.Context, error) {
@@ -24,7 +23,8 @@ func Decode(parentCtx context.Context, msg []byte, payload interface{}) (context
 	_, ok := payload.(map[string]interface{})
 	// if target type isn't map[string]interface{} try to decode, otherwise it's already it
 	if !ok {
-		err = mapstructure.Decode(m.Payload, &payload)
+		plM, _ := json.Marshal(m.Payload)
+		err = json.Unmarshal(plM, &payload)
 		if err != nil {
 			return nil, err
 		}

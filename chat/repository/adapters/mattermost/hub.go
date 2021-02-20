@@ -13,37 +13,6 @@ type NewChatSessionResponse struct {
 	ChatSessionId string
 }
 
-const INCOMING_WS_QUEUE_TOPIC = "mm.ws.event"
-
-// TODO: move to config
-// for the whole list of events refer to https://api.mattermost.com/#tag/WebSocket
-var skippedWsEventTypes = map[string]struct{}{
-	"hello": {},
-	"config_changed": {},
-	"delete_team": {},
-	"leave_team": {},
-	"license_changed": {},
-	"plugin_disabled": {},
-	"plugin_enabled": {},
-	"plugin_statuses_changed": {},
-	"preference_changed": {},
-	"preferences_changed": {},
-	"preferences_deleted": {},
-	"response": {},
-	"update_team": {},
-	"user_added": {},
-	"user_removed": {},
-	"user_role_updated": {},
-	"user_updated": {},
-}
-
-type ChatIncomingWsEventPayload struct {
-	UserId     string
-	ChatUserId string
-	Event      string
-	Data       map[string]interface{}
-}
-
 type ChatSessionHub interface {
 	Init(ctx context.Context) error
 	NewSession(ctx context.Context, userId, username, chatUserId string) (string, error)
@@ -83,21 +52,30 @@ func NewHub(cfg *kitConfig.Config, userService domain.UserService, queue queue.Q
 
 func (h *hubImpl) Init(ctx context.Context) error {
 
+	l := log.L().Cmp("mm-hub").Mth("init")
+
 	var err error
 
 	h.adminSession, err = newAdminSession(ctx, h.cfg)
 	if err != nil {
 		return err
 	}
+
+	l.DbgF("admin session %s", h.adminSession.GetId())
+
 	h.botSession, err = newBotSession(ctx, h.cfg)
 	if err != nil {
 		return err
 	}
 
+	l.DbgF("bot session %s", h.adminSession.GetId())
+
 	return nil
 }
 
 func (h *hubImpl) NewSession(ctx context.Context, userId, username, chatUserId string) (string, error) {
+
+	l := log.L().Cmp("mm-hub").Mth("new-session").C(ctx).F(log.FF{"user": username})
 
 	// we hold the only session for the userId
 	h.RLock()
@@ -124,9 +102,9 @@ func (h *hubImpl) NewSession(ctx context.Context, userId, username, chatUserId s
 
 	}()
 
-	log.DbgF("[chat] user %s logged in session=%s", userId, sessionId)
-
 	s.Open(ctx)
+
+	l.F(log.FF{"sid": sessionId}).Dbg("logged in")
 
 	return sessionId, nil
 }
@@ -140,6 +118,9 @@ func (h *hubImpl) BotSession() ChatSession {
 }
 
 func (h *hubImpl) Logout(ctx context.Context, chatUserId string) error {
+
+	l := log.L().Cmp("mm-hub").Mth("logout").C(ctx).F(log.FF{"chat-user": chatUserId})
+
 	h.Lock()
 	defer h.Unlock()
 
@@ -149,11 +130,11 @@ func (h *hubImpl) Logout(ctx context.Context, chatUserId string) error {
 		delete(h.userSessions, s.GetUserId())
 		delete(h.chatUserSessions, s.GetChatUserId())
 	} else {
-		log.DbgF("[chat][logout] no session found for user %s", chatUserId)
+		l.Warn("no session found")
 		return nil
 	}
 
-	log.DbgF("[chat] user %s logged out", chatUserId)
+	l.Dbg("logged out")
 
 	return nil
 
@@ -193,6 +174,8 @@ func (h *hubImpl) GetByChatUserId(chatUserId string) ChatSession {
 
 func (h *hubImpl) Close(ctx context.Context) {
 
+	l := log.L().Cmp("mm-hub").Mth("close").C(ctx)
+
 	h.Lock()
 	defer h.Unlock()
 
@@ -206,6 +189,6 @@ func (h *hubImpl) Close(ctx context.Context) {
 	h.sessions = nil
 	h.userSessions = nil
 
-	log.Dbg("[chat] hub closed")
+	l.Dbg("closed")
 
 }

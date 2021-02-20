@@ -2,15 +2,44 @@ package mattermost
 
 import (
 	"context"
-	"fmt"
 	"github.com/adacta-ru/mattermost-server/v6/model"
 	"gitlab.medzdrav.ru/prototype/kit"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
+	"gitlab.medzdrav.ru/prototype/proto"
 	"sync"
 )
+
+// TODO: move to config
+// skippedWsEventTypes defines mattermost events to skip
+// the whole list of available events find at https://api.mattermost.com/#tag/WebSocket
+var skippedWsEventTypes = map[string]struct{}{
+	"hello":                   {},
+	"config_changed":          {},
+	"delete_team":             {},
+	"leave_team":              {},
+	"license_changed":         {},
+	"plugin_disabled":         {},
+	"plugin_enabled":          {},
+	"plugin_statuses_changed": {},
+	"preference_changed":      {},
+	"preferences_changed":     {},
+	"preferences_deleted":     {},
+	"response":                {},
+	"update_team":             {},
+	"user_added":              {},
+	"user_removed":            {},
+	"user_role_updated":       {},
+	"user_updated":            {},
+}
+
+type mattermostWsEvent struct {
+	ChatUserId string                 `json:"chatUserId"`
+	Event      string                 `json:"event"`
+	Data       map[string]interface{} `json:"data"`
+}
 
 type ChatSession interface {
 	GetId() string
@@ -67,11 +96,11 @@ func newAdminSession(ctx context.Context, cfg *kitConfig.Config) (ChatSession, e
 	}
 
 	mmClient, err := Login(&Params{
-		Url:     cfg.Mattermost.Url,
-		WsUrl:   cfg.Mattermost.Ws,
-		Account: cfg.Mattermost.AdminUsername,
-		Pwd:     cfg.Mattermost.AdminPassword,
-		OpenWS:  false,
+		Url:         cfg.Mattermost.Url,
+		WsUrl:       cfg.Mattermost.Ws,
+		Account:     cfg.Mattermost.AdminUsername,
+		AccessToken: cfg.Mattermost.AdminAccessToken,
+		OpenWS:      false,
 	})
 	if err != nil {
 		return nil, err
@@ -107,40 +136,50 @@ func (s *sessionImpl) skipEvent(eventType string) bool {
 	return ok
 }
 
-func (s *sessionImpl) forwardEvent(ctx context.Context, event *model.WebSocketEvent) {
+func (s *sessionImpl) forwardEvent(event *model.WebSocketEvent) {
 
-	log.TrcF("[mm-ws] event=%s data=%v", event.EventType(), event.ToJson())
+	l := log.L().Cmp("mm-hub").Mth("fwd-ev").F(log.FF{"type": event.EventType()})
+
+	l.Dbg().Trc(event.ToJson())
 
 	if s.skipEvent(event.EventType()) {
-		log.TrcF("[mm-ws] event=%s skipped")
+		l.Trc("skipped")
 		return
 	}
 
 	s.RLock()
 	userId := s.UserId
 	chatUserId := s.ChatUserId
+	username := s.Username
 	s.RUnlock()
 
-	c, ok := kitContext.Request(ctx)
-	if !ok {
-		log.Err(fmt.Errorf("invalid context"), true)
-		return
-	}
+	ctx := kitContext.NewRequestCtx().
+		Client("mm-ws").
+		WithNewRequestId().
+		WithUser(userId, username).
+		WithChatUserId(chatUserId)
 
 	msg := &queue.Message{
-		Ctx: c,
-		Payload: &ChatIncomingWsEventPayload{
-			UserId:     userId,
-			ChatUserId: chatUserId,
-			Event:      event.EventType(),
-			Data:       event.GetData(),
+		Ctx: ctx,
+		Payload: &proto.OutgoingWsEventQueueMessagePayload{
+			UserId: userId,
+			WsEvent: &proto.WsMessage{
+				MessageType: proto.WS_MESSAGE_TYPE_CHAT,
+				Data: &mattermostWsEvent{
+					ChatUserId: chatUserId,
+					Event:      event.EventType(),
+					Data:       event.GetData(),
+				},
+			},
 		},
 	}
 
-	if err := s.queue.Publish(ctx, queue.QUEUE_TYPE_AT_MOST_ONCE, INCOMING_WS_QUEUE_TOPIC, msg); err != nil {
-		log.Err(err, true)
+	if err := s.queue.Publish(ctx.ToContext(context.Background()), queue.QUEUE_TYPE_AT_MOST_ONCE, proto.QUEUE_TOPIC_OUTGOING_WS_EVENT, msg); err != nil {
+		l.E(err).Err("publish failed")
 		return
 	}
+
+	l.Dbg("ok")
 
 }
 
@@ -152,18 +191,21 @@ func (s *sessionImpl) listen(ctx context.Context) {
 
 	go s.mmClient.WsApi.Listen()
 	go func() {
+
+		l := log.L().Cmp("mm-hub").Mth("listen")
+
 		for {
 			select {
 			case event := <-s.mmClient.WsApi.EventChannel:
-				s.forwardEvent(ctx, event)
+				s.forwardEvent(event)
 			case response := <-s.mmClient.WsApi.ResponseChannel:
-				log.TrcF("[mm-ws] response event=%s data=%s", response.EventType(), response.ToJson())
+				l.F(log.FF{"event": response.EventType()}).Dbg().Trc(response.ToJson())
 			case _ = <-s.mmClient.WsApi.PingTimeoutChannel:
-				log.Trc("[mm-ws] ping")
+				l.Trc("ping")
 			case <-s.closeMMws:
-				log.Trc("[mm-ws] close", s.mmClient.User.Email)
 				s.mmClient.WsApi.Close()
 				s.mmClient.RestApi.ClearOAuthToken()
+				l.TrcF("%s closed\n", s.mmClient.User.Username)
 				return
 			}
 		}

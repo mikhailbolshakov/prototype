@@ -37,11 +37,12 @@ func (h *TestHelper) Login(username string) (string, chan struct{}, error) {
 
 		h.sessionId = rs.SessionId
 
-		_, done, err := h.Ws(h.sessionId)
+		ws, done, err := h.Ws(h.sessionId)
 		if err != nil {
 			return "", nil, err
 		}
 
+		h.ws = ws
 		return rs.SessionId, done, nil
 	}
 }
@@ -69,7 +70,7 @@ func (h *TestHelper) Logout(username string) error {
 func (h *TestHelper) Ws(sessionId string) (*websocket.Conn, chan struct{}, error) {
 
 	header := http.Header{}
-	wsConn, _, err := websocket.DefaultDialer.Dial( fmt.Sprintf("%s?session=%s", WS_URL, sessionId), header)
+	wsConn, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("%s?session=%s", WS_URL, sessionId), header)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -80,11 +81,16 @@ func (h *TestHelper) Ws(sessionId string) (*websocket.Conn, chan struct{}, error
 
 func (h *TestHelper) ListenWs(c *websocket.Conn, done chan struct{}) {
 
-	ticker := time.NewTicker(time.Second * 5)
+	ticker := time.NewTicker(h.wsPingInterval)
 	defer ticker.Stop()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
+
+	c.SetPongHandler(func(m string) error {
+		log.Println("[ws] received pong")
+		return nil
+	})
 
 	//readMessageChan := make(chan []byte)
 
@@ -106,7 +112,7 @@ func (h *TestHelper) ListenWs(c *websocket.Conn, done chan struct{}) {
 			c.Close()
 			return
 		case <-ticker.C:
-			err := c.WriteMessage(websocket.TextMessage, []byte("ping"))
+			err := c.WriteMessage(websocket.PingMessage, []byte("ping"))
 			if err != nil {
 				log.Println("[ws] write error:", err)
 				return
@@ -124,7 +130,6 @@ func (h *TestHelper) ListenWs(c *websocket.Conn, done chan struct{}) {
 			}
 			select {
 			case <-done:
-				//case <-time.After(time.Second):
 			}
 			return
 		}

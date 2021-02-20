@@ -2,8 +2,9 @@ package tasks
 
 import (
 	"context"
+	"gitlab.medzdrav.ru/prototype/bp/meta"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
-	"log"
 )
 
 type serviceImpl struct {
@@ -17,18 +18,24 @@ func newImpl() *serviceImpl {
 }
 
 func (u *serviceImpl) GetByChannelId(ctx context.Context, channelId string) []*pb.Task {
+
+	l := log.L().Cmp(meta.ServiceCode).Mth("get-by-channel").C(ctx).F(log.FF{"channel": channelId})
+
 	rs, err := u.GetByChannel(ctx, &pb.GetByChannelRequest{ChannelId: channelId})
 	if err != nil {
-		log.Printf("error: %v", err)
+		l.E(err).Err()
 		return []*pb.Task{}
 	}
 	return rs.Tasks
 }
 
 func (u *serviceImpl) MakeTransition(ctx context.Context, rq *pb.MakeTransitionRequest) error {
+
+	l := log.L().Cmp(meta.ServiceCode).Mth("make-transition").C(ctx).F(log.FF{"task": rq.TaskId, "tr": rq.TransitionId})
+
 	_, err := u.TasksClient.MakeTransition(ctx, rq)
 	if err != nil {
-		log.Printf("error: %v", err)
+		l.E(err).Err()
 		return err
 	}
 	return nil

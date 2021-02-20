@@ -1,7 +1,7 @@
 package client_request
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/entities"
@@ -10,13 +10,11 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit"
 	"gitlab.medzdrav.ru/prototype/kit/bpm"
 	"gitlab.medzdrav.ru/prototype/kit/bpm/zeebe"
-	kitCtx "gitlab.medzdrav.ru/prototype/kit/context"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	chatPb "gitlab.medzdrav.ru/prototype/proto/chat"
-	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
-	"gitlab.medzdrav.ru/prototype/tasks/domain"
-	"log"
+	taskPb "gitlab.medzdrav.ru/prototype/proto/tasks"
 	"time"
 )
 
@@ -60,9 +58,9 @@ func (bp *bpImpl) Init() error {
 }
 
 func (bp *bpImpl) SetQueueListeners(ql listener.QueueListener) {
-	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "tasks.assigned", bp.TaskAssignedMessageHandler)
-	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "tasks.solved", bp.TaskSolvedMessageHandler)
-	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "mm.posts", bp.MattermostPostMessageHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, taskPb.QUEUE_TOPIC_TASK_ASSIGN_STATUS, bp.TaskAssignedMessageHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, taskPb.QUEUE_TOPIC_TASK_SOLVED_STATUS, bp.TaskSolvedMessageHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, chatPb.QUEUE_TOPIC_MATTERMOST_POST_MESSAGE, bp.ChatPostMessageHandler)
 }
 
 func (bp *bpImpl) GetId() string {
@@ -86,13 +84,13 @@ func (bp *bpImpl) registerBpmHandlers() error {
 
 func (bp *bpImpl) executeBotTaskHandler(client worker.JobClient, job entities.Job) {
 
-	log.Println("executeBotTaskHandler executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	message := variables["message"].(string)
 	channelId := variables["channelId"].(string)
@@ -125,24 +123,24 @@ func (bp *bpImpl) executeBotTaskHandler(client worker.JobClient, job entities.Jo
 
 func (bp *bpImpl) checkClientOpenTaskHandler(client worker.JobClient, job entities.Job) {
 
-	log.Println("checkClientOpenTaskHandler executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
 
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
+
 	channelId := variables["channelId"].(string)
 	// retrieves tasks by channel
-	ts, err := bp.taskService.Search(ctx, &pb.SearchRequest{
-		Type: &pb.Type{
+	ts, err := bp.taskService.Search(ctx, &taskPb.SearchRequest{
+		Type: &taskPb.Type{
 			Type:    TASK_TYPE_CLIENT,
 			Subtype: TASK_SUBTYPE_COMMON_RQ,
 		},
-		Status:    &pb.Status{Status: TASK_STATUS_OPEN},
+		Status:    &taskPb.Status{Status: TASK_STATUS_OPEN},
 		ChannelId: channelId,
-		Paging:    &pb.PagingRequest{Index: 0, Size: 1},
+		Paging:    &taskPb.PagingRequest{Index: 0, Size: 1},
 	})
 	if err != nil {
 		zeebe.FailJob(client, job, err)
@@ -177,13 +175,13 @@ func (bp *bpImpl) checkClientOpenTaskHandler(client worker.JobClient, job entiti
 
 func (bp *bpImpl) createClientRequestTaskHandler(client worker.JobClient, job entities.Job) {
 
-	log.Println("createClientRequestTaskHandler executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	channelId := variables["channelId"].(string)
 	userId := variables["userId"].(string)
@@ -194,16 +192,16 @@ func (bp *bpImpl) createClientRequestTaskHandler(client worker.JobClient, job en
 	user := bp.userService.Get(ctx, userId)
 
 	// create a new task
-	createdTask, err := bp.taskService.New(ctx, &pb.NewTaskRequest{
-		Type: &pb.Type{
+	createdTask, err := bp.taskService.New(ctx, &taskPb.NewTaskRequest{
+		Type: &taskPb.Type{
 			Type:    TASK_TYPE_CLIENT,
 			Subtype: TASK_SUBTYPE_COMMON_RQ,
 		},
-		Reported:    &pb.Reported{UserId: user.Id, At: ts},
+		Reported:    &taskPb.Reported{UserId: user.Id, At: ts},
 		Description: "Клиент обратился в чат",
 		Title:       "Обращение клиента по общим вопросам",
 		DueDate:     nil,
-		Assignee:    &pb.Assignee{},
+		Assignee:    &taskPb.Assignee{},
 		ChannelId:   channelId,
 	})
 	if err != nil {
@@ -211,7 +209,7 @@ func (bp *bpImpl) createClientRequestTaskHandler(client worker.JobClient, job en
 		return
 	}
 
-	if err := bp.taskService.MakeTransition(ctx, &pb.MakeTransitionRequest{
+	if err := bp.taskService.MakeTransition(ctx, &taskPb.MakeTransitionRequest{
 		TaskId:       createdTask.Id,
 		TransitionId: "2",
 	}); err != nil {
@@ -237,13 +235,13 @@ func (bp *bpImpl) createClientRequestTaskHandler(client worker.JobClient, job en
 
 func (bp *bpImpl) subscribeConsultantHandler(client worker.JobClient, job entities.Job) {
 
-	log.Println("createClientRequestTaskHandler executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	channelId := variables["channelId"].(string)
 	assigneeUser := variables["assignee"].(string)
@@ -265,13 +263,13 @@ func (bp *bpImpl) subscribeConsultantHandler(client worker.JobClient, job entiti
 
 func (bp *bpImpl) sendMessageTaskAssignedHandler(client worker.JobClient, job entities.Job) {
 
-	log.Println("sendMessageTaskAssignedHandler executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	userId := variables["userId"].(string)
 	assigneeUsername := variables["assignee"].(string)
@@ -308,13 +306,13 @@ func (bp *bpImpl) sendMessageTaskAssignedHandler(client worker.JobClient, job en
 
 func (bp *bpImpl) sendMessageNoAvailableConsultantHandler(client worker.JobClient, job entities.Job) {
 
-	log.Println("sendMessageNoAvailableConsultantHandler executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	userId := variables["userId"].(string)
 	channelId := variables["channelId"].(string)
@@ -332,27 +330,15 @@ func (bp *bpImpl) sendMessageNoAvailableConsultantHandler(client worker.JobClien
 	}
 }
 
-func (bp *bpImpl) MattermostPostMessageHandler(payload []byte) error {
+func (bp *bpImpl) ChatPostMessageHandler(msg []byte) error {
 
-	// TODO: context from external system
-	ctx := kitCtx.NewRequestCtx().Empty().ToContext(nil)
-
-	type postQueueMsg struct {
-		Id        string `json:"id"`
-		CreateAt  int64  `json:"createAt"`
-		UpdateAt  int64  `json:"updateAt"`
-		EditAt    int64  `json:"editAt"`
-		DeleteAt  int64  `json:"deleteAt"`
-		UserId    string `json:"userId"`
-		ChannelId string `json:"channelId"`
-		Message   string `json:"message"`
-		Type      string `json:"type"`
-	}
-
-	post := &postQueueMsg{}
-	if err := json.Unmarshal(payload, post); err != nil {
+	post := &chatPb.MattermostPostMessagePayload{}
+	ctx, err := queue.Decode(context.Background(), msg, &post)
+	if err != nil {
 		return err
 	}
+
+	log.L().Pr("queue").Cmp(bp.GetId()).Mth("chat-message").C(ctx).Dbg().Trc(string(msg))
 
 	// get user by MM user id
 	user, err := bp.userService.GetByMMId(ctx, post.UserId)
@@ -387,11 +373,13 @@ func (bp *bpImpl) MattermostPostMessageHandler(payload []byte) error {
 
 func (bp *bpImpl) TaskAssignedMessageHandler(msg []byte) error {
 
-	task := &domain.Task{}
-	_, err := queue.Decode(nil, msg, task)
+	task := &taskPb.TaskMessagePayload{}
+	ctx, err := queue.Decode(nil, msg, task)
 	if err != nil {
 		return err
 	}
+
+	log.L().Pr("queue").Cmp(bp.GetId()).Mth("task-assigned").F(log.FF{"task-id": task.Id}).C(ctx).Dbg().Trc(string(msg))
 
 	if task.Type.Type == TASK_TYPE_CLIENT && task.Type.SubType == TASK_SUBTYPE_COMMON_RQ && task.Assignee.UserId != "" {
 		variables := map[string]interface{}{}
@@ -405,23 +393,25 @@ func (bp *bpImpl) TaskAssignedMessageHandler(msg []byte) error {
 
 func (bp *bpImpl) TaskSolvedMessageHandler(msg []byte) error {
 
-	task := &domain.Task{}
+	task := &taskPb.TaskMessagePayload{}
 	ctx, err := queue.Decode(nil, msg, task)
 	if err != nil {
 		return err
 	}
 
+	l := log.L().Pr("queue").Cmp(bp.GetId()).Mth("task-solved").F(log.FF{"task-id": task.Id}).C(ctx).Dbg().Trc(string(msg))
+
 	if task.Type.Type == TASK_TYPE_CLIENT && task.Type.SubType == TASK_SUBTYPE_COMMON_RQ {
 
 		msg := fmt.Sprintf("Консультация %s завершена", task.Num)
 		if err := bp.chatService.Post(ctx, msg, task.ChannelId, "", false); err != nil {
-			log.Println(err)
+			l.E(err).St().Err()
 			return err
 		}
 
 		user := bp.userService.Get(ctx, task.Reported.UserId)
 		if err := bp.chatService.PredefinedPost(ctx, task.ChannelId, user.Id, "client.feedback", false, nil); err != nil {
-			log.Println(err)
+			l.E(err).St().Err()
 			return err
 		}
 

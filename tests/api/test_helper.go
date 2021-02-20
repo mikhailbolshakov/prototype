@@ -3,8 +3,10 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 const (
@@ -18,10 +20,14 @@ const (
 
 type TestHelper struct {
 	sessionId string
+	ws *websocket.Conn
+	wsPingInterval time.Duration
 }
 
 func NewTestHelper() *TestHelper {
-	return &TestHelper{}
+	return &TestHelper{
+		wsPingInterval: time.Second,
+	}
 }
 
 func (h *TestHelper) do(url string, verb string, payload []byte) ([]byte, error) {

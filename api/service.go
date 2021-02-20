@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"github.com/Nerzal/gocloak/v7"
 	"gitlab.medzdrav.ru/prototype/api/public"
 	"gitlab.medzdrav.ru/prototype/api/public/bp"
@@ -25,10 +24,13 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
-	"math/rand"
+	"gitlab.medzdrav.ru/prototype/proto"
 )
 
-const INCOMING_WS_QUEUE_TOPIC = "mm.ws.event"
+// NodeId - node id of a service
+// TODO: not to hardcode. Should be defined by service discovery procedure
+var nodeId = "1"
+const serviceCode = "api"
 
 type serviceImpl struct {
 	http            *kitHttp.Server
@@ -94,12 +96,12 @@ func (s *serviceImpl) initHttpServer(ctx context.Context, c *kitConfig.Config) e
 
 	authService := auth.New(ctx, s.keycloak, authClient)
 
-	s.http = kitHttp.NewHttpServer(c.Http.Host, c.Http.Port)
+	s.http = kitHttp.NewHttpServer(c.Http.Host, c.Http.Port, c.Http.Tls.Cert, c.Http.Tls.Key)
 
 	// session HUB
 	s.hub = session.NewHub(c, s.http, authService, s.userService, s.chatService)
-	// setup a NATS message handler on events received from the chat
-	s.queueListener.Add(queue.QUEUE_TYPE_AT_MOST_ONCE, INCOMING_WS_QUEUE_TOPIC, s.hub.GetChatWsEventsHandler())
+	// setup a NATS message handler on events forwarded to websocket
+	s.queueListener.Add(queue.QUEUE_TYPE_AT_MOST_ONCE, proto.QUEUE_TOPIC_OUTGOING_WS_EVENT, s.hub.GetOutgoingWsEventsHandler())
 
 	s.http.SetRouters(s.hub.GetLoginRouteSetter())
 
@@ -143,7 +145,10 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, fmt.Sprintf("client_%d", rand.Intn(99999))); err != nil {
+	if err := s.queue.Open(ctx, serviceCode + nodeId, &queue.Options{
+		Url:       c.Nats.Url,
+		ClusterId: c.Nats.ClusterId,
+	}); err != nil {
 		return err
 	}
 

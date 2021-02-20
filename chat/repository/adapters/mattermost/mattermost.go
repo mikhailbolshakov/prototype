@@ -6,21 +6,34 @@ import (
 	"github.com/adacta-ru/mattermost-server/v6/model"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
+	"go.uber.org/atomic"
 )
+
+var notReadyErr = fmt.Errorf("[mattermost] not ready")
 
 type serviceImpl struct {
 	hub ChatSessionHub
 	cfg *kitConfig.Config
+	ready *atomic.Bool
 }
 
 func newImpl(hub ChatSessionHub) *serviceImpl {
 	m := &serviceImpl{
 		hub: hub,
+		ready: atomic.NewBool(false),
 	}
 	return m
 }
 
+func (s *serviceImpl) setReady(r bool) {
+	s.ready.Store(r)
+}
+
 func (s *serviceImpl) getClient(f *domain.From) (*Client, error) {
+
+	if !s.ready.Load() {
+		return nil, notReadyErr
+	}
 
 	var cl *Client
 	switch f.Who {
@@ -50,6 +63,10 @@ func (s *serviceImpl) setConfig(cfg *kitConfig.Config) {
 
 func (s *serviceImpl) CreateUser(ctx context.Context, rq *domain.CreateUserRequest) (string, error) {
 
+	if !s.ready.Load() {
+		return "", notReadyErr
+	}
+
 	if rq.Password == "" {
 		rq.Password = s.cfg.Mattermost.DefaultPassword
 	}
@@ -64,6 +81,10 @@ func (s *serviceImpl) CreateUser(ctx context.Context, rq *domain.CreateUserReque
 
 func (s *serviceImpl) CreateClientChannel(ctx context.Context, rq *domain.CreateClientChannelRequest) (string, error) {
 
+	if !s.ready.Load() {
+		return "", notReadyErr
+	}
+
 	if rq.TeamName == "" {
 		rq.TeamName = s.cfg.Mattermost.Team
 	}
@@ -77,10 +98,19 @@ func (s *serviceImpl) CreateClientChannel(ctx context.Context, rq *domain.Create
 }
 
 func (s *serviceImpl) SubscribeUser(ctx context.Context, userId, channelId string) error {
+
+	if !s.ready.Load() {
+		return notReadyErr
+	}
+
 	return s.hub.AdminSession().Client().SubscribeUser(channelId, userId)
 }
 
 func (s *serviceImpl) Post(ctx context.Context, post *domain.Post) error {
+
+	if !s.ready.Load() {
+		return notReadyErr
+	}
 
 	cl, err := s.getClient(post.From)
 	if err != nil {
@@ -102,6 +132,10 @@ func (s *serviceImpl) Post(ctx context.Context, post *domain.Post) error {
 
 func (s *serviceImpl) GetUserStatuses(ctx context.Context, rq *domain.GetUsersStatusesRequest) (*domain.GetUsersStatusesResponse, error) {
 
+	if !s.ready.Load() {
+		return nil, notReadyErr
+	}
+
 	rs := &domain.GetUsersStatusesResponse{
 		Statuses: []*domain.UserStatus{},
 	}
@@ -122,6 +156,11 @@ func (s *serviceImpl) GetUserStatuses(ctx context.Context, rq *domain.GetUsersSt
 }
 
 func (s *serviceImpl) CreateDirectChannel(ctx context.Context, chatUserId1, chatUserId2 string) (string, error) {
+
+	if !s.ready.Load() {
+		return "", notReadyErr
+	}
+
 	chId, err := s.hub.AdminSession().Client().CreateDirectChannel(chatUserId1, chatUserId2)
 	if err != nil {
 		return "", err
@@ -130,10 +169,20 @@ func (s *serviceImpl) CreateDirectChannel(ctx context.Context, chatUserId1, chat
 }
 
 func (s *serviceImpl) GetChannelsForUserAndMembers(ctx context.Context, rq *domain.GetChannelsForUserAndMembersRequest) ([]string, error) {
+
+	if !s.ready.Load() {
+		return nil, notReadyErr
+	}
+
 	return s.hub.AdminSession().Client().GetChannelsForUserAndMembers(rq.UserId, s.cfg.Mattermost.Team, rq.MemberUserIds)
 }
 
 func (s *serviceImpl) DeleteUser(ctx context.Context, chatUserId string) error {
+
+	if !s.ready.Load() {
+		return notReadyErr
+	}
+
 	return s.hub.AdminSession().Client().DeleteUser(chatUserId)
 }
 
@@ -216,6 +265,10 @@ func (s *serviceImpl) convertAttachments(attachments []*domain.PostAttachment) [
 
 func (s *serviceImpl) SetUserStatus(ctx context.Context, chatUserId, status string, from *domain.From) error {
 
+	if !s.ready.Load() {
+		return notReadyErr
+	}
+
 	if cl, err := s.getClient(from); err != nil {
 		return cl.UpdateStatus(chatUserId, status)
 	} else {
@@ -225,9 +278,19 @@ func (s *serviceImpl) SetUserStatus(ctx context.Context, chatUserId, status stri
 }
 
 func (s *serviceImpl) Login(ctx context.Context, userId, username, chatUserId string) (string, error) {
+
+	if !s.ready.Load() {
+		return "", notReadyErr
+	}
+
 	return s.hub.NewSession(ctx, userId, username, chatUserId)
 }
 
 func (s *serviceImpl) Logout(ctx context.Context, chatUserId string) error {
+
+	if !s.ready.Load() {
+		return notReadyErr
+	}
+
 	return s.hub.Logout(ctx, chatUserId)
 }

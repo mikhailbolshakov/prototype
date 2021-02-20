@@ -2,9 +2,9 @@ package storage
 
 import (
 	"fmt"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"log"
 )
 
 type Storage struct {
@@ -34,6 +34,7 @@ func Open(params *Params) (*Storage, error) {
 		params.Host,
 	)
 
+	// uncomment to log all queries
 	cfg := &gorm.Config{
 		//Logger: logger.New(
 		//	log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
@@ -49,7 +50,8 @@ func Open(params *Params) (*Storage, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Connected to database %s", params.DBName)
+
+	log.L().Pr("db").Cmp(params.UserName).Inf("ok")
 
 	s.Instance = db
 

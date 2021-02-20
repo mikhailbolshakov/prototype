@@ -1,7 +1,6 @@
 package listener
 
 import (
-	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"sync"
@@ -71,8 +70,10 @@ func (q *queueListener) ListenAsync() {
 							m := msg
 							h := h
 							go func() {
+								l := log.L().Pr("queue").Cmp("listener").F(log.FF{"topic": tp})
+								l.TrcF("%s", string(m))
 								if err := h(m); err != nil {
-									log.Err(fmt.Errorf("[queue-listener] %v handler error %s", tp, err.Error()), true)
+									l.E(err).St().Err()
 								}
 							}()
 						}

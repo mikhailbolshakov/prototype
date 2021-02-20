@@ -9,7 +9,9 @@ import (
 	context2 "gitlab.medzdrav.ru/prototype/kit/context"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
+	taskPb "gitlab.medzdrav.ru/prototype/proto/tasks"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
+	"gitlab.medzdrav.ru/prototype/tasks/meta"
 	"math/rand"
 	"time"
 )
@@ -49,9 +51,9 @@ func NewTaskService(
 
 func (t *serviceImpl) remindsSchedulerHandler(ctx context.Context, taskId string) {
 
-	log.Dbg("reminder fired")
-
 	task := t.Get(ctx, taskId)
+
+	l := log.L().Cmp(meta.ServiceCode).Mth("reminds-scheduler").C(ctx).F(log.FF{"task": task.Num}).Dbg("fired")
 
 	if task.ChannelId != "" {
 
@@ -64,7 +66,7 @@ func (t *serviceImpl) remindsSchedulerHandler(ctx context.Context, taskId string
 		}
 
 		if err := t.chatService.Post(ctx, msg, task.ChannelId, "", false); err != nil {
-			log.Err(err, true)
+			l.E(err).Err("chat post failed")
 			return
 		}
 
@@ -73,12 +75,13 @@ func (t *serviceImpl) remindsSchedulerHandler(ctx context.Context, taskId string
 }
 
 func (t *serviceImpl) dueDateSchedulerHandler(ctx context.Context, taskId string) {
-	log.Dbg("due date fired")
 
 	task := t.Get(ctx, taskId)
 
-	if err := t.queue.Publish(ctx, queue.QUEUE_TYPE_AT_LEAST_ONCE, "tasks.duedate", &queue.Message{Payload: task}); err != nil {
-		log.Err(err, true)
+	l := log.L().Cmp(meta.ServiceCode).Mth("duedate-scheduler").C(ctx).F(log.FF{"task": task.Num}).Dbg("fired")
+
+	if err := t.queue.Publish(ctx, queue.QUEUE_TYPE_AT_LEAST_ONCE, taskPb.QUEUE_TOPIC_TASK_DUEDATE, &queue.Message{Payload: task}); err != nil {
+		l.E(err).Err("publish failed")
 		return
 	}
 
@@ -92,7 +95,7 @@ func (t *serviceImpl) dueDateSchedulerHandler(ctx context.Context, taskId string
 		msg := fmt.Sprintf("Уведомление о наступлении времени решения по задаче %s (%s)", task.Num, dueDateStr)
 
 		if err := t.chatService.Post(ctx, msg, task.ChannelId, "", false); err != nil {
-			log.Err(err, true)
+			l.E(err).Err("chat post failed")
 			return
 		}
 
@@ -101,6 +104,8 @@ func (t *serviceImpl) dueDateSchedulerHandler(ctx context.Context, taskId string
 }
 
 func (t *serviceImpl) New(ctx context.Context, task *domain.Task) (*domain.Task, error) {
+
+	l := log.L().Cmp(meta.ServiceCode).Mth("new").C(ctx)
 
 	// check configuration by the task type
 	cfg, err := t.config.Get(ctx, task.Type)
@@ -119,6 +124,8 @@ func (t *serviceImpl) New(ctx context.Context, task *domain.Task) (*domain.Task,
 	task.Id = kit.NewId()
 	task.Num, _ = t.newNum(cfg)
 	task.Status = tr.To
+
+	l.F(log.FF{"task": task.Num})
 
 	// if reported isn't specified setup current
 	if task.Reported.At == nil {
@@ -180,12 +187,16 @@ func (t *serviceImpl) New(ctx context.Context, task *domain.Task) (*domain.Task,
 		return nil, err
 	}
 
+	l.Dbg("created").Trc(kit.Json(task))
+
 	t.putHistory(ctx, task)
 
 	if tr.QueueTopic != "" {
-		if err := t.queue.Publish(ctx, queue.QUEUE_TYPE_AT_LEAST_ONCE, tr.QueueTopic, &queue.Message{Payload: task}); err != nil {
-			return nil, err
-		}
+		go func() {
+			if err := t.queue.Publish(ctx, queue.QUEUE_TYPE_AT_LEAST_ONCE, tr.QueueTopic, &queue.Message{Payload: task}); err != nil {
+				log.L().Cmp(meta.ServiceCode).Mth("new").C(ctx).F(log.FF{"topic": tr.QueueTopic}).E(err).Err("publish failed")
+			}
+		}()
 	}
 
 	// add task to scheduler
@@ -201,9 +212,12 @@ func (t *serviceImpl) putHistory(ctx context.Context, task *domain.Task) {
 
 	go func() {
 
-		r, ok := context2.Request(ctx)
-		if !ok {
-			log.Err(fmt.Errorf("invalid context"), true)
+		l := log.L().Cmp(meta.ServiceCode).Mth("put-hist").C(ctx).F(log.FF{"task": task.Num})
+
+		r, err := context2.MustRequest(ctx)
+		if err != nil {
+			l.E(err).Err()
+			return
 		}
 
 		hist := &domain.History{
@@ -216,7 +230,8 @@ func (t *serviceImpl) putHistory(ctx context.Context, task *domain.Task) {
 		}
 
 		if _, err := t.storage.CreateHistory(ctx, hist); err != nil {
-			log.Err(err, true)
+			l.E(err).Err()
+			return
 		}
 
 	}()

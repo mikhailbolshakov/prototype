@@ -6,6 +6,7 @@ import (
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"gitlab.medzdrav.ru/prototype/users/domain"
+	"gitlab.medzdrav.ru/prototype/users/meta"
 	"log"
 )
 
@@ -21,7 +22,7 @@ func New(domain domain.UserService) *Server {
 	s := &Server{domain: domain}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer()
+	gs, err := kitGrpc.NewServer(meta.ServiceCode)
 	if err != nil {
 		panic(err)
 	}

@@ -3,7 +3,6 @@ package chat
 import (
 	"context"
 	pb "gitlab.medzdrav.ru/prototype/proto/chat"
-	"log"
 )
 
 type serviceImpl struct {
@@ -17,12 +16,12 @@ func newImpl() *serviceImpl {
 }
 
 func (u *serviceImpl) CreateUser(ctx context.Context, rq *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
+
 	rs, err := u.UsersClient.CreateUser(ctx, &pb.CreateUserRequest{
 		Username: rq.Username,
 		Email:    rq.Email,
 	})
 	if err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 
@@ -37,7 +36,6 @@ func (u *serviceImpl) CreateClientChannel(ctx context.Context, rq *pb.CreateClie
 		Subscribers: rq.Subscribers,
 	})
 	if err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 
@@ -48,7 +46,6 @@ func (u *serviceImpl) GetUsersStatuses(ctx context.Context, rq *pb.GetUsersStatu
 
 	rs, err := u.UsersClient.GetUsersStatuses(ctx, rq)
 	if err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 

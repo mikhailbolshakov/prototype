@@ -2,10 +2,10 @@ package chat
 
 import (
 	"context"
-	"fmt"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
 	"gitlab.medzdrav.ru/prototype/chat/domain/impl"
 	"gitlab.medzdrav.ru/prototype/chat/grpc"
+	"gitlab.medzdrav.ru/prototype/chat/meta"
 	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/mattermost"
 	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/users"
@@ -13,8 +13,11 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
-	"math/rand"
 )
+
+// NodeId - node id of a service
+// TODO: not to hardcode. Should be defined by service discovery procedure
+var nodeId = "1"
 
 type serviceImpl struct {
 	domainService     domain.Service
@@ -76,7 +79,10 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, fmt.Sprintf("mm_%d", rand.Intn(99999))); err != nil {
+	if err := s.queue.Open(ctx, meta.ServiceCode + nodeId, &queue.Options{
+		Url:       c.Nats.Url,
+		ClusterId: c.Nats.ClusterId,
+	}); err != nil {
 		return err
 	}
 

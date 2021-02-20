@@ -2,7 +2,6 @@ package bp
 
 import (
 	"context"
-	"fmt"
 	"gitlab.medzdrav.ru/prototype/bp/domain"
 	"gitlab.medzdrav.ru/prototype/bp/domain/client_law_request"
 	"gitlab.medzdrav.ru/prototype/bp/domain/client_med_request"
@@ -10,6 +9,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/bp/domain/create_user"
 	"gitlab.medzdrav.ru/prototype/bp/domain/dentist_online_consultation"
 	"gitlab.medzdrav.ru/prototype/bp/grpc"
+	"gitlab.medzdrav.ru/prototype/bp/meta"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/bp_engine"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/config"
@@ -21,8 +21,11 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
-	"math/rand"
 )
+
+// NodeId - node id of a service
+// TODO: not to hardcode. Should be defined by service discovery procedure
+var nodeId = "1"
 
 type serviceImpl struct {
 	tasksAdapter    tasks.Adapter
@@ -120,7 +123,10 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, fmt.Sprintf("client_tasks_%d", rand.Intn(99999))); err != nil {
+	if err := s.queue.Open(ctx, meta.ServiceCode + nodeId, &queue.Options{
+		Url:       c.Nats.Url,
+		ClusterId: c.Nats.ClusterId,
+	}); err != nil {
 		return err
 	}
 

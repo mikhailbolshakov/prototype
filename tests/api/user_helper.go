@@ -74,7 +74,7 @@ func (h *TestHelper) GetUser(username string) (*userApi.User, error) {
 
 func (h *TestHelper) CreateClient() (*userApi.User, error) {
 
-	phone := fmt.Sprintf("%d", time.Now().Unix())
+	phone := fmt.Sprintf("%d", time.Now().UnixNano())
 	email := fmt.Sprintf("cl_%s@example.com", phone)
 	userRq := userApi.CreateClientRequest{
 		FirstName:  "Test",

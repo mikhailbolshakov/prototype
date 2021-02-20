@@ -2,16 +2,18 @@ package session
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"gitlab.medzdrav.ru/prototype/api/public"
+	"gitlab.medzdrav.ru/prototype/kit"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
+	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
 	"gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
+	"gitlab.medzdrav.ru/prototype/proto"
 	"golang.org/x/sync/errgroup"
 	net_http "net/http"
 	"sync"
@@ -36,7 +38,7 @@ type Hub interface {
 	GetLoginRouteSetter() http.RouteSetter
 	SessionMiddleware(next net_http.Handler) net_http.Handler
 	NoSessionMiddleware(next net_http.Handler) net_http.Handler
-	GetChatWsEventsHandler() listener.QueueMessageHandler
+	GetOutgoingWsEventsHandler() listener.QueueMessageHandler
 	GetMonitor() SessionMonitor
 }
 
@@ -72,6 +74,8 @@ func NewHub(cfg *kitConfig.Config, srv *http.Server, auth auth.Service, userServ
 
 func (h *hubImpl) NewSession(ctx context.Context, rq *NewSessionRequest) (*NewSessionResponse, error) {
 
+	l := log.L().Cmp("hub").Mth("new-session")
+
 	usr := h.userService.Get(ctx, rq.Username)
 	if usr == nil || usr.Id == "" {
 		return nil, fmt.Errorf("no user found %s", rq.Username)
@@ -102,7 +106,7 @@ func (h *hubImpl) NewSession(ctx context.Context, rq *NewSessionRequest) (*NewSe
 		return nil, err
 	}
 
-	s := newSession(usr.Id, usr.Username, usr.MMId, chatSessionId, h.chatService).setJWT(jwt)
+	s := newSession(usr.Id, usr.Username, usr.MMId, chatSessionId, h.chatService, h.queue).setJWT(jwt)
 	sessionId := s.getId()
 
 	func() {
@@ -121,46 +125,54 @@ func (h *hubImpl) NewSession(ctx context.Context, rq *NewSessionRequest) (*NewSe
 
 	}()
 
-	log.TrcF("[hub] new session %v", s)
+	l.F(log.FF{"session-id": sessionId}).Inf("new session")
+	l.TrcF("session details %v", s)
 
 	return &NewSessionResponse{SessionId: sessionId}, nil
 }
 
-func (h *hubImpl) GetChatWsEventsHandler() listener.QueueMessageHandler {
-
-	type ChatIncomingWsEventPayload struct {
-		UserId     string
-		ChatUserId string
-		Event      string
-		Data       map[string]interface{}
-	}
+func (h *hubImpl) GetOutgoingWsEventsHandler() listener.QueueMessageHandler {
 
 	return func(msg []byte) error {
 
-		var pl *ChatIncomingWsEventPayload
-		_, err := queue.Decode(context.Background(), msg, &pl)
+		var wsEventMsgPl *proto.OutgoingWsEventQueueMessagePayload
+		ctx, err := queue.Decode(context.Background(), msg, &wsEventMsgPl)
 		if err != nil {
 			return err
 		}
 
-		log.TrcF("[hub] chat ws message %v", string(msg))
+		l := log.L().Pr("queue").Cmp("hub").Mth("ws-event-handler").C(ctx)
+		l.TrcF("ws message details %s", string(msg))
 
-		if pl == nil {
-			return fmt.Errorf("[hub] invalid chat message")
+		if wsEventMsgPl == nil {
+			return fmt.Errorf("invalid message")
 		}
 
 		h.RLock()
 		defer h.RUnlock()
 
-		usrSessions := h.GetByUserId(pl.UserId)
+		usrSessions := h.GetByUserId(wsEventMsgPl.UserId)
 		if usrSessions == nil || len(usrSessions) == 0 {
-			return fmt.Errorf("[hub] cannot send chat message to ws. user sessions not found. user=%s", pl.UserId)
+			l.InfF("cannot forward to ws. no user session user=%s", wsEventMsgPl.UserId)
+			return nil
 		}
 
-		msgToUser, _ := json.Marshal(pl)
+		// set message Id if not set
+		if wsEventMsgPl.WsEvent.Id == "" {
+			wsEventMsgPl.WsEvent.Id = kit.NewId()
+		}
+
+		// set correlationId as requestId from the ctx is not set
+		if wsEventMsgPl.WsEvent.CorrelationId == "" {
+			if r, err := kitContext.MustRequest(ctx); err == nil {
+				wsEventMsgPl.WsEvent.CorrelationId = r.GetRequestId()
+			} else {
+				return err
+			}
+		}
 
 		for _, s := range usrSessions {
-			if err := s.sendWsMessage(msgToUser); err != nil {
+			if err := s.sendWsMessage(wsEventMsgPl.WsEvent); err != nil {
 				return err
 			}
 		}
@@ -208,14 +220,9 @@ func (h *hubImpl) GetByUserId(userId string) []Session {
 
 func (h *hubImpl) SetupWsConnection(sessionId string, wsConn *websocket.Conn) error {
 
-	s, ok := func() (Session, bool) {
-		h.RLock()
-		defer h.RUnlock()
-		s, ok := h.sessions[sessionId]
-		return s, ok
-	}()
+	s := h.GetById(sessionId)
 
-	if ok {
+	if s != nil {
 
 		if s.isWs() {
 			return fmt.Errorf("ws connection is already open for the session %s", sessionId)

@@ -56,6 +56,8 @@ type daemonImpl struct {
 
 func (d *daemonImpl) assign(ctx context.Context, tt *assignmentTask) error {
 
+	ll := log.L().Cmp("task-assignment").Mth("assign").C(ctx)
+
 	logSuccess := func(log *domain.AssignmentLog) {
 		log.Status = "success"
 		t := time.Now().UTC()
@@ -83,8 +85,6 @@ func (d *daemonImpl) assign(ctx context.Context, tt *assignmentTask) error {
 			Assigned:        0,
 		})
 
-		log.DbgF("assignment rule is fired %v", rule)
-
 		// search users for the assignee pool
 		usersRs, err := d.userService.Search(ctx, &pb.SearchRequest{
 			Paging: &pb.PagingRequest{
@@ -98,7 +98,7 @@ func (d *daemonImpl) assign(ctx context.Context, tt *assignmentTask) error {
 		})
 		if err != nil {
 			logFail(l, err)
-			log.Err(err, true)
+			ll.E(err).Err("user search failed")
 			return err
 		}
 
@@ -117,15 +117,16 @@ func (d *daemonImpl) assign(ctx context.Context, tt *assignmentTask) error {
 		rs, err := d.taskService.Search(ctx, cr)
 		if err != nil {
 			logFail(l, err)
-			log.Err(err, true)
+			ll.E(err).Err("task search failed")
 			return err
 		}
 
 		l.TasksToAssign = len(rs.Tasks)
 
+		ll.F(log.FF{"rule": rule.Code}).Dbg("rule fired").TrcF("users=%d tasks=%d", l.UsersInPool, l.TasksToAssign)
+
 		if len(rs.Tasks) == 0 {
 			logSuccess(l)
-			log.Dbg("no task to assign found")
 			break
 		}
 
@@ -134,14 +135,14 @@ func (d *daemonImpl) assign(ctx context.Context, tt *assignmentTask) error {
 			usersPool[u.Username] = u
 		}
 
-		var userToAssign *pb.User
+		userToAssign := &pb.User{}
 
 		// go through tasks
 		for _, t := range rs.Tasks {
 
 			if len(usersPool) == 0 {
 				// TODO: message from here to notify task there are no available users to assign
-				log.DbgF("no users available for task %s", t.Id)
+				ll.F(log.FF{"task": t.Num}).Dbg("no users")
 				break
 			}
 
@@ -150,6 +151,7 @@ func (d *daemonImpl) assign(ctx context.Context, tt *assignmentTask) error {
 				userToAssign = u
 				break
 			}
+
 			// delete it from the pool
 			delete(usersPool, userToAssign.Username)
 
@@ -159,10 +161,10 @@ func (d *daemonImpl) assign(ctx context.Context, tt *assignmentTask) error {
 			})
 			if err != nil {
 				logFail(l, err)
-				log.Err(err, true)
+				ll.E(err).Err("set assignee failed")
 				return err
 			}
-			log.DbgF("user %s assigned on task %s", userToAssign.Username, t.Id)
+			ll.F(log.FF{"task": t.Num}).Inf("assigned user=%s", userToAssign.Username)
 
 			// if rule specifies a target status then make transition
 			if rule.Target != nil && rule.Target.Status != nil {
@@ -170,13 +172,13 @@ func (d *daemonImpl) assign(ctx context.Context, tt *assignmentTask) error {
 				tr, err := d.cfgService.FindTransition(ctx, t.Type, t.Status, rule.Target.Status)
 				if err != nil {
 					logFail(l, err)
-					log.Err(err, true)
+					ll.E(err).Err("find transition failed")
 					return err
 				}
 				t, err = d.taskService.MakeTransition(ctx, t.Id, tr.Id)
 				if err != nil {
 					logFail(l, err)
-					log.Err(err, true)
+					ll.E(err).Err("make transition failed")
 					return err
 				}
 
@@ -211,7 +213,7 @@ func (d *daemonImpl) Run(ctx context.Context) {
 						return
 					}
 				case <-tt.ctx.Done():
-					log.DbgF("assignment task of type %v is cancelled", tt.taskType)
+					log.L().Cmp("task-assignment").Mth("run").F(log.FF{"task-type": tt.taskType}).C(ctx).Dbg("cancelled")
 					return
 				}
 

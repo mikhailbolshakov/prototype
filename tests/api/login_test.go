@@ -28,6 +28,11 @@ func Test_NewClientLogin_Success(t *testing.T) {
 
 	fmt.Println("test passed", sessionId)
 
+	err = helper.Logout(user.Username)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 func Test_NewClientLogout_Success(t *testing.T) {
@@ -167,5 +172,20 @@ func Test_MultipleConnectionsSameUser(t *testing.T) {
 	if len(m.Sessions) != 0 {
 		t.Fatal("expected no sessions")
 	}
+
+}
+
+func Test_Ws_KeepAliveExceeded(t *testing.T) {
+
+	helper := NewTestHelper()
+
+	helper.wsPingInterval = time.Hour
+	_, _, err := helper.Login(TEST_USER)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	<-time.After(time.Second * 40)
+
 
 }

@@ -2,7 +2,6 @@ package impl
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-co-op/gocron"
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/kit/log"
@@ -53,13 +52,15 @@ func (r *reminderImpl) remindFunc(ctx context.Context, taskId string) {
 
 func (r *reminderImpl) ScheduleTask(ctx context.Context, ts *domain.Task) {
 
+	l := log.L().Cmp("task-sch").Mth("schedule").C(ctx).F(log.FF{"task": ts.Num})
+
 	if r.config.IsFinalStatus(ctx, ts.Type, ts.Status) {
 		return
 	}
 
 	if ts.DueDate != nil && ts.DueDate.After(time.Now().UTC()) {
 		_, _ = r.dueDateScheduler.Every(1).Hours().StartAt(*ts.DueDate).Do(r.dueDateFunc, ts.Id)
-		log.DbgF("scheduler set for due date: %v", ts.DueDate)
+		l.TrcF("duedate scheduled at %v\n", ts.DueDate)
 	}
 
 	for _, rmnd := range ts.Reminders {
@@ -78,7 +79,7 @@ func (r *reminderImpl) ScheduleTask(ctx context.Context, ts *domain.Task) {
 			case "days":
 				d = 24 * int64(time.Hour)
 			default:
-				log.Err(fmt.Errorf("ERROR: not supported unit type %v", rmnd.BeforeDueDate.Unit), true)
+				l.Err("not supported unit type %v", rmnd.BeforeDueDate.Unit)
 				continue
 			}
 
@@ -87,14 +88,14 @@ func (r *reminderImpl) ScheduleTask(ctx context.Context, ts *domain.Task) {
 
 			if schTime.After(time.Now().UTC()) {
 				_, _ = r.reminderScheduler.Every(1).Hours().StartAt(schTime).Do(r.remindFunc, ts.Id)
-				log.DbgF("scheduler set for remind 'before due date': %v", schTime)
+				l.TrcF("scheduled reminder at %v", schTime)
 			}
 
 		}
 
 		if rmnd.SpecificTime != nil && rmnd.SpecificTime.At != nil && rmnd.SpecificTime.At.After(time.Now().UTC()) {
 			_, _ = r.reminderScheduler.Every(1).Day().StartAt(*rmnd.SpecificTime.At).Do(r.remindFunc, ts.Id)
-			log.DbgF("scheduler set for remind 'specific time': %v", rmnd.SpecificTime.At)
+			l.DbgF("scheduled reminder at %v", rmnd.SpecificTime.At)
 		}
 
 	}
@@ -102,9 +103,12 @@ func (r *reminderImpl) ScheduleTask(ctx context.Context, ts *domain.Task) {
 
 }
 
-func (r *reminderImpl) start(ctx context.Context, ) {
+func (r *reminderImpl) start(ctx context.Context) {
+
+	l := log.L().Cmp("task-sch").Mth("start").C(ctx)
 
 	// TODO: retrieve tasks which have Reminder in the future
+	// TODO: paging
 	rs, err := r.storage.Search(ctx, &domain.SearchCriteria{
 		PagingRequest: &common.PagingRequest{
 			Size: 10000,
@@ -114,11 +118,11 @@ func (r *reminderImpl) start(ctx context.Context, ) {
 		},
 	})
 	if err != nil {
-		log.Err(err, true)
+		l.E(err).Err("task search failed")
 		return
 	}
 
-	log.DbgF("preparing reminders... found %d tasks", len(rs.Tasks))
+	l.DbgF("found %d tasks\n", len(rs.Tasks))
 
 	for _, t := range rs.Tasks {
 		r.ScheduleTask(ctx, t)

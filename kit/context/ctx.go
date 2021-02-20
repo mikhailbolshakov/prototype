@@ -9,6 +9,14 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+const (
+	CLIENT_TYPE_REST  = "rest"
+	CLIENT_TYPE_TEST  = "test"
+	CLIENT_TYPE_JOB   = "job"
+	CLIENT_TYPE_QUEUE = "queue"
+	CLIENT_TYPE_WS    = "ws"
+)
+
 type requestContextKey struct{}
 
 type RequestContext struct {
@@ -87,22 +95,27 @@ func (r *RequestContext) WithChatUserId(chatUserId string) *RequestContext {
 }
 
 func (r *RequestContext) Rest() *RequestContext {
-	r.Cl = "rest"
+	r.Cl = CLIENT_TYPE_REST
 	return r
 }
 
 func (r *RequestContext) Test() *RequestContext {
-	r.Cl = "test"
+	r.Cl = CLIENT_TYPE_TEST
 	return r
 }
 
-func (r *RequestContext) Batch() *RequestContext {
-	r.Cl = "batch"
+func (r *RequestContext) Job() *RequestContext {
+	r.Cl = CLIENT_TYPE_JOB
 	return r
 }
 
 func (r *RequestContext) Queue() *RequestContext {
-	r.Cl = "queue"
+	r.Cl = CLIENT_TYPE_QUEUE
+	return r
+}
+
+func (r *RequestContext) Ws() *RequestContext {
+	r.Cl = CLIENT_TYPE_WS
 	return r
 }
 
@@ -122,6 +135,17 @@ func (r *RequestContext) ToContext(parent context.Context) context.Context {
 		parent = context.Background()
 	}
 	return context.WithValue(parent, requestContextKey{}, r)
+}
+
+func (r *RequestContext) ToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"rid": r.Rid,
+		"sid": r.Sid,
+		"uid": r.Uid,
+		"un":  r.Un,
+		"cid": r.Cid,
+		"cl":  r.Cl,
+	}
 }
 
 func Request(context context.Context) (*RequestContext, bool) {

@@ -2,7 +2,6 @@ package dentist_online_consultation
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/entities"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
@@ -11,13 +10,13 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/bpm"
 	"gitlab.medzdrav.ru/prototype/kit/bpm/zeebe"
 	"gitlab.medzdrav.ru/prototype/kit/grpc"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	pbChat "gitlab.medzdrav.ru/prototype/proto/chat"
 	services2 "gitlab.medzdrav.ru/prototype/proto/services"
-	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
+	taskPb "gitlab.medzdrav.ru/prototype/proto/tasks"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
-	"log"
 	"time"
 )
 
@@ -66,8 +65,8 @@ func (bp *bpImpl) Init() error {
 }
 
 func (bp *bpImpl) SetQueueListeners(ql listener.QueueListener) {
-	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "tasks.duedate", bp.dueDateTaskHandler)
-	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "tasks.solved", bp.solvedTaskHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, taskPb.QUEUE_TOPIC_TASK_DUEDATE, bp.dueDateTaskHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, taskPb.QUEUE_TOPIC_TASK_SOLVED_STATUS, bp.solvedTaskHandler)
 }
 
 func (bp *bpImpl) GetId() string {
@@ -88,14 +87,17 @@ func (bp *bpImpl) registerBpmHandlers() error {
 	})
 }
 
-func (bp *bpImpl) dueDateTaskHandler(payload []byte) error {
-	ts := &domain.Task{}
-	if err := json.Unmarshal(payload, ts); err != nil {
+func (bp *bpImpl) dueDateTaskHandler(msg []byte) error {
+
+	task := &taskPb.TaskMessagePayload{}
+	ctx, err := queue.Decode(nil, msg, task)
+	if err != nil {
 		return err
 	}
 
-	log.Printf("due date task message received %v", ts)
-	_ = bp.SendMessage("msg-consultation-time", ts.Id, nil)
+	log.L().Pr("queue").Cmp(bp.GetId()).Mth("task-duedate").F(log.FF{"task-id": task.Id}).C(ctx).Dbg().Trc(string(msg))
+
+	_ = bp.SendMessage("msg-consultation-time", task.Id, nil)
 	return nil
 }
 
@@ -106,6 +108,8 @@ func (bp *bpImpl) solvedTaskHandler(msg []byte) error {
 	if err != nil {
 		return err
 	}
+
+	log.L().Pr("queue").Cmp(bp.GetId()).Mth("task-solved").F(log.FF{"task-id": task.Id}).C(ctx).Dbg().Trc(string(msg))
 
 	if task.Type.Type == TT_CLIENT && task.Type.SubType == TST_DENTIST_CONSULTATION {
 
@@ -125,13 +129,13 @@ func (bp *bpImpl) solvedTaskHandler(msg []byte) error {
 
 func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 
-	log.Println("createTaskHandler executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	deliveryId := variables["deliveryId"].(string)
 
@@ -181,26 +185,26 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	}
 
 	// create a task
-	task, err := bp.taskService.New(ctx, &pb.NewTaskRequest{
-		Type: &pb.Type{
+	task, err := bp.taskService.New(ctx, &taskPb.NewTaskRequest{
+		Type: &taskPb.Type{
 			Type:    "client",
 			Subtype: "dentist-consultation",
 		},
-		Reported: &pb.Reported{
+		Reported: &taskPb.Reported{
 			UserId: user.Id,
 			At:     grpc.TimeToPbTS(startTime),
 		},
 		Description: "Консультация назначена при обращении к медконсультанту",
 		Title:       "Консультация со стоматологом",
 		DueDate:     grpc.TimeToPbTS(&consultationTime),
-		Assignee: &pb.Assignee{
+		Assignee: &taskPb.Assignee{
 			UserId: expert.Id,
 			At:     grpc.TimeToPbTS(startTime),
 		},
 		ChannelId: channelId,
-		Reminders: []*pb.Reminder{
+		Reminders: []*taskPb.Reminder{
 			{
-				BeforeDueDate: &pb.BeforeDueDate{
+				BeforeDueDate: &taskPb.BeforeDueDate{
 					Unit:  "minutes",
 					Value: 1,
 				},
@@ -263,8 +267,6 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 
 func (bp *bpImpl) cancelConsultationHandler(client worker.JobClient, job entities.Job) {
 
-	log.Println("cancelConsultationHandler executed")
-
 	jobKey := job.GetKey()
 
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
@@ -272,6 +274,8 @@ func (bp *bpImpl) cancelConsultationHandler(client worker.JobClient, job entitie
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	deliveryId := variables["deliveryId"].(string)
 	taskId := variables["expertTaskId"].(string)
@@ -283,7 +287,7 @@ func (bp *bpImpl) cancelConsultationHandler(client worker.JobClient, job entitie
 	}
 
 	// cancel task
-	err = bp.taskService.MakeTransition(ctx, &pb.MakeTransitionRequest{
+	err = bp.taskService.MakeTransition(ctx, &taskPb.MakeTransitionRequest{
 		TaskId:       taskId,
 		TransitionId: "5",
 	})
@@ -320,13 +324,13 @@ func (bp *bpImpl) cancelConsultationHandler(client worker.JobClient, job entitie
 
 func (bp *bpImpl) clientFeedbackHandler(client worker.JobClient, job entities.Job) {
 
-	log.Println("clientFeedbackHandler executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	deliveryId := variables["deliveryId"].(string)
 
@@ -346,23 +350,23 @@ func (bp *bpImpl) clientFeedbackHandler(client worker.JobClient, job entities.Jo
 	dueDate := startTime.Add(time.Minute * 3)
 
 	// create a task
-	t, err := bp.taskService.New(ctx, &pb.NewTaskRequest{
-		Type: &pb.Type{
+	t, err := bp.taskService.New(ctx, &taskPb.NewTaskRequest{
+		Type: &taskPb.Type{
 			Type:    "client",
 			Subtype: "client-feedback",
 		},
-		Reported:    &pb.Reported{UserId: expertUser.Id, At: grpc.TimeToPbTS(&startTime)},
+		Reported:    &taskPb.Reported{UserId: expertUser.Id, At: grpc.TimeToPbTS(&startTime)},
 		Description: fmt.Sprintf("Добрый день %s %s, просим заполнить обратную связь о консультации с экспертом %s %s", user.ClientDetails.FirstName, user.ClientDetails.LastName, expertUser.ExpertDetails.FirstName, expertUser.ExpertDetails.LastName),
 		Title:       fmt.Sprintf("Обратная связь о консультации %s", deliveryTasks[0].(string)),
-		Assignee: &pb.Assignee{
+		Assignee: &taskPb.Assignee{
 			UserId: user.Id,
 			At:     grpc.TimeToPbTS(&startTime),
 		},
 		DueDate:   grpc.TimeToPbTS(&dueDate),
 		ChannelId: user.ClientDetails.CommonChannelId,
-		Reminders: []*pb.Reminder{
+		Reminders: []*taskPb.Reminder{
 			{
-				BeforeDueDate: &pb.BeforeDueDate{
+				BeforeDueDate: &taskPb.BeforeDueDate{
 					Unit:  "minutes",
 					Value: 1,
 				},
@@ -391,9 +395,7 @@ func (bp *bpImpl) clientFeedbackHandler(client worker.JobClient, job entities.Jo
 
 }
 
-func (d *bpImpl) taskInProgressHandler(client worker.JobClient, job entities.Job) {
-
-	log.Println("create task handler executed")
+func (bp *bpImpl) taskInProgressHandler(client worker.JobClient, job entities.Job) {
 
 	jobKey := job.GetKey()
 
@@ -403,9 +405,11 @@ func (d *bpImpl) taskInProgressHandler(client worker.JobClient, job entities.Job
 		return
 	}
 
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
+
 	taskId := variables["expertTaskId"].(string)
 
-	err = d.taskService.MakeTransition(ctx, &pb.MakeTransitionRequest{
+	err = bp.taskService.MakeTransition(ctx, &taskPb.MakeTransitionRequest{
 		TaskId:       taskId,
 		TransitionId: "2",
 	})
@@ -424,13 +428,13 @@ func (d *bpImpl) taskInProgressHandler(client worker.JobClient, job entities.Job
 
 func (bp *bpImpl) deliveryCompletedHandler(client worker.JobClient, job entities.Job) {
 
-	log.Println("delivery completed executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	deliveryId := variables["deliveryId"].(string)
 

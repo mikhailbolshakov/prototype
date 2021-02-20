@@ -2,19 +2,22 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/services/domain"
 	"gitlab.medzdrav.ru/prototype/services/domain/impl"
 	"gitlab.medzdrav.ru/prototype/services/grpc"
+	"gitlab.medzdrav.ru/prototype/services/meta"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/bp"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/services/repository/storage"
-	"math/rand"
 )
+
+// NodeId - node id of a service
+// TODO: not to hardcode. Should be defined by service discovery procedure
+var nodeId = "1"
 
 type serviceImpl struct {
 	grpc           *grpc.Server
@@ -79,7 +82,10 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, fmt.Sprintf("client_tasks_%d", rand.Intn(99999))); err != nil {
+	if err := s.queue.Open(ctx, meta.ServiceCode + nodeId, &queue.Options{
+		Url:       c.Nats.Url,
+		ClusterId: c.Nats.ClusterId,
+	}); err != nil {
 		return err
 	}
 

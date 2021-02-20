@@ -2,10 +2,15 @@ package session
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"gitlab.medzdrav.ru/prototype/api/public"
 	"gitlab.medzdrav.ru/prototype/kit"
+	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	"gitlab.medzdrav.ru/prototype/kit/log"
+	"gitlab.medzdrav.ru/prototype/kit/queue"
+	"gitlab.medzdrav.ru/prototype/proto"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -13,7 +18,7 @@ import (
 
 type Session interface {
 	setWs(ws Ws) Session
-	sendWsMessage(msg []byte) error
+	sendWsMessage(msg *proto.WsMessage) error
 	setJWT(jwt *auth.JWT) Session
 	isWs() bool
 	getId() string
@@ -28,6 +33,7 @@ type Session interface {
 }
 
 type sessionImpl struct {
+	sync.RWMutex
 	id             string
 	accessToken    string
 	refreshToken   string
@@ -40,10 +46,10 @@ type sessionImpl struct {
 	chatService    public.ChatService
 	sentWsMessages uint32
 	ws             Ws
-	sync.RWMutex
+	queue          queue.Queue
 }
 
-func newSession(userId, username, chatUserId string, chatSessionId string, chatService public.ChatService) Session {
+func newSession(userId, username, chatUserId string, chatSessionId string, chatService public.ChatService, queue queue.Queue) Session {
 
 	s := &sessionImpl{
 		id:            kit.NewId(),
@@ -53,6 +59,7 @@ func newSession(userId, username, chatUserId string, chatSessionId string, chatS
 		chatSessionId: chatSessionId,
 		chatService:   chatService,
 		startAt:       time.Now().UTC(),
+		queue:         queue,
 	}
 
 	return s
@@ -94,9 +101,57 @@ func (s *sessionImpl) getAccessToken() string {
 	return s.accessToken
 }
 
+func (s *sessionImpl) forwardIncomingWsMessage(msg []byte) {
+
+	l := log.L().Pr("ws").Cmp("hub").Mth("fwd-incoming-msg")
+
+	l.TrcF("%s", string(msg))
+
+	var wsMessage *proto.WsMessage
+	err := json.Unmarshal(msg, &wsMessage)
+	if err != nil {
+		l.E(err).St().ErrF("invalid format")
+		return
+	}
+
+	// build context
+	rCtx := kitContext.NewRequestCtx().
+		Ws().
+		WithSessionId(s.getId()).
+		WithUser(s.getUserId(), s.getUsername()).
+		WithChatUserId(s.getChatUserId())
+
+	if wsMessage.Id != "" {
+		rCtx.WithRequestId(wsMessage.Id)
+	} else {
+		rCtx.WithNewRequestId()
+	}
+
+	ctx := rCtx.ToContext(context.Background())
+
+	l.C(ctx)
+
+	// define topic as template + message type
+	topic := fmt.Sprintf(proto.QUEUE_TOPIC_INCOMING_WS_TEMPLATE, wsMessage.MessageType)
+
+	qMsg := &queue.Message{
+		Ctx:     rCtx,
+		Payload: wsMessage,
+	}
+
+	// publish message
+	if err := s.queue.Publish(ctx, queue.QUEUE_TYPE_AT_MOST_ONCE, topic, qMsg); err != nil {
+		l.E(err).St().Err()
+		return
+	} else {
+		l.DbgF("message forwarded, topic %s", topic)
+	}
+
+}
+
 func (s *sessionImpl) wsListen(ws Ws) {
 
-	closedEventChan := ws.closedEvent()
+	closedEventChan := ws.wsClosedEvent()
 	receivedEventChan := ws.receivedMessageEvent()
 	for {
 		select {
@@ -106,23 +161,28 @@ func (s *sessionImpl) wsListen(ws Ws) {
 			s.Unlock()
 			return
 		case msg := <-receivedEventChan:
-			//TODO: here we have to forward message to Chat service if we need
-			log.TrcF("message forward to chat: %v", msg)
+			s.forwardIncomingWsMessage(msg)
 		}
 	}
 }
 
-func (s *sessionImpl) sendWsMessage(msg []byte) error {
+func (s *sessionImpl) sendWsMessage(msg *proto.WsMessage) error {
 
-	log.TrcF("[session][ws] message sending to user=%s msg=%s", s.userId, string(msg))
+	l := log.L().Pr("ws").Cmp("hub").Mth("send-ws")
+
+	msgb, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
 
 	// check if WS connection is open
 	if s.isWs() {
-		s.ws.send(msg)
+		s.ws.send(msgb)
 		// increment sent message counter
 		atomic.AddUint32(&s.sentWsMessages, 1)
+		l.F(log.FF{"user": s.userId}).TrcF("sent user=%s msg=%s", s.userId, string(msgb))
 	} else {
-		log.InfF("[session][ws] cannot send WS message. no client connection")
+		l.Warn("cannot send, no client connection")
 	}
 	return nil
 }
@@ -164,7 +224,7 @@ func (s *sessionImpl) close(ctx context.Context) {
 		go func() {
 			err := s.chatService.Logout(ctx, s.chatUserId)
 			if err != nil {
-				log.Err(err, true)
+				log.L().Pr("ws").Cmp("hub").Mth("close").C(ctx).E(err).St().Err("chat session logout")
 			}
 		}()
 	}
@@ -172,5 +232,7 @@ func (s *sessionImpl) close(ctx context.Context) {
 	if s.ws != nil {
 		s.ws.close()
 	}
+
+	log.L().Pr("ws").Cmp("hub").Mth("session-close").C(ctx).Dbg("closed")
 
 }

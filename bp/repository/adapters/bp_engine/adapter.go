@@ -28,6 +28,8 @@ func NewAdapter() Adapter {
 
 func (c *adapterImpl) Init(cfg *kitConfig.Config, bps []domain.BusinessProcess, queueListener listener.QueueListener) error {
 
+	l := log.L().Cmp("bp-engine").Mth("init")
+
 	err := c.Bpm.Open(&bpm.Params{
 		Port: cfg.Zeebe.Port,
 		Host: cfg.Zeebe.Host,
@@ -43,12 +45,12 @@ func (c *adapterImpl) Init(cfg *kitConfig.Config, bps []domain.BusinessProcess, 
 		}
 		BPMNs = append(BPMNs, bp.GetBPMNPath())
 		bp.SetQueueListeners(queueListener)
-		log.DbgF("business process %s initialized", bp.GetId())
+		l.F(log.FF{"bpmn": bp.GetId()}).Dbg("ok")
 	}
 
 	if len(BPMNs) > 0 {
 		if err := c.Bpm.DeployBPMNs(BPMNs); err != nil {
-			log.Err(err, true)
+			l.E(err).Err("deploy failed")
 		}
 	}
 

@@ -8,10 +8,11 @@ import (
 	b "gitlab.medzdrav.ru/prototype/bp/domain"
 	"gitlab.medzdrav.ru/prototype/kit/bpm"
 	"gitlab.medzdrav.ru/prototype/kit/bpm/zeebe"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	pbChat "gitlab.medzdrav.ru/prototype/proto/chat"
-	"log"
+	userPb "gitlab.medzdrav.ru/prototype/proto/users"
 )
 
 type bpImpl struct {
@@ -47,7 +48,7 @@ func (bp *bpImpl) Init() error {
 }
 
 func (bp *bpImpl) SetQueueListeners(ql listener.QueueListener) {
-	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, "users.draft-created", bp.userDraftCreatedHandler)
+	ql.Add(queue.QUEUE_TYPE_AT_LEAST_ONCE, userPb.QUEUE_TOPIC_USER_DRAFT_CREATED, bp.userDraftCreatedHandler)
 }
 
 func (bp *bpImpl) GetId() string {
@@ -60,8 +61,8 @@ func (bp *bpImpl) GetBPMNPath() string {
 
 func (bp *bpImpl) registerBpmHandlers() error {
 	return bp.RegisterTaskHandlers(map[string]interface{}{
-		"st-create-mm-user":    bp.createMMUser,
-		"st-create-mm-channel": bp.createMMChannel,
+		"st-create-mm-user":    bp.createChatUser,
+		"st-create-mm-channel": bp.createChatChannel,
 		"st-create-send-hello": bp.sendHello,
 		"st-create-kk-user":    bp.createKKUser,
 		"st-activate-user":     bp.activateUser,
@@ -79,6 +80,8 @@ func (bp *bpImpl) userDraftCreatedHandler(msg []byte) error {
 		return err
 	}
 
+	log.L().Pr("queue").Cmp(bp.GetId()).Mth("user-draft").C(ctx).Dbg().Trc(string(msg))
+
 	var vars = map[string]interface{}{"id": user["id"], "type": user["type"]}
 	if err := zeebe.CtxToVars(ctx, vars); err != nil {
 		return err
@@ -90,15 +93,15 @@ func (bp *bpImpl) userDraftCreatedHandler(msg []byte) error {
 
 }
 
-func (bp *bpImpl) createMMUser(client worker.JobClient, job entities.Job) {
-
-	log.Println("createMMUser executed")
+func (bp *bpImpl) createChatUser(client worker.JobClient, job entities.Job) {
 
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	userId := variables["id"].(string)
 	user := bp.userService.Get(ctx, userId)
@@ -148,15 +151,15 @@ func (bp *bpImpl) createMMUser(client worker.JobClient, job entities.Job) {
 
 }
 
-func (bp *bpImpl) createMMChannel(client worker.JobClient, job entities.Job) {
-
-	log.Println("createMMChannel executed")
+func (bp *bpImpl) createChatChannel(client worker.JobClient, job entities.Job) {
 
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	userId := variables["id"].(string)
 	user := bp.userService.Get(ctx, userId)
@@ -208,13 +211,13 @@ func (bp *bpImpl) createMMChannel(client worker.JobClient, job entities.Job) {
 
 func (bp *bpImpl) sendHello(client worker.JobClient, job entities.Job) {
 
-	log.Println("sendHello executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	id := variables["id"].(string)
 	channelId := variables["mmChannelId"].(string)
@@ -241,18 +244,18 @@ func (bp *bpImpl) sendHello(client worker.JobClient, job entities.Job) {
 
 func (bp *bpImpl) createKKUser(client worker.JobClient, job entities.Job) {
 
-	log.Println("createKKUser executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
 
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
+
 	userId := variables["id"].(string)
 	user := bp.userService.Get(ctx, userId)
 
-	// TODO: config
+	// TODO: move to repository
 	token, err := bp.keycloakProvider().LoginAdmin(ctx, "admin", "admin", "master")
 	if err != nil {
 		err = bp.SendError(job.GetKey(), "err-create-kk-user", err.Error())
@@ -321,13 +324,13 @@ func (bp *bpImpl) createKKUser(client worker.JobClient, job entities.Job) {
 
 func (bp *bpImpl) activateUser(client worker.JobClient, job entities.Job) {
 
-	log.Println("activateUser executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	userId := variables["id"].(string)
 	_, err = bp.userService.Activate(ctx, userId)
@@ -345,13 +348,13 @@ func (bp *bpImpl) activateUser(client worker.JobClient, job entities.Job) {
 
 func (bp *bpImpl) deleteMMUser(client worker.JobClient, job entities.Job) {
 
-	log.Println("deleteMMUser executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	err = bp.chatService.DeleteUser(ctx, variables["mmId"].(string))
 	if err != nil {
@@ -368,15 +371,15 @@ func (bp *bpImpl) deleteMMUser(client worker.JobClient, job entities.Job) {
 
 func (bp *bpImpl) deleteKKUser(client worker.JobClient, job entities.Job) {
 
-	log.Println("deleteKKUser executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
 
-	// TODO: config
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
+
+	// TODO: move to repository
 
 	token, err := bp.keycloakProvider().LoginAdmin(ctx, "admin", "admin", "master")
 	if err != nil {
@@ -400,13 +403,13 @@ func (bp *bpImpl) deleteKKUser(client worker.JobClient, job entities.Job) {
 
 func (bp *bpImpl) deleteUser(client worker.JobClient, job entities.Job) {
 
-	log.Println("deleteUser executed")
-
 	variables, ctx, err := zeebe.GetVarsAndCtx(job)
 	if err != nil {
 		zeebe.FailJob(client, job, err)
 		return
 	}
+
+	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	_, err = bp.userService.Delete(ctx, variables["id"].(string))
 	if err != nil {

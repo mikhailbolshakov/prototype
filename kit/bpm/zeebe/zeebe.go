@@ -51,7 +51,7 @@ func (z *engineImpl) Open(params *bpm.Params) error {
 		UsePlaintextConnection: true,
 	}); err == nil {
 		z.client = zc
-		log.DbgF("[zeebe] connection is opened on %s:%s", z.params.Host, z.params.Port)
+		log.L().Cmp("zeebe").Mth("open").Inf("ok")
 	} else {
 		return err
 	}
@@ -70,6 +70,7 @@ func (z *engineImpl) Close() error {
 		if err != nil {
 			return err
 		}
+		log.L().Cmp("zeebe").Mth("close").Inf("closed")
 	}
 	return nil
 }
@@ -82,6 +83,7 @@ func (z *engineImpl) DeployBPMNs(paths []string) error {
 
 		go func(path string){
 
+			l := log.L().Cmp("zeebe").Mth("deploy").F(log.FF{"path": path})
 			errRetryCount := 0
 
 			for {
@@ -90,12 +92,14 @@ func (z *engineImpl) DeployBPMNs(paths []string) error {
 					if strings.Contains(err.Error(), "ResourceExhausted") && errRetryCount <= ERR_EXHAUSTED_RESOURCES_MAX_RETRY {
 						time.Sleep(time.Millisecond * 100)
 						errRetryCount++
+						l.Warn("retry")
 					} else {
-						log.Err(fmt.Errorf("[zeebe] deployment %s. err: %v", path, rs), true)
+						l.E(err).Err()
 						return
 					}
 				} else {
-					log.DbgF("[zeebe] %s deployed. details: %v", path, rs)
+					l.Dbg("deployed")
+					l.TrcF("details: %v", rs)
 					return
 				}
 			}
@@ -112,7 +116,7 @@ func (z *engineImpl) RegisterTaskHandlers(handlers map[string]interface{}) error
 		if f, ok := handlerFunc.(func(client worker.JobClient, job entities.Job)); ok {
 			z.jobWorkers = append(z.jobWorkers, z.client.NewJobWorker().JobType(task).Handler(f).Open())
 		} else {
-			return errors.New("no valid handler passed")
+			return fmt.Errorf("no valid handler passed")
 		}
 	}
 
@@ -121,6 +125,8 @@ func (z *engineImpl) RegisterTaskHandlers(handlers map[string]interface{}) error
 }
 
 func (z *engineImpl) StartProcess(processId string, vars map[string]interface{}) (string, error) {
+
+	l := log.L().Cmp("zeebe").Mth("start").F(log.FF{"process-id": processId})
 
 	p, err := z.client.NewCreateInstanceCommand().BPMNProcessId(processId).LatestVersion().VariablesFromMap(vars)
 	if err != nil {
@@ -134,13 +140,16 @@ func (z *engineImpl) StartProcess(processId string, vars map[string]interface{})
 		return "", err
 	}
 
-	log.DbgF("[zeebe] process %s started. details = %v", processId, pRs.String())
+	l.Dbg("started")
+	l.TrcF("vars=%v details=%v", vars, pRs.String())
 
 	return fmt.Sprintf("%d", pRs.WorkflowInstanceKey), nil
 
 }
 
 func (z *engineImpl) SendMessage(messageId string, correlationId string, vars map[string]interface{}) error {
+
+	l := log.L().Cmp("zeebe").Mth("send-message").F(log.FF{"msg-id": messageId, "corr-id": correlationId})
 
 	ctx := context.Background()
 
@@ -154,20 +163,24 @@ func (z *engineImpl) SendMessage(messageId string, correlationId string, vars ma
 	if err != nil {
 		return err
 	}
-	log.DbgF("[zeebe] message %s published, response: %v", messageId, rs)
+
+	l.Dbg("sent")
+	l.TrcF("vars=%v response=%v", vars, rs)
 
 	return nil
 }
 
 func (z *engineImpl) SendError(jobId int64, errCode, errMessage string) error {
 
+	l := log.L().Cmp("zeebe").Mth("send-err").F(log.FF{"jobId": jobId, "err-code": errCode, "err-m": errMessage})
+
 	m := z.client.NewThrowErrorCommand().JobKey(jobId).ErrorCode(errCode).ErrorMessage(errMessage)
 
-	rs, err := m.Send(context.Background())
+	_, err := m.Send(context.Background())
 	if err != nil {
 		return err
 	}
-	log.DbgF("[zeebe] error sent. code: %s, message: %s, response: %v", errCode, errMessage, rs)
+	l.Dbg("sent")
 
 	return nil
 }

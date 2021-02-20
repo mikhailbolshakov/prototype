@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	kit "gitlab.medzdrav.ru/prototype/kit/config"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	pb "gitlab.medzdrav.ru/prototype/proto/config"
@@ -20,9 +19,11 @@ func newImpl() *serviceImpl {
 
 func (u *serviceImpl) Get() (*kit.Config, error) {
 
+	l := log.L().Pr("grpc").Cmp("config").Mth("get")
+
 	rs, err := u.ConfigServiceClient.Get(context.Background(), &pb.ConfigRequest{})
 	if err != nil {
-		log.Err(err, true)
+		l.E(err).St().Err()
 		return nil, err
 	}
 
@@ -32,7 +33,7 @@ func (u *serviceImpl) Get() (*kit.Config, error) {
 	}
 
 	if err := kit.EnrichWithEnv("../.env", cfg); err != nil {
-		log.Err(fmt.Errorf("failed to enrich config with local env"), false)
+		l.E(err).Err("failed to enrich config with local env")
 		return nil, err
 	}
 

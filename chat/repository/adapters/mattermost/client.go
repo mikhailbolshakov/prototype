@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/adacta-ru/mattermost-server/v6/model"
-	"log"
+	"gitlab.medzdrav.ru/prototype/kit/log"
 	"net/http"
 )
 
@@ -46,6 +46,8 @@ func HandleResponse(rs *model.Response) error {
 
 func Login(p *Params) (*Client, error) {
 
+	l := log.L().Cmp("mm-client").Mth("login").F(log.FF{"user": p.Account})
+
 	cl := &Client{Params: p}
 
 	cl.RestApi = model.NewAPIv4Client(p.Url)
@@ -68,7 +70,7 @@ func Login(p *Params) (*Client, error) {
 	}
 
 	cl.User = user
-	log.Printf("muttermost connected. user: %s", cl.User.Email)
+	l.Trc("logged")
 
 	if p.OpenWS {
 		appErr := &model.AppError{}
@@ -79,6 +81,26 @@ func Login(p *Params) (*Client, error) {
 	}
 
 	return cl, nil
+}
+
+// Ping
+func (c *Client) Ping() bool {
+	r, rs := c.RestApi.GetPing()
+	if err := HandleResponse(rs); err != nil || r != "OK" {
+		return false
+	}
+	return true
+}
+
+// This version of Ping can be called before Login
+func ping(url, accessToken string) bool {
+	restApi := model.NewAPIv4Client(url)
+	restApi.SetOAuthToken(accessToken)
+	r, rs := restApi.GetPing()
+	if err := HandleResponse(rs); err != nil || r != "OK" {
+		return false
+	}
+	return true
 }
 
 func (c *Client) SetStatus(userId, status string) error {
@@ -99,14 +121,21 @@ func (c *Client) SetStatus(userId, status string) error {
 }
 
 func (c *Client) Logout() error {
+
+	l := log.L().Cmp("mm-client").Mth("del-user").F(log.FF{"user": c.User.Username})
+
 	_, rs := c.RestApi.Logout()
 	if err := HandleResponse(rs); err != nil {
 		return err
 	}
+	l.Dbg("logged out")
+
 	return nil
 }
 
 func (c *Client) CreateUser(teamName, username, password, email string) (string, error) {
+
+	l := log.L().Cmp("mm-client").Mth("create-user").F(log.FF{"user": username})
 
 	user, rs := c.RestApi.CreateUser(&model.User{
 		Username: username,
@@ -128,22 +157,28 @@ func (c *Client) CreateUser(teamName, username, password, email string) (string,
 		return "", err
 	}
 
+	l.Dbg("created")
+
 	return user.Id, nil
 }
 
 func (c *Client) DeleteUser(userId string) error {
 
+	l := log.L().Cmp("mm-client").Mth("del-user").F(log.FF{"user": userId})
+
 	_, rs := c.RestApi.DeleteUser(userId)
 	if err := HandleResponse(rs); err != nil {
 		return err
 	}
-	log.Printf("user delete. Id: %s", userId)
+	l.Dbg("deleted")
 
 	return nil
 
 }
 
 func (c *Client) CreateUserChannel(channelType, teamName, userId, displayName, name string) (string, error) {
+
+	l := log.L().Cmp("mm-client").Mth("create-channel").F(log.FF{"user": c.User.Username})
 
 	team, rs := c.RestApi.GetTeamByName(teamName, "")
 	if err := HandleResponse(rs); err != nil {
@@ -165,6 +200,8 @@ func (c *Client) CreateUserChannel(channelType, teamName, userId, displayName, n
 		return "", err
 	}
 
+	l.Dbg("created")
+
 	return ch.Id, nil
 }
 
@@ -177,6 +214,8 @@ func (c *Client) SubscribeUser(channelId string, userId string) error {
 }
 
 func (c *Client) CreateEphemeralPost(channelId string, recipientUserId string, message string, attachments []*model.SlackAttachment) error {
+
+	l := log.L().Cmp("mm-client").Mth("create-eph-post").F(log.FF{"user": c.User.Username})
 
 	props := model.StringInterface{}
 	if attachments != nil && len(attachments) > 0 {
@@ -196,11 +235,15 @@ func (c *Client) CreateEphemeralPost(channelId string, recipientUserId string, m
 		return err
 	}
 
+	l.Dbg("posted")
+
 	return nil
 
 }
 
 func (c *Client) CreatePost(channelId string, message string, attachments []*model.SlackAttachment) error {
+
+	l := log.L().Cmp("mm-client").Mth("create-post").F(log.FF{"user": c.User.Username})
 
 	props := model.StringInterface{}
 	if attachments != nil && len(attachments) > 0 {
@@ -217,6 +260,8 @@ func (c *Client) CreatePost(channelId string, message string, attachments []*mod
 	if err := HandleResponse(rs); err != nil {
 		return err
 	}
+
+	l.Dbg("posted")
 
 	return nil
 

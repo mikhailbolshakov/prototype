@@ -9,6 +9,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	pb "gitlab.medzdrav.ru/prototype/proto/chat"
+	userPb "gitlab.medzdrav.ru/prototype/proto/users"
 	"gitlab.medzdrav.ru/prototype/users/domain"
 	"strings"
 	"time"
@@ -152,7 +153,7 @@ func (u *userServiceImpl) Create(ctx context.Context, user *domain.User) (*domai
 	}
 
 	// publish message
-	if err := u.Publish(ctx, user, queue.QUEUE_TYPE_AT_LEAST_ONCE, "users.draft-created"); err != nil {
+	if err := u.Publish(ctx, user, queue.QUEUE_TYPE_AT_LEAST_ONCE, userPb.QUEUE_TOPIC_USER_DRAFT_CREATED); err != nil {
 		return nil, err
 	}
 

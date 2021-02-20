@@ -7,6 +7,7 @@ import (
 	log "gitlab.medzdrav.ru/prototype/kit/log"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 	domain "gitlab.medzdrav.ru/prototype/tasks/domain"
+	"gitlab.medzdrav.ru/prototype/tasks/meta"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -23,7 +24,7 @@ func New(domain domain.TaskService) *Server {
 	s := &Server{domain: domain}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer()
+	gs, err := kitGrpc.NewServer(meta.ServiceCode)
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +46,8 @@ func (s *Server) ListenAsync() {
 	go func () {
 		err := s.Server.Listen(s.host, s.port)
 		if err != nil {
-			log.Fatal(err)
+			log.L().Pr("grpc").Mth("listen").E(err).Err()
+			return
 		}
 	}()
 }

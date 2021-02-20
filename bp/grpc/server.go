@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"encoding/json"
+	"gitlab.medzdrav.ru/prototype/bp/meta"
 	bpmKit "gitlab.medzdrav.ru/prototype/kit/bpm"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
@@ -22,7 +23,7 @@ func New(bpm bpmKit.Engine) *Server {
 	s := &Server{bpm: bpm}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer()
+	gs, err := kitGrpc.NewServer(meta.ServiceCode)
 	if err != nil {
 		panic(err)
 	}

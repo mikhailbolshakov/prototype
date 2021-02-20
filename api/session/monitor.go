@@ -10,8 +10,8 @@ import (
 Simple session monitor
 it's just for dev purposes as it doesn't gather info for cluster configuration (when there are more than one hub instances)
 
-!!! USER IT CAREFULLY
-Since it locks the whole HUB for Read, so all new sessions are locked until monitor request is finished
+!!! USE IT CAREFULLY
+It locks the whole HUB for Read, so all new sessions are locked until monitor request is finished
 
 */
 

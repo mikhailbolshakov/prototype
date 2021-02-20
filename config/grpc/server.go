@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"gitlab.medzdrav.ru/prototype/config/domain"
+	"gitlab.medzdrav.ru/prototype/config/meta"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/config"
 	"log"
@@ -22,7 +23,7 @@ func New(configService domain.ConfigService) *Server {
 	}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer()
+	gs, err := kitGrpc.NewServer(meta.ServiceCode)
 	if err != nil {
 		panic(err)
 	}

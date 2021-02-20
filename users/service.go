@@ -2,18 +2,21 @@ package users
 
 import (
 	"context"
-	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/users/domain"
 	"gitlab.medzdrav.ru/prototype/users/domain/impl"
 	"gitlab.medzdrav.ru/prototype/users/grpc"
+	"gitlab.medzdrav.ru/prototype/users/meta"
 	"gitlab.medzdrav.ru/prototype/users/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/users/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/users/repository/storage"
-	"math/rand"
 )
+
+// NodeId - node id of a service
+// TODO: not to hardcode. Should be defined by service discovery procedure
+var nodeId = "1"
 
 type serviceImpl struct {
 	domainService  domain.UserService
@@ -60,7 +63,10 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, fmt.Sprintf("users_%d", rand.Intn(99999))); err != nil {
+	if err := s.queue.Open(ctx, meta.ServiceCode + nodeId, &queue.Options{
+		Url:       c.Nats.Url,
+		ClusterId: c.Nats.ClusterId,
+	}); err != nil {
 		return err
 	}
 
