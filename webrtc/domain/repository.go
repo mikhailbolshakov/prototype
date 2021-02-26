@@ -1,9 +1,17 @@
 package domain
 
-import "context"
+import (
+	"context"
+	kit "gitlab.medzdrav.ru/prototype/kit/config"
+)
 
-// RoomStorage is responsible for rooms persistence
-type RoomStorage interface {
-	Save(ctx context.Context, r *Room) error
-	SaveAsync(ctx context.Context, r *Room)
+type WebrtcStorage interface {
+}
+
+type IonService interface {
+
+}
+
+type ConfigService interface {
+	Get(ctx context.Context) (*kit.Config, error)
 }

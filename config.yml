@@ -42,7 +42,27 @@ nats:
   url: "nats://127.0.0.1:4222"
   clusterId: "test-cluster"
 
+etcd:
+  hosts:
+    - "localhost:2379"
+
 webrtc:
+
+  coordinator:
+    local:
+      enabled: false
+    etcd:
+      enabled: true
+
+  signal:
+    fqdn: localhost
+    httpaddr: "localhost:7000"
+    key: ""
+    cert: ""
+    auth:
+      enabled: false
+      keytype: HMAC
+      key: 1q2dGu5pzikcrECJgW3ADfXX3EsmoD99SYvSVCpDsJrAqxou5tUNbHPvkEFI4bTS
 
   sfu:
     # Ballast size in MiB, will allocate memory to reduce the GC trigger upto 2x the
@@ -58,28 +78,36 @@ webrtc:
         # Prefer best quality initially
         bestqualityfirst: true
 
-  # Range of ports that ion accepts WebRTC traffic on
-  # Format: [min, max]   and max - min >= 100
-  # portrange:
-  #   - 50000
-  #   - 60000
+    webrtc:
+      # Range of ports that ion accepts WebRTC traffic on
+      # Format: [min, max]   and max - min >= 100
+      # portrange:
+      #   - 50000
+      #   - 60000
+      # if sfu behind nat, set iceserver
+      iceservers:
+        -
+          urls:
+            - "stun:stun.stunprotocol.org:3478"
+        -
+          urls:
+            - "turn:turn.awsome.org:3478"
+          username: "awsome"
+          credential: "awsome"
 
-  # if sfu behind nat, set iceserver
-  #iceservers:
-  # -
-  #   urls:
-  #      - "stun:stun.stunprotocol.org:3478"
-  # -
-  #   urls:
-  #      - "turn:turn.awsome.org:3478"
-  #   username: "awsome"
-  #   credential: "awsome"
+      # sdp semantics:
+      # "unified-plan"
+      # "plan-b"
+      # "unified-plan-with-fallback"
+      sdpsemantics: "unified-plan"
 
-  # sdp semantics:
-  # "unified-plan"
-  # "plan-b"
-  # "unified-plan-with-fallback"
-  sdpsemantics: "unified-plan"
+      log:
+        stats: true
+        level: debug
+        fix:
+          - "proc.go"
+          - "asm_amd64.s"
+          - "jsonrpc2.go"
 
   #candidates:
   # In case you're deploying ion-sfu on a server which is configured with
@@ -166,10 +194,6 @@ services:
       host-rw: localhost
       # read-only host
       host-ro: localhost
-    grpc:
-      port: 50057
-      host: localhost
-    log:
-      level: info
+
 
 

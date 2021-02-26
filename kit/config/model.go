@@ -1,5 +1,7 @@
 package config
 
+import "github.com/pion/ion-sfu/pkg/sfu"
+
 type Log struct {
 	Level string
 }
@@ -68,43 +70,43 @@ type SrvCfg struct {
 	Log      *Log
 }
 
+type Etcd struct {
+	Hosts []string
+}
+
 type Es struct {
 	Url   string
 	Trace bool
 }
 
-type Simulcast struct {
-	BestQualityFirst bool
+type AuthConfig struct {
+	Enabled bool
+	Key     string
+	KeyType string
 }
 
-type Router struct {
-	MaxBandWidth  uint64
-	MaxBufferTime int
-	Simulcast     *Simulcast
+type SignalConfig struct {
+	FQDN     string
+	Key      string
+	Cert     string
+	HTTPAddr string
+	GRPCAddr string
+	Auth     *AuthConfig
 }
 
-type Sfu struct {
-	Ballast int64
-	Router  *Router
-}
-
-type IceServer struct {
-	URLs       []string `mapstructure:"urls"`
-	Username   string
-	Credential string
-}
-
-type Candidates struct {
-	IceLite    bool
-	NAT1To1IPs []string
+type CoordinatorConfig struct {
+	Local *struct {
+		Enabled bool
+	}
+	Etcd *struct {
+		Enabled bool
+	}
 }
 
 type Webrtc struct {
-	Sfu          *Sfu
-	PortRange    []uint16
-	SdpSemantics string
-	Candidates   *Candidates
-	IceServers   []*IceServer
+	Signal      *SignalConfig
+	SFU         *sfu.Config
+	Coordinator *CoordinatorConfig
 }
 
 type Nats struct {
@@ -122,5 +124,6 @@ type Config struct {
 	Es         *Es
 	Webrtc     *Webrtc
 	Nats       *Nats
+	Etcd       *Etcd
 	Test       string
 }

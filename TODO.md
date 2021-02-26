@@ -66,10 +66,14 @@
 - Cluster mode 
     - support simple leader election based on Redis
     - gRpc LB
+    - coordinating with etcd
     
 - Mattermost
     - reconnect to NATS after NATS goes down +
     - cluster mode - deep study 
+    
+- Prometheus
+    - metrics support
     
 - Processes
     - handle lost calls from zeebe which happens just after app starts
@@ -78,7 +82,7 @@
     - queue topics must be declared as consts + 
     
 - Webrtc
-    - 
+    - ION implementation
 
 - Deployment
     - microservices split

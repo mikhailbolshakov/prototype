@@ -12,6 +12,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/services"
 	"gitlab.medzdrav.ru/prototype/tasks"
 	"gitlab.medzdrav.ru/prototype/users"
+	"gitlab.medzdrav.ru/prototype/webrtc"
 	"os"
 	"os/signal"
 	"syscall"
@@ -52,6 +53,7 @@ func main() {
 		services.New(),
 		bp.New(),
 		api.New(),
+		webrtc.New(),
 	}
 
 	// init service

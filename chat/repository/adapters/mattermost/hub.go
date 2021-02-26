@@ -174,7 +174,7 @@ func (h *hubImpl) GetByChatUserId(chatUserId string) ChatSession {
 
 func (h *hubImpl) Close(ctx context.Context) {
 
-	l := log.L().Cmp("mm-hub").Mth("close").C(ctx)
+	l := log.L().Cmp("mm-hub").Mth("close")
 
 	h.Lock()
 	defer h.Unlock()

@@ -12,6 +12,7 @@ import (
 const (
 	BASE_URL    = "http://localhost:8000"
 	WS_URL      = "ws://localhost:8000/ws"
+	WEBRTC_URL  = "ws://localhost:7000/webrtc"
 	APPJSON     = "application/json"
 	MM_URL      = "http://localhost:8065"
 	DEFAULT_PWD = "12345"
