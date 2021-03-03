@@ -26,6 +26,11 @@ func ToJson(v interface{}) (string, error) {
 	return "", nil
 }
 
+func MustJson(v interface{}) string {
+	s, _ := ToJson(v)
+	return s
+}
+
 func MillisFromTime(t time.Time) int64 {
 	return t.UnixNano() / int64(time.Millisecond)
 }

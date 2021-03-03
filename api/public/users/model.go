@@ -2,6 +2,16 @@ package users
 
 import "time"
 
+
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	SessionId string `json:"sessionId"`
+}
+
 type CreateClientRequest struct {
 	FirstName  string    `json:"firstName"`
 	MiddleName string    `json:"middleName"`

@@ -3,6 +3,7 @@ package storage
 import (
 	kitCache "gitlab.medzdrav.ru/prototype/kit/cache"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
+	"gitlab.medzdrav.ru/prototype/kit/kv"
 	kitStorage "gitlab.medzdrav.ru/prototype/kit/storage"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
 )
@@ -10,6 +11,7 @@ import (
 type Adapter interface {
 	Init(c *kitConfig.Config) error
 	GetService() domain.WebrtcStorage
+	GetRoomCoordinator() domain.RoomCoordinator
 	Close()
 }
 
@@ -17,17 +19,20 @@ type container struct {
 	Db         *kitStorage.Storage
 	ReadOnlyDB *kitStorage.Storage
 	Cache      *kitCache.Redis
+	Etcd       *kv.Etcd
 }
 
 type adapterImpl struct {
-	container   *container
-	storageImpl *storageImpl
+	container     *container
+	storageImpl   *storageImpl
+	roomCoordImpl *roomCoordImpl
 }
 
 func NewAdapter() Adapter {
 	a := &adapterImpl{}
 	a.container = &container{}
 	a.storageImpl = newStorage(a.container)
+	a.roomCoordImpl = &roomCoordImpl{ c: a.container }
 	return a
 }
 
@@ -72,6 +77,11 @@ func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
 		return err
 	}
 
+	a.container.Etcd, err = kv.Open(&kv.Options{Hosts: cfg.Etcd.Hosts})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -79,8 +89,13 @@ func (a *adapterImpl) GetService() domain.WebrtcStorage {
 	return a.storageImpl
 }
 
+func (a *adapterImpl) GetRoomCoordinator() domain.RoomCoordinator {
+	return a.roomCoordImpl
+}
+
 func (a *adapterImpl) Close() {
 	a.container.Db.Close()
 	a.container.ReadOnlyDB.Close()
 	a.container.Cache.Close()
+	_ = a.container.Etcd.Close()
 }

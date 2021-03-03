@@ -11,12 +11,13 @@ import (
 
 const (
 	BASE_URL    = "http://localhost:8000"
-	WS_URL      = "ws://localhost:8000/ws"
-	WEBRTC_URL  = "ws://localhost:7000/webrtc"
+	WS_URL      = "ws://localhost:8001/ws"
+	WEBRTC_URL  = "ws://localhost:8002/webrtc"
 	APPJSON     = "application/json"
 	MM_URL      = "http://localhost:8065"
 	DEFAULT_PWD = "12345"
 	TEST_USER   = "79032221002"
+	WEBRTC_GRPC = "localhost:51058"
 )
 
 type TestHelper struct {

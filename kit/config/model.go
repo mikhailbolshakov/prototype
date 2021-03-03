@@ -33,9 +33,10 @@ type Tls struct {
 }
 
 type Http struct {
-	Host string
-	Port string
-	Tls  *Tls
+	Host   string
+	Port   string
+	WsPort string `config:"ws-port"`
+	Tls    *Tls
 }
 
 type Mattermost struct {
@@ -85,28 +86,14 @@ type AuthConfig struct {
 	KeyType string
 }
 
-type SignalConfig struct {
-	FQDN     string
-	Key      string
-	Cert     string
-	HTTPAddr string
-	GRPCAddr string
-	Auth     *AuthConfig
-}
-
-type CoordinatorConfig struct {
-	Local *struct {
-		Enabled bool
-	}
-	Etcd *struct {
-		Enabled bool
-	}
+type Signal struct {
+	Host string
+	Port string
 }
 
 type Webrtc struct {
-	Signal      *SignalConfig
-	SFU         *sfu.Config
-	Coordinator *CoordinatorConfig
+	Signal      *Signal
+	Pion        *sfu.Config
 }
 
 type Nats struct {

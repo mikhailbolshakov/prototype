@@ -1,20 +1,21 @@
 package monitoring
 
 import (
-	"gitlab.medzdrav.ru/prototype/api/session"
+	"gitlab.medzdrav.ru/prototype/kit/grpc"
+	sessionPb "gitlab.medzdrav.ru/prototype/proto/sessions"
 )
 
-func (c *ctrlImpl) toUserSessionsApi(si *session.UserSessionInfo) *UserSessionInfo {
+func (c *ctrlImpl) toUserSessionsApi(si *sessionPb.UserSessionsInfo) *UserSessionInfo {
 	res := &UserSessionInfo{
 		UserId:     si.UserId,
 		ChatUserId: si.ChatUserId,
-		Sessions: []*SessionInfo{},
+		Sessions:   []*SessionInfo{},
 	}
 
 	for _, s := range si.Sessions {
 		res.Sessions = append(res.Sessions, &SessionInfo{
 			Id:             s.Id,
-			StartAt:        s.StartAt,
+			StartAt:        grpc.PbTSToTime(s.StartAt),
 			SentWsMessages: s.SentWsMessages,
 			ChatSessionId:  s.ChatSessionId,
 		})
@@ -23,10 +24,10 @@ func (c *ctrlImpl) toUserSessionsApi(si *session.UserSessionInfo) *UserSessionIn
 	return res
 }
 
-func (c *ctrlImpl) toTotalSessionsApi(si *session.TotalSessionInfo) *TotalSessionInfo {
+func (c *ctrlImpl) toTotalSessionsApi(si *sessionPb.TotalSessionInfo) *TotalSessionInfo {
 	res := &TotalSessionInfo{
-		ActiveCount:     si.ActiveCount,
-		ActiveUsersCount: si.ActiveUsersCount,
+		ActiveCount:      int(si.ActiveCount),
+		ActiveUsersCount: int(si.ActiveUsersCount),
 	}
 	return res
 }

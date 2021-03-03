@@ -2,29 +2,30 @@ package webrtc
 
 import (
 	"context"
+	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain/impl"
+	"gitlab.medzdrav.ru/prototype/webrtc/grpc"
+	"gitlab.medzdrav.ru/prototype/webrtc/jsonrpc"
 	"gitlab.medzdrav.ru/prototype/webrtc/meta"
 	"gitlab.medzdrav.ru/prototype/webrtc/repository/adapters/config"
-	"gitlab.medzdrav.ru/prototype/webrtc/repository/adapters/ion"
+	"gitlab.medzdrav.ru/prototype/webrtc/repository/adapters/sessions"
 	"gitlab.medzdrav.ru/prototype/webrtc/repository/storage"
 )
 
-// NodeId - node id of a service
-// TODO: not to hardcode. Should be defined by service discovery procedure
-var nodeId = "1"
-
 type serviceImpl struct {
-	configAdapter  config.Adapter
-	configService  domain.ConfigService
-	storageAdapter storage.Adapter
-	ionAdapter     ion.Adapter
-	ionService     domain.IonService
-	webrtcService  domain.WebrtcService
-	queue          queue.Queue
+	http            *kitHttp.Server
+	grpc            *grpc.Server
+	jsonRpc         *jsonrpc.Server
+	configAdapter   config.Adapter
+	configService   domain.ConfigService
+	storageAdapter  storage.Adapter
+	webrtcService   domain.WebrtcService
+	queue           queue.Queue
+	sessionsAdapter sessions.Adapter
 }
 
 func New() service.Service {
@@ -36,12 +37,8 @@ func New() service.Service {
 
 	s.queue = stan.New()
 	s.storageAdapter = storage.NewAdapter()
-	strg := s.storageAdapter.GetService()
 
-	s.ionAdapter = ion.NewAdapter()
-	s.ionService = s.ionAdapter.GetService()
-
-	s.webrtcService = impl.NewWebrtcService(s.ionService, strg, s.queue)
+	s.sessionsAdapter = sessions.NewAdapter()
 
 	return s
 }
@@ -61,29 +58,43 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, meta.ServiceCode+nodeId, &queue.Options{
+	if err := s.sessionsAdapter.Init(c); err != nil {
+		return err
+	}
+
+	if err := s.queue.Open(ctx, meta.ServiceCode+meta.NodeId, &queue.Options{
 		Url:       c.Nats.Url,
 		ClusterId: c.Nats.ClusterId,
 	}); err != nil {
 		return err
 	}
 
-	if err := s.ionAdapter.Init(ctx, c); err != nil {
+	s.webrtcService = impl.NewWebrtcService(c, s.storageAdapter.GetRoomCoordinator(), s.storageAdapter.GetService(), s.queue)
+
+	s.grpc = grpc.New(s.webrtcService)
+	if err := s.grpc.Init(c); err != nil {
 		return err
 	}
+
+	s.http = kitHttp.NewHttpServer(c.Webrtc.Signal.Host, c.Webrtc.Signal.Port, "", "")
+
+	s.jsonRpc = jsonrpc.New(s.http, s.sessionsAdapter.GetService(), s.webrtcService)
 
 	return nil
 
 }
 
 func (s *serviceImpl) ListenAsync(ctx context.Context) error {
-	s.ionAdapter.ListenAsync()
+	s.grpc.ListenAsync()
+	s.http.Listen()
 	return nil
 }
 
 func (s *serviceImpl) Close(ctx context.Context) {
+	s.grpc.Close()
+	s.http.Close()
 	s.configAdapter.Close()
 	_ = s.queue.Close()
 	s.storageAdapter.Close()
-	s.ionAdapter.Close(ctx)
+	s.sessionsAdapter.Close()
 }

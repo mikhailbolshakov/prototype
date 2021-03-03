@@ -4,7 +4,7 @@ import "time"
 
 type SessionInfo struct {
 	Id             string    `json:"id"`
-	StartAt        time.Time `json:"startAt"`
+	StartAt        *time.Time `json:"startAt"`
 	SentWsMessages uint32    `json:"sentWsMessages"`
 	ChatSessionId  string    `json:"chatSessionId"`
 }

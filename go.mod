@@ -7,7 +7,6 @@ replace github.com/coreos/etcd => go.etcd.io/etcd/v3 v3.5.0-alpha.0
 require (
 	github.com/Nerzal/gocloak/v7 v7.11.0
 	github.com/adacta-ru/mattermost-server/v6 v6.0.0
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/go-co-op/gocron v0.4.0
 	github.com/go-redis/redis v6.15.9+incompatible
@@ -18,8 +17,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/joho/godotenv v1.3.0
 	github.com/koding/websocketproxy v0.0.0-20181220232114-7ed82d81a28c
-	github.com/lucas-clemente/quic-go v0.19.1 // indirect
-	github.com/matryer/moq v0.1.4 // indirect
 	github.com/mitchellh/mapstructure v1.2.2
 	github.com/nats-io/nats-streaming-server v0.19.0 // indirect
 	github.com/nats-io/nats.go v1.10.0
@@ -27,12 +24,11 @@ require (
 	github.com/olivere/elastic v6.2.35+incompatible
 	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/gomega v1.10.4 // indirect
-	github.com/pborman/uuid v1.2.1
-	github.com/pion/ion-log v1.0.0 // indirect
-	github.com/pion/ion-sfu v1.7.3
+	github.com/pion/ion-log v1.0.0
+	github.com/pion/ion-sdk-go v0.4.0
+	github.com/pion/ion-sfu v1.9.3
+	github.com/pion/mediadevices v0.1.17
 	github.com/pion/webrtc/v3 v3.0.11
-	github.com/prometheus/client_golang v1.9.0
-	github.com/prometheus/client_model v0.2.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sherifabdlnaby/configuro v0.0.2
 	github.com/sirupsen/logrus v1.7.0

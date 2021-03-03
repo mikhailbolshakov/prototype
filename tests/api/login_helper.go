@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"gitlab.medzdrav.ru/prototype/api/public/monitoring"
-	"gitlab.medzdrav.ru/prototype/api/session"
+	"gitlab.medzdrav.ru/prototype/api/public/users"
 	"log"
 	"net/http"
 	"os"
@@ -15,7 +15,7 @@ import (
 
 func (h *TestHelper) Login(username string) (string, chan struct{}, error) {
 
-	rq := &session.LoginRequest{
+	rq := &users.LoginRequest{
 		Username: username,
 		Password: DEFAULT_PWD,
 	}
@@ -27,7 +27,7 @@ func (h *TestHelper) Login(username string) (string, chan struct{}, error) {
 		return "", nil, err
 	} else {
 
-		var rs *session.LoginResponse
+		var rs *users.LoginResponse
 		err = json.Unmarshal(r, &rs)
 		if err != nil {
 			return "", nil, err

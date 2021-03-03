@@ -38,5 +38,13 @@ func (r *Router) Set(authRouter, noAuthRouter *mux.Router) {
 		r.ctrl.Search(writer, request)
 	}).Methods("GET")
 
+	noAuthRouter.HandleFunc("/api/users/login", func(writer http.ResponseWriter, request *http.Request) {
+		r.ctrl.Login(writer, request)
+	}).Methods("POST")
+
+	authRouter.HandleFunc("/api/users/{userId}/logout", func(writer http.ResponseWriter, request *http.Request) {
+		r.ctrl.Logout(writer, request)
+	}).Methods("POST")
+
 
 }

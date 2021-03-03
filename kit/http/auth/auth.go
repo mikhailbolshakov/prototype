@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/Nerzal/gocloak/v7"
@@ -45,6 +46,7 @@ type Service interface {
 	AuthClient(*Authenticate) (*JWT, error)
 	AuthUser(*User) (*JWT, error)
 	RefreshToken(*Refresh) (*JWT, error)
+	CheckAccessToken(accessToken string) error
 }
 
 type serviceImpl struct {
@@ -148,4 +150,18 @@ func (s *serviceImpl) RefreshToken(requestData *Refresh) (*JWT, error) {
 		SessionState:     response.SessionState,
 		TokenType:        response.TokenType,
 	}, nil
+}
+
+func (s *serviceImpl) CheckAccessToken(accessToken string) error {
+
+	result, err := s.gocloak.RetrospectToken(s.ctx, accessToken, s.client.ID, s.client.Secret, s.client.Realm)
+	if err != nil {
+		return err
+	}
+
+	if !*result.Active {
+		return fmt.Errorf("invalid or expired token")
+	}
+
+	return nil
 }

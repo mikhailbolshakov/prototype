@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"github.com/Nerzal/gocloak/v7"
 	"gitlab.medzdrav.ru/prototype/api/public"
 	"gitlab.medzdrav.ru/prototype/api/public/bp"
 	"gitlab.medzdrav.ru/prototype/api/public/chat"
@@ -14,17 +13,15 @@ import (
 	chatRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/api/repository/adapters/config"
 	servRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/services"
+	"gitlab.medzdrav.ru/prototype/api/repository/adapters/sessions"
 	tasksRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/tasks"
 	usersRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/users"
-	"gitlab.medzdrav.ru/prototype/api/session"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
-	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
-	"gitlab.medzdrav.ru/prototype/proto"
 )
 
 // NodeId - node id of a service
@@ -34,9 +31,6 @@ const serviceCode = "api"
 
 type serviceImpl struct {
 	http            *kitHttp.Server
-	keycloak        gocloak.GoCloak
-	authMdw         auth.Middleware
-	hub             session.Hub
 	userAdapter     usersRep.Adapter
 	userService     public.UserService
 	taskAdapter     tasksRep.Adapter
@@ -52,6 +46,8 @@ type serviceImpl struct {
 	configService   public.ConfigService
 	queue           queue.Queue
 	queueListener   listener.QueueListener
+	sessionsAdapter sessions.Adapter
+	sessionsService public.SessionsService
 }
 
 func New() service.Service {
@@ -76,6 +72,9 @@ func New() service.Service {
 	s.chatAdapter = chatRep.NewAdapter(s.userService)
 	s.chatService = s.chatAdapter.GetService()
 
+	s.sessionsAdapter = sessions.NewAdapter()
+	s.sessionsService = s.sessionsAdapter.GetService()
+
 	s.queue = stan.New()
 	s.queueListener = listener.NewQueueListener(s.queue)
 
@@ -84,41 +83,19 @@ func New() service.Service {
 
 func (s *serviceImpl) initHttpServer(ctx context.Context, c *kitConfig.Config) error {
 
-	authClient := &auth.ClientSecurityInfo{
-		ID:     c.Keycloak.ClientId,
-		Secret: c.Keycloak.ClientSecret,
-		Realm:  c.Keycloak.ClientRealm,
-	}
-
-	s.keycloak = gocloak.NewClient(c.Keycloak.Url)
-
-	s.authMdw = auth.NewMdw(ctx, s.keycloak, authClient, "", "")
-
-	authService := auth.New(ctx, s.keycloak, authClient)
+	mdw := public.NewMiddleware(s.sessionsService)
 
 	s.http = kitHttp.NewHttpServer(c.Http.Host, c.Http.Port, c.Http.Tls.Cert, c.Http.Tls.Key)
 
-	// session HUB
-	s.hub = session.NewHub(c, s.http, authService, s.userService, s.chatService)
-	// setup a NATS message handler on events forwarded to websocket
-	s.queueListener.Add(queue.QUEUE_TYPE_AT_MOST_ONCE, proto.QUEUE_TOPIC_OUTGOING_WS_EVENT, s.hub.GetOutgoingWsEventsHandler())
+	s.http.SetAuthMiddleware(mdw.SessionMiddleware)
+	s.http.SetNoAuthMiddleware(mdw.NoSessionMiddleware)
 
-	s.http.SetRouters(s.hub.GetLoginRouteSetter())
-
-	// set auth middlewares
-	// the first middleware checks session by X-SESSION-ID header and if correct sets Authorization Bearer with Access Token
-	// then the mdw which checks standard Bearer token takes its action
-	// TODO: currently if a token expires we don't remove session immediately, but we must
-	s.http.SetAuthMiddleware(s.hub.SessionMiddleware, s.authMdw.CheckToken)
-	// middleware for routes that don't require auth and don't have sessions like login (hm... we have to think it over)
-	s.http.SetNoAuthMiddleware(s.hub.NoSessionMiddleware)
-
-	userController := users.NewController(authService, s.userService)
+	userController := users.NewController(s.sessionsService, s.userService)
 	taskController := tasks.NewController(s.taskService)
 	servController := services.NewController(s.balanceService, s.deliveryService)
 	bpController := bp.NewController(s.bpService)
 	chatController := chat.NewController(s.chatService)
-	monitorController := monitoring.NewController(s.hub.GetMonitor())
+	monitorController := monitoring.NewController(s.sessionsAdapter.GetMonitor())
 
 	s.http.SetRouters(users.NewRouter(userController),
 		tasks.NewRouter(taskController),
@@ -172,6 +149,10 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
+	if err := s.sessionsAdapter.Init(c); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -190,5 +171,6 @@ func (s *serviceImpl) Close(context.Context) {
 	s.taskAdapter.Close()
 	s.chatAdapter.Close()
 	s.configAdapter.Close()
+	s.sessionsAdapter.Close()
 	s.http.Close()
 }

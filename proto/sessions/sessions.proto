@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package sessions;
+option go_package = "proto/sessions";
+
+import "google/protobuf/timestamp.proto";
+
+message LoginRequest {
+  string Username = 1;
+  string Password = 2;
+  bool ChatLogin = 3;
+}
+
+message LoginResponse {
+  string SessionId = 1;
+}
+
+message LogoutRequest {
+  string UserId = 1;
+}
+
+message LogoutResponse {}
+
+message GetByIdRequest {
+  string Id = 1;
+}
+
+message Session {
+  string Id = 1;
+  string UserId = 2;
+  string Username = 3;
+  string ChatUserId = 4;
+  string ChatSessionId = 5;
+  google.protobuf.Timestamp LoginAt = 6;
+}
+
+message GetByUserRequest {
+  string UserId = 1;
+  string Username = 2;
+}
+
+message SessionsResponse {
+  repeated Session Sessions = 1;
+}
+
+message AuthSessionRequest {
+  string SessionId = 1;
+}
+
+service Sessions {
+  rpc Login(LoginRequest) returns (LoginResponse) {}
+  rpc Logout(LogoutRequest) returns (LogoutResponse) {}
+  rpc Get(GetByIdRequest) returns (Session) {}
+  rpc GetByUser(GetByUserRequest) returns (SessionsResponse) {}
+  rpc AuthSession(AuthSessionRequest) returns (Session) {}
+}
+
+message SessionInfo {
+  string Id = 1;
+  google.protobuf.Timestamp StartAt = 2;
+  uint32 SentWsMessages = 3;
+  string ChatSessionId = 4;
+}
+
+message UserSessionsInfo {
+  string UserId = 1;
+  string ChatUserId = 2;
+  repeated SessionInfo Sessions = 3;
+}
+
+message TotalSessionInfo {
+  uint32 ActiveCount = 1;
+  uint32 ActiveUsersCount = 2;
+}
+
+message UserSessionsRequest {
+  string UserId = 1;
+}
+
+message SessionsTotalRequest {}
+
+service Monitor {
+  rpc UserSessions(UserSessionsRequest) returns (UserSessionsInfo) {}
+  rpc TotalSessions(SessionsTotalRequest) returns (TotalSessionInfo) {}
+}

@@ -5,6 +5,7 @@ import (
 	kit "gitlab.medzdrav.ru/prototype/kit/config"
 	bpPb "gitlab.medzdrav.ru/prototype/proto/bp"
 	servPb "gitlab.medzdrav.ru/prototype/proto/services"
+	sessionPb "gitlab.medzdrav.ru/prototype/proto/sessions"
 	taskPb "gitlab.medzdrav.ru/prototype/proto/tasks"
 	userPb "gitlab.medzdrav.ru/prototype/proto/users"
 	"time"
@@ -58,4 +59,17 @@ type ChatService interface {
 	Logout(ctx context.Context, chatUserId string) error
 	Post(ctx context.Context, fromUserId, channelId, message string) error
 	EphemeralPost(ctx context.Context, fromUserId, toUserId, channelId, message string) error
+}
+
+type SessionsService interface {
+	Login(ctx context.Context, rq *sessionPb.LoginRequest) (string, error)
+	Logout(ctx context.Context, userId string) error
+	Get(ctx context.Context, sid string) (*sessionPb.Session, error)
+	GetByUser(ctx context.Context, userId, username string) ([]*sessionPb.Session, error)
+	AuthSession(ctx context.Context, sid string) (*sessionPb.Session, error)
+}
+
+type SessionMonitor interface {
+	UserSessions(ctx context.Context, userId string) (*sessionPb.UserSessionsInfo, error)
+	TotalSessions(ctx context.Context) (*sessionPb.TotalSessionInfo, error)
 }

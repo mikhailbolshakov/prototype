@@ -45,7 +45,7 @@ func Init(level string) error {
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(lv)
 	logger.SetFormatter(&Formatter{
-		FixedFields:            []string{"cl", "un", "rid", "protocol", "component", "method"},
+		FixedFields:            []string{"protocol", "component", "method"},
 		TimestampFormat:        "2006-01-02T15:04:05-0700",
 		HideKeysForFixedFields: true,
 		NoColors:               true,

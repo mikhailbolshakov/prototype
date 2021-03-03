@@ -21,6 +21,8 @@ func Test_NewClientLogin_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	_ = helper.Logout(TEST_USER)
+
 	sessionId, _, err := helper.Login(user.Username)
 	if err != nil {
 		t.Fatal(err)
@@ -48,6 +50,8 @@ func Test_NewClientLogout_Success(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	_ = helper.Logout(TEST_USER)
 
 	sessionId, _, err := helper.Login(user.Username)
 	if err != nil {
@@ -129,6 +133,8 @@ func Test_MultipleConnectionsSameUser(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	_ = helper.Logout(TEST_USER)
+
 	_, _, err = helper.Login(user.Username)
 	if err != nil {
 		t.Fatal(err)
@@ -165,6 +171,89 @@ func Test_MultipleConnectionsSameUser(t *testing.T) {
 	}
 
 	m, err = helper.MonitorUserSessions(user.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(m.Sessions) != 0 {
+		t.Fatal("expected no sessions")
+	}
+
+}
+
+func Test_MultipleConnections(t *testing.T) {
+
+	helper := NewTestHelper()
+
+	_, _, err := helper.Login(TEST_USER)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	user1, err := helper.CreateClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	user2, err := helper.CreateClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_ = helper.Logout(TEST_USER)
+
+	s1, _, err := helper.Login(user1.Username)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m, err := helper.MonitorUserSessions(user1.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(m.Sessions) != 1 {
+		t.Fatal("expected one session")
+	}
+
+	s2, _, err := helper.Login(user2.Username)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m, err = helper.MonitorUserSessions(user2.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(m.Sessions) != 1 {
+		t.Fatal("expected one session")
+	}
+
+	<-time.After(time.Second * 3)
+
+	helper.sessionId = s1
+	err = helper.Logout(user1.Username)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m, err = helper.MonitorUserSessions(user1.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(m.Sessions) != 0 {
+		t.Fatal("expected no sessions")
+	}
+
+	helper.sessionId = s2
+	err = helper.Logout(user2.Username)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m, err = helper.MonitorUserSessions(user2.Id)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,6 +10,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/services"
+	"gitlab.medzdrav.ru/prototype/sessions"
 	"gitlab.medzdrav.ru/prototype/tasks"
 	"gitlab.medzdrav.ru/prototype/users"
 	"gitlab.medzdrav.ru/prototype/webrtc"
@@ -30,14 +31,16 @@ func main() {
 	// TODO: change to some custom background context
 	ctx := kitContext.NewRequestCtx().Empty().ToContext(nil)
 
+	l := log.L().Cmp("main")
+
 	// load config first
 	cfg := config.New()
 	if err := cfg.Init(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		l.E(err).St().Err()
 		os.Exit(1)
 	}
 	if err := cfg.ListenAsync(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		l.E(err).St().Err()
 		os.Exit(1)
 	}
 
@@ -54,13 +57,14 @@ func main() {
 		bp.New(),
 		api.New(),
 		webrtc.New(),
+		sessions.New(),
 	}
 
 	// init service
 	for _, s := range srvs {
 		err := s.Init(ctx)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+			l.E(err).St().Err()
 			os.Exit(1)
 		}
 	}
@@ -68,7 +72,7 @@ func main() {
 	//run listeners
 	for _, s := range srvs {
 		if err := s.ListenAsync(ctx); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+			l.E(err).St().Err()
 			os.Exit(1)
 		}
 	}
@@ -77,6 +81,7 @@ func main() {
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
+	l.Inf("quit signal")
 	for _, s := range srvs {
 		s.Close(ctx)
 	}

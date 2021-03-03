@@ -8,8 +8,8 @@ import (
 	"gitlab.medzdrav.ru/prototype/api/public"
 	"gitlab.medzdrav.ru/prototype/kit/grpc"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
-	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
+	sessionPb "gitlab.medzdrav.ru/prototype/proto/sessions"
 	"net/http"
 	"strconv"
 	"strings"
@@ -21,20 +21,64 @@ type Controller interface {
 	CreateExpert(http.ResponseWriter, *http.Request)
 	GetByUsername(http.ResponseWriter, *http.Request)
 	Search(http.ResponseWriter, *http.Request)
+	Login(http.ResponseWriter, *http.Request)
+	Logout(http.ResponseWriter, *http.Request)
 }
 
 type ctrlImpl struct {
 	kitHttp.Controller
-	userService public.UserService
-	auth        auth.Service
+	sessionsService public.SessionsService
+	userService     public.UserService
 }
 
-func NewController(auth auth.Service, userService public.UserService) Controller {
+func NewController(sessionsService public.SessionsService, userService public.UserService) Controller {
 
 	return &ctrlImpl{
-		auth:        auth,
 		userService: userService,
+		sessionsService: sessionsService,
 	}
+}
+
+func (c *ctrlImpl) Login(w http.ResponseWriter, r *http.Request) {
+
+	rq := &LoginRequest{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(rq); err != nil {
+		c.RespondError(w, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+
+	sid, err := c.sessionsService.Login(r.Context(), &sessionPb.LoginRequest{
+		Username: rq.Username,
+		Password: rq.Password,
+	})
+
+	if err != nil {
+		c.RespondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	c.RespondOK(w, &LoginResponse{
+		SessionId: sid,
+	})
+}
+
+func (c *ctrlImpl) Logout(w http.ResponseWriter, r *http.Request) {
+
+	userId := mux.Vars(r)["userId"]
+
+	if userId == "" {
+		c.RespondError(w, http.StatusBadRequest, errors.New("no user specified"))
+		return
+	}
+
+	err := c.sessionsService.Logout(r.Context(), userId)
+	if err != nil {
+		c.RespondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	c.RespondOK(w, &struct{}{})
 }
 
 func (c *ctrlImpl) CreateClient(writer http.ResponseWriter, r *http.Request) {
