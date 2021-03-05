@@ -89,6 +89,20 @@ webrtc:
     log:
       level: trace
 
+  avp:
+    samplebuilder:
+      audiomaxlate: 100
+      videomaxlate: 200
+    webrtc:
+      plicycle: 1000
+    log:
+      level: trace
+
+  recording:
+    file:
+      enabled: true
+      path: "/home/mikhailb/work/adacta/rgs-med/dev/prototype/recording/"
+
 services:
   chat:
     database:

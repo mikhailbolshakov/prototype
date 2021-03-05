@@ -40,6 +40,8 @@ func New() service.Service {
 
 	s.sessionsAdapter = sessions.NewAdapter()
 
+	s.webrtcService = impl.NewWebrtcService(s.storageAdapter.GetRoomCoordinator(), s.storageAdapter.GetService(), s.queue)
+
 	return s
 }
 
@@ -69,7 +71,9 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	s.webrtcService = impl.NewWebrtcService(c, s.storageAdapter.GetRoomCoordinator(), s.storageAdapter.GetService(), s.queue)
+	if err := s.webrtcService.Init(ctx, c); err != nil {
+		return err
+	}
 
 	s.grpc = grpc.New(s.webrtcService)
 	if err := s.grpc.Init(c); err != nil {

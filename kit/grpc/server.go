@@ -17,8 +17,7 @@ func NewServer(service string) (*Server, error) {
 
 	s := &Server{
 		Service: service,
-		Srv: grpc.NewServer(grpc_middleware.WithUnaryServerChain(
-			ContextUnaryServerInterceptor())),
+		Srv: grpc.NewServer(grpc_middleware.WithUnaryServerChain(ContextUnaryServerInterceptor()), grpc_middleware.WithStreamServerChain()),
 	}
 
 	return s, nil

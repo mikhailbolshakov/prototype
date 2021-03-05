@@ -1,6 +1,9 @@
 package config
 
-import "github.com/pion/ion-sfu/pkg/sfu"
+import (
+	avp "github.com/pion/ion-avp/pkg"
+	"github.com/pion/ion-sfu/pkg/sfu"
+)
 
 type Log struct {
 	Level string
@@ -91,9 +94,20 @@ type Signal struct {
 	Port string
 }
 
+type FileRecording struct {
+	Enabled bool
+	Path    string
+}
+
+type Recording struct {
+	File *FileRecording
+}
+
 type Webrtc struct {
-	Signal      *Signal
-	Pion        *sfu.Config
+	Signal    *Signal
+	Pion      *sfu.Config
+	Avp       *avp.Config
+	Recording *Recording
 }
 
 type Nats struct {

@@ -6,6 +6,7 @@ import (
 	sfuPb "github.com/pion/ion-sfu/cmd/signal/grpc/proto"
 	"github.com/pion/ion-sfu/pkg/sfu"
 	"github.com/pion/webrtc/v3"
+	"gitlab.medzdrav.ru/prototype/kit"
 	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
@@ -20,6 +21,7 @@ import (
 
 type Server struct {
 	host, port string
+	// TODO: mutex per stream
 	sync.Mutex
 	*kitGrpc.Server
 	webrtc domain.WebrtcService
@@ -78,9 +80,15 @@ func (s *Server) streamSendErr(stream sfuPb.SFU_SignalServer, err error) error {
 
 func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 
-	ctx := kitContext.NewRequestCtx().Webrtc().ToContext(stream.Context())
+	ctx := stream.Context()
+	rq, ok := kitContext.Request(ctx)
+	if !ok {
+		user := "webrtc-" + kit.NewId()
+		rq = kitContext.NewRequestCtx().Webrtc().WithNewRequestId().WithUser(user, user)
+		ctx = rq.ToContext(ctx)
+	}
 
-	peer := s.webrtc.NewPeer(ctx)
+	peer := s.webrtc.NewPeer(ctx, rq.GetUserId(), rq.GetUsername())
 
 	l := log.L().Pr("grpc").Cmp("webrtc").Mth("signal").C(ctx).Dbg()
 
@@ -103,13 +111,21 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 		switch payload := in.Payload.(type) {
 		case *sfuPb.SignalRequest_Join:
 
-			l.DbgF("signal->join called:\n%v", string(payload.Join.Description))
+			l.Dbg("signal->join")
 
 			// Notify user of new ice candidate
-			peer.SetOnIceCandidate(func(candidate *webrtc.ICECandidateInit, target int) {
+			peer.OnIceCandidate(func(candidate *webrtc.ICECandidateInit, target int) {
+
+				if candidate == nil {
+					return
+				}
+
+				ll := l.Clone().F(log.FF{"event": "on-ice", "peer": peer.GetUsername()}).Dbg().TrcF("%v", *candidate)
+
 				bytes, err := json.Marshal(candidate)
 				if err != nil {
-					l.ErrF("onIceCandidate %v", err)
+					ll.E(err).St().Err()
+					return
 				}
 				err = s.streamSend(stream,&sfuPb.SignalReply{
 					Payload: &sfuPb.SignalReply_Trickle{
@@ -125,12 +141,15 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 			})
 
 			// Notify user of new offer
-			peer.SetOnOffer(func(o *webrtc.SessionDescription) {
+			peer.OnOffer(func(o *webrtc.SessionDescription) {
+
+				ll := l.Clone().F(log.FF{"event": "on-offer", "peer": peer.GetUsername()}).Dbg().TrcF("%v", *o)
+
 				marshalled, err := json.Marshal(o)
 				if err != nil {
 					err = s.streamSendErr(stream, fmt.Errorf("offer sdp marshal error: %w", err))
 					if err != nil {
-						l.ErrF("grpc send error %v ", err)
+						ll.E(err).St().Err("grpc send")
 					}
 					return
 				}
@@ -141,11 +160,13 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 				})
 
 				if err != nil {
-					l.ErrF("negotiation error %s", err)
+					ll.E(err).St().Err("negotiation")
 				}
 			})
 
-			peer.SetOnICEConnectionStateChange( func(c webrtc.ICEConnectionState) {
+			peer.OnICEConnectionStateChange( func(c webrtc.ICEConnectionState) {
+				ll := l.Clone().F(log.FF{"event": "on-ice-state", "peer": peer.GetUsername()}).Dbg().TrcF("%v", c)
+
 				err = s.streamSend(stream, &sfuPb.SignalReply{
 					Payload: &sfuPb.SignalReply_IceConnectionState{
 						IceConnectionState: c.String(),
@@ -153,7 +174,7 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 				})
 
 				if err != nil {
-					l.ErrF("oniceconnectionstatechange error %s", err)
+					ll.E(err).St().Err("oniceconnectionstatechange")
 				}
 			})
 
@@ -161,16 +182,17 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 			if err != nil {
 				err = s.streamSendErr(stream, fmt.Errorf("join sdp unmarshal error: %w", err))
 				if err != nil {
-					l.ErrF("grpc send error %v ", err)
+					l.E(err).Err("grpc send")
 					return status.Errorf(codes.Internal, err.Error())
 				}
 			}
+			l.TrcF("offer=%v", *offer)
 
 			// get or create room
 			roomMeta, err := s.webrtc.GetOrCreateRoom(ctx, payload.Join.Sid)
 			if err != nil {
 				err = s.streamSendErr(stream, fmt.Errorf("get or create room: %w", err))
-				l.ErrF(" %v ", err)
+				l.E(err).Err("grpc send")
 				continue
 			}
 
@@ -180,7 +202,8 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 				return nil
 			}
 
-			answer, err := peer.Join(ctx, payload.Join.Sid, payload.Join.Uid, offer)
+			answer, err := peer.Join(ctx, payload.Join.Sid, offer)
+			l.Dbg("join").TrcF("answer=%v", *answer)
 
 			if err != nil {
 				switch err {
@@ -199,6 +222,7 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 
 			marshalled, err := json.Marshal(answer)
 			if err != nil {
+				l.E(err).St().Err("marshal")
 				return status.Errorf(codes.Internal, fmt.Sprintf("sdp marshal error: %v", err))
 			}
 
@@ -213,7 +237,7 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 			})
 
 			if err != nil {
-				l.ErrF("error sending join response %s", err)
+				l.E(err).St().Err("sending join response")
 				return status.Errorf(codes.Internal, "join error %s", err)
 			}
 
@@ -229,7 +253,9 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 			}
 
 			if sdp.Type == webrtc.SDPTypeOffer {
+				l.DbgF("signal->offer").TrcF("sdp=%v", sdp)
 				answer, err := peer.Offer(sdp)
+				l.TrcF("answer=%v", answer)
 				if err != nil {
 					switch err {
 					case sfu.ErrNoTransportEstablished:
@@ -237,11 +263,12 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 					case sfu.ErrOfferIgnored:
 						err = s.streamSendErr(stream, fmt.Errorf("negotiate answer error: %w", err))
 						if err != nil {
-							l.ErrF("grpc send error %v ", err)
+							l.E(err).St().Err("grpc send")
 							return status.Errorf(codes.Internal, err.Error())
 						}
 						continue
 					default:
+						l.E(err).St().Err("negotiate")
 						return status.Errorf(codes.Unknown, fmt.Sprintf("negotiate error: %v", err))
 					}
 				}
@@ -250,7 +277,7 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 				if err != nil {
 					err = s.streamSendErr(stream, fmt.Errorf("sdp marshal error: %w", err))
 					if err != nil {
-						l.ErrF("grpc send error %v ", err)
+						l.E(err).St().Err("grpc send")
 						return status.Errorf(codes.Internal, err.Error())
 					}
 				}
@@ -263,49 +290,55 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 				})
 
 				if err != nil {
+					l.E(err).St().Err("negotiate")
 					return status.Errorf(codes.Internal, fmt.Sprintf("negotiate error: %v", err))
 				}
 
 			} else if sdp.Type == webrtc.SDPTypeAnswer {
+				l.DbgF("signal->answer").TrcF("sdp=%v", sdp)
 				err := peer.Answer(sdp)
 				if err != nil {
 					switch err {
 					case sfu.ErrNoTransportEstablished:
 						err = s.streamSendErr(stream, fmt.Errorf("set remote description error: %w", err))
 						if err != nil {
-							l.ErrF("grpc send error %v ", err)
+							l.E(err).St().Err("grpc send")
 							return status.Errorf(codes.Internal, err.Error())
 						}
 					default:
+						l.E(err).St().Err("negotiate")
 						return status.Errorf(codes.Unknown, err.Error())
 					}
 				}
 			}
 
 		case *sfuPb.SignalRequest_Trickle:
+			l.DbgF("signal->trickle")
 			var candidate webrtc.ICECandidateInit
 			err := json.Unmarshal([]byte(payload.Trickle.Init), &candidate)
 			if err != nil {
-				l.ErrF("error parsing ice candidate: %v", err)
+				l.E(err).St().Err("parsing ice candidate")
 				err = s.streamSendErr(stream, fmt.Errorf("unmarshal ice candidate error:  %w", err))
 				if err != nil {
-					l.ErrF("grpc send error %v ", err)
+					l.E(err).St().Err("grpc send")
 					return status.Errorf(codes.Internal, err.Error())
 				}
 				continue
 			}
 
+			l.TrcF("candidate=%v", candidate)
 			err = peer.Trickle(candidate, int(payload.Trickle.Target))
 			if err != nil {
 				switch err {
 				case sfu.ErrNoTransportEstablished:
-					l.ErrF("peer hasn't joined")
+					l.E(err).St().Err("transport")
 					err = s.streamSendErr(stream, fmt.Errorf("trickle error:  %w", err))
 					if err != nil {
-						l.ErrF("grpc send error %v ", err)
+						l.E(err).St().Err("grpc send")
 						return status.Errorf(codes.Internal, err.Error())
 					}
 				default:
+					l.E(err).St().Err("negotiate")
 					return status.Errorf(codes.Unknown, fmt.Sprintf("negotiate error: %v", err))
 				}
 			}

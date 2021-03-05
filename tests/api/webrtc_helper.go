@@ -106,7 +106,7 @@ func getTracks() []mediadevices.Track {
 
 }
 
-func (h *TestHelper) NewPeer(sid, peerId string) *peer {
+func (h *TestHelper) NewPeer(sid, peerId string, streamToFile bool) *peer {
 
 	p := &peer{id: peerId}
 
@@ -133,8 +133,9 @@ func (h *TestHelper) NewPeer(sid, peerId string) *peer {
 	p.c = e.AddClient(WEBRTC_GRPC, sid, p.id)
 
 	// subscribe rtp from session
-	// comment this if you don't need save to file
-	p.c.OnTrack = p.save
+	if streamToFile {
+		p.c.OnTrack = p.save
+	}
 
 	// client join a session
 	if err := p.c.Join(sid); err != nil {

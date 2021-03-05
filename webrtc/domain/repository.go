@@ -22,3 +22,7 @@ type RoomCoordinator interface {
 	GetOrCreate(ctx context.Context, meta *RoomMeta) (bool, error)
 	Close(ctx context.Context, roomId string)
 }
+
+type Sfu interface {
+	
+}

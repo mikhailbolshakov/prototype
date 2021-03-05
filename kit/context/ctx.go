@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	CLIENT_TYPE_REST      = "rest"
-	CLIENT_TYPE_TEST      = "test"
-	CLIENT_TYPE_JOB       = "job"
-	CLIENT_TYPE_QUEUE     = "queue"
-	CLIENT_TYPE_WS        = "ws"
+	CLIENT_TYPE_REST   = "rest"
+	CLIENT_TYPE_TEST   = "test"
+	CLIENT_TYPE_JOB    = "job"
+	CLIENT_TYPE_QUEUE  = "queue"
+	CLIENT_TYPE_WS     = "ws"
 	CLIENT_TYPE_WEBRTC = "webrtc"
 )
 

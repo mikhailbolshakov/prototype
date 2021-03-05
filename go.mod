@@ -24,10 +24,12 @@ require (
 	github.com/olivere/elastic v6.2.35+incompatible
 	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/gomega v1.10.4 // indirect
+	github.com/pion/ion-avp v1.8.1
 	github.com/pion/ion-log v1.0.0
 	github.com/pion/ion-sdk-go v0.4.0
 	github.com/pion/ion-sfu v1.9.3
 	github.com/pion/mediadevices v0.1.17
+	github.com/pion/rtcp v1.2.6
 	github.com/pion/webrtc/v3 v3.0.11
 	github.com/satori/go.uuid v1.2.0
 	github.com/sherifabdlnaby/configuro v0.0.2

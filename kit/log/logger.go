@@ -2,6 +2,7 @@ package log
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
@@ -55,7 +56,7 @@ func Init(level string) error {
 	return nil
 }
 
-// CLogger provides rich logging abilities
+// CLogger provides structured logging abilities
 // !!!! Not thread safe. Don't share one CLogger instance through multiple goroutines
 type CLogger interface {
 	C(ctx context.Context) CLogger // C - adds request context to log
@@ -77,6 +78,7 @@ type CLogger interface {
 	WarnF(format string, args ...interface{}) CLogger
 	Fatal(args ...interface{}) CLogger
 	FatalF(format string, args ...interface{}) CLogger
+	Clone() CLogger
 }
 
 func L() CLogger {
@@ -88,7 +90,20 @@ func L() CLogger {
 type clogger struct {
 	lre  *logrus.Entry
 	err  error
-	tags []string
+}
+
+// always use Clone when pass CLogger between goroutines
+func (cl *clogger) Clone() CLogger {
+	entry := logrus.NewEntry(logger)
+	if len(cl.lre.Data) > 0 {
+		marshaled, _ := json.Marshal(cl.lre.Data)
+		_ = json.Unmarshal(marshaled, &entry.Data)
+	}
+	clone := &clogger{
+		lre:  entry,
+		err:  cl.err,
+	}
+	return clone
 }
 
 func (cl *clogger) C(ctx context.Context) CLogger {
@@ -181,7 +196,7 @@ func (cl *clogger) Trc(args ...interface{}) CLogger {
 }
 
 func (cl *clogger) TrcF(format string, args ...interface{}) CLogger {
-	cl.lre.Tracef(format, args)
+	cl.lre.Tracef(format, args...)
 	return cl
 }
 

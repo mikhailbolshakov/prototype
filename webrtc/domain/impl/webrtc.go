@@ -19,10 +19,11 @@ type room struct {
 	sfuSession *sfu.Session
 	meta       *domain.RoomMeta
 	cancel     context.CancelFunc
+	recorder   domain.RoomRecorder
 }
 
 type webrtcImpl struct {
-	sfu.SessionProvider
+	//sfu.SessionProvider
 	sync.RWMutex
 	common.BaseService
 	sfu             *sfu.SFU
@@ -31,37 +32,47 @@ type webrtcImpl struct {
 	rooms           map[string]*room
 	roomLeases      map[string]context.CancelFunc
 	roomCoord       domain.RoomCoordinator
-	cfg             *config.Webrtc
+	cfg             *config.Config
 	factory         *buffer.Factory
 	dc              *sfu.Datachannel
+	recording       domain.Recording
 }
 
-func NewWebrtcService(cfg *config.Config, roomCoord domain.RoomCoordinator, storage domain.WebrtcStorage, queue queue.Queue) domain.WebrtcService {
+func NewWebrtcService(roomCoord domain.RoomCoordinator, storage domain.WebrtcStorage, queue queue.Queue) domain.WebrtcService {
 
 	s := &webrtcImpl{
-		cfg:             cfg.Webrtc,
 		storage:         storage,
-		sfu:             sfu.NewSFU(*cfg.Webrtc.Pion),
-		sfuTransportCfg: sfu.NewWebRTCTransportConfig(*cfg.Webrtc.Pion),
 		rooms:           make(map[string]*room),
 		roomCoord:       roomCoord,
 		roomLeases:      make(map[string]context.CancelFunc),
-		factory:         buffer.NewBufferFactory(cfg.Webrtc.Pion.Router.MaxPacketTrack),
 	}
 	s.BaseService = common.BaseService{Queue: queue}
 
-	s.dc = s.sfu.NewDatachannel(sfu.APIChannelLabel)
-	s.dc.Use(datachannel.SubscriberAPI)
-
 	return s
+}
+
+func (w *webrtcImpl) Init(ctx context.Context, cfg *config.Config) error {
+	w.cfg = cfg
+	w.sfu = sfu.NewSFU(*cfg.Webrtc.Pion)
+	w.sfuTransportCfg = sfu.NewWebRTCTransportConfig(*cfg.Webrtc.Pion)
+	w.factory = buffer.NewBufferFactory(cfg.Webrtc.Pion.Router.MaxPacketTrack)
+	w.dc = w.sfu.NewDatachannel(sfu.APIChannelLabel)
+	w.dc.Use(datachannel.SubscriberAPI)
+
+	if w.cfg.Webrtc.Recording.File.Enabled {
+		w.recording = NewRecording()
+		return w.recording.Init(ctx, cfg, w)
+	}
+	return nil
+
 }
 
 func (w *webrtcImpl) GetSFU() *sfu.SFU {
 	return w.sfu
 }
 
-func (w *webrtcImpl) NewPeer(ctx context.Context) domain.Peer {
-	return newPeer(ctx, w.sfu)
+func (w *webrtcImpl) NewPeer(ctx context.Context, userId, username string) domain.Peer {
+	return newPeer(ctx, w.sfu, userId, username)
 	//return newPeer(ctx, w)
 }
 
@@ -80,7 +91,7 @@ func (w *webrtcImpl) getLocalRoom(roomId string) (*room, bool) {
 	return r, ok
 }
 
-func (w *webrtcImpl) createLocal(roomId string, meta *domain.RoomMeta) *room {
+func (w *webrtcImpl) createLocal(ctx context.Context, roomId string, meta *domain.RoomMeta) (*room, error) {
 
 	//otherwise create a new room
 
@@ -99,31 +110,34 @@ func (w *webrtcImpl) createLocal(roomId string, meta *domain.RoomMeta) *room {
 	r := &room{
 		id: roomId,
 		//sfuSession: sfuS,
-		meta: meta,
+		meta:     meta,
 	}
 
 	w.Lock()
 	w.rooms[roomId] = r
 	defer w.Unlock()
 
-	return r
+	return r, nil
 
 }
 
-func (w *webrtcImpl) ensureLocal(roomId string) *room {
-
-	if r, ok := w.getLocalRoom(roomId); ok {
-		return r
-	}
-
-	return w.createLocal(roomId, w.createMeta(roomId))
-
-}
+//func (w *webrtcImpl) ensureLocal(roomId string) *room {
+//
+//	if r, ok := w.getLocalRoom(roomId); ok {
+//		return r
+//	}
+//
+//	return w.createLocal(roomId, w.createMeta(roomId))
+//
+//}
 
 func (w *webrtcImpl) GetOrCreateRoom(ctx context.Context, roomId string) (*domain.RoomMeta, error) {
 
+	l := log.L().C(ctx).Cmp("webrtc").Mth("get-or-create-room").F(log.FF{"room": roomId}).Dbg()
+
 	// check if there is a local room
 	if r, ok := w.getLocalRoom(roomId); ok {
+		l.Dbg("local room found")
 		return r.meta, nil
 	}
 
@@ -131,31 +145,47 @@ func (w *webrtcImpl) GetOrCreateRoom(ctx context.Context, roomId string) (*domai
 	roomMeta := w.createMeta(roomId)
 
 	// check if there is a remote room on another node
-	//ctx, cancelFunc := context.WithCancel(ctx)
-	//foundOnAnotherNode, err := w.roomCoord.GetOrCreate(ctx, roomMeta)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//if foundOnAnotherNode {
-	//	return roomMeta, nil
-	//}
-	//
-	//// otherwise create a new local room
-	//w.Lock()
-	//w.roomLeases[roomId] = cancelFunc
-	//w.Unlock()
+	ctx, cancelFunc := context.WithCancel(ctx)
+	foundOnAnotherNode, err := w.roomCoord.GetOrCreate(ctx, roomMeta)
+	if err != nil {
+		return nil, err
+	}
 
-	_ = w.createLocal(roomId, roomMeta)
+	if foundOnAnotherNode {
+		l.DbgF("found in cluster. meta=%v", *roomMeta)
+		return roomMeta, nil
+	}
+
+	// otherwise create a new local room
+	w.Lock()
+	w.roomLeases[roomId] = cancelFunc
+	w.Unlock()
+
+	r, err := w.createLocal(ctx, roomId, roomMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	l.DbgF("local created. meta=%v", *roomMeta)
+
+	// create a new recorder
+	// TODO: to support MINIO recorder
+	if w.cfg.Webrtc.Recording.File.Enabled {
+		rec, err := w.recording.NewRoomRecorder(ctx, roomId)
+		if err != nil {
+			return nil, err
+		}
+		r.recorder = rec
+	}
 
 	return roomMeta, nil
-
 }
 
-func (w *webrtcImpl) GetSession(roomId string) (*sfu.Session, sfu.WebRTCTransportConfig) {
-	return w.ensureLocal(roomId).sfuSession, w.sfuTransportCfg
-}
+//func (w *webrtcImpl) GetSession(roomId string) (*sfu.Session, sfu.WebRTCTransportConfig) {
+//	return w.ensureLocal(roomId).sfuSession, w.sfuTransportCfg
+//}
 
+//TODO: handle room closed correctly
 func (w *webrtcImpl) onRoomClosed(roomId string) {
 
 	l := log.L().Cmp("webrtc").Mth("room-closed").F(log.FF{"room": roomId})

@@ -9,15 +9,20 @@ import (
 )
 
 type peerImpl struct {
-	sfuPeer *sfu.Peer
-	onOfferEv domain.OnOfferEvent
-	onIceCandidateEv domain.OnIceCandidateEvent
+	userId                       string
+	username                     string
+	sfuPeer                      *sfu.Peer
+	onOfferEv                    domain.OnOfferEvent
+	onIceCandidateEv             domain.OnIceCandidateEvent
 	onIceConnectionStateChangeEv domain.OnICEConnectionStateChangeEvent
 }
 
-func newPeer(ctx context.Context, sessionProvider sfu.SessionProvider) domain.Peer {
+func newPeer(ctx context.Context, sessionProvider sfu.SessionProvider, userId, username string) domain.Peer {
 
-	p := &peerImpl{}
+	p := &peerImpl{
+		userId: userId,
+		username: username,
+	}
 
 	sfuPeer := sfu.NewPeer(sessionProvider)
 	sfuPeer.OnOffer = p.onOffer
@@ -52,11 +57,11 @@ func (p *peerImpl) onICEConnectionStateChange(s webrtc.ICEConnectionState) {
 	}
 }
 
-func (p *peerImpl) Join(ctx context.Context, roomId, userId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+func (p *peerImpl) Join(ctx context.Context, roomId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 
-	l := log.L().Cmp("webrtc").Mth("peer-join").F(log.FF{"room": roomId, "usr": userId}).Dbg().TrcF("%v", *offer)
+	l := log.L().Cmp("webrtc").Mth("peer-join").F(log.FF{"room": roomId, "usr": p.userId}).Dbg().TrcF("%v", *offer)
 
-	err := p.sfuPeer.Join(roomId, userId)
+	err := p.sfuPeer.Join(roomId, p.userId)
 	if err != nil {
 		return nil, err
 	}
@@ -90,14 +95,22 @@ func (p *peerImpl) Close(ctx context.Context) {
 	p.sfuPeer.Close()
 }
 
-func (p *peerImpl) SetOnOffer(e domain.OnOfferEvent) {
+func (p *peerImpl) OnOffer(e domain.OnOfferEvent) {
 	p.onOfferEv = e
 }
 
-func (p *peerImpl) SetOnIceCandidate(e domain.OnIceCandidateEvent) {
+func (p *peerImpl) OnIceCandidate(e domain.OnIceCandidateEvent) {
 	p.onIceCandidateEv = e
 }
 
-func (p *peerImpl) SetOnICEConnectionStateChange(e domain.OnICEConnectionStateChangeEvent) {
+func (p *peerImpl) OnICEConnectionStateChange(e domain.OnICEConnectionStateChangeEvent) {
 	p.onIceConnectionStateChangeEv = e
+}
+
+func (p *peerImpl) GetUserId() string {
+	return p.userId
+}
+
+func (p *peerImpl) GetUsername() string {
+	return p.username
 }

@@ -108,8 +108,8 @@ func (s *Server) Set(noAuthRouter *mux.Router, upgrader *websocket.Upgrader) {
 		}
 		defer c.Close()
 
-		peer := s.webrtcService.NewPeer(ctx)
-		signal := newSignal(session.UserId, session.Username, peer, s.webrtcService)
+		peer := s.webrtcService.NewPeer(ctx, session.UserId, session.Username)
+		signal := newSignal(peer, s.webrtcService)
 
 		defer peer.Close(ctx)
 

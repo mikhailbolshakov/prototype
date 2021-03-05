@@ -25,14 +25,14 @@ type container struct {
 type adapterImpl struct {
 	container     *container
 	storageImpl   *storageImpl
-	roomCoordImpl *roomCoordImpl
+	roomCoordImpl *etcdRoomCoordImpl
 }
 
 func NewAdapter() Adapter {
 	a := &adapterImpl{}
 	a.container = &container{}
 	a.storageImpl = newStorage(a.container)
-	a.roomCoordImpl = &roomCoordImpl{ c: a.container }
+	a.roomCoordImpl = &etcdRoomCoordImpl{ c: a.container }
 	return a
 }
 

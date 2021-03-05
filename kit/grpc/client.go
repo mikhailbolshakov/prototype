@@ -15,6 +15,7 @@ func NewClient(host, port string) (*Client, error) {
 	gc, err := grpc.Dial(fmt.Sprintf("%s:%s", host, port),
 		grpc.WithInsecure(),
 		grpc.WithChainUnaryInterceptor(grpc_middleware.ChainUnaryClient(ContextUnaryClientInterceptor())))
+		grpc.WithChainStreamInterceptor(grpc_middleware.ChainStreamClient(ContextStreamClientInterceptor()))
 	if err != nil {
 		return nil, err
 	}
