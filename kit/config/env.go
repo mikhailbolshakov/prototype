@@ -19,7 +19,7 @@ func Env(filename string) (map[string]string, error) {
 	return envMap, nil
 }
 
-func EnrichWithEnv(filename string, config *Config) error {
+func EnrichWithEnv(filename string, config interface{}) error {
 
 	var opts = []configuro.ConfigOptions{ configuro.WithLoadFromEnvVars("CONFIG"), configuro.WithoutLoadFromConfigFile() }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
+	"gitlab.medzdrav.ru/prototype/webrtc/logger"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 
@@ -16,12 +17,16 @@ type etcdRoomCoordImpl struct {
 	c *container
 }
 
+func (r *etcdRoomCoordImpl) l() log.CLogger {
+	return logger.L().Cmp("webrtc-etcd-coord")
+}
+
 func (r *etcdRoomCoordImpl) GetOrCreate(ctx context.Context, meta *domain.RoomMeta) (bool, error) {
 
 	roomId := meta.Id
 	found := false
 
-	l := log.L().Cmp("webrtc").Mth("etcd-coordination").C(ctx).F(log.FF{"room": roomId}).Dbg().TrcF("meta:%v", *meta)
+	l := r.l().Mth("get-or-create").C(ctx).F(log.FF{"room": roomId}).Dbg().TrcF("meta:%v", *meta)
 
 	// This operation is only allowed 5 seconds to complete
 	etcdCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -100,7 +105,7 @@ func (r *etcdRoomCoordImpl) GetOrCreate(ctx context.Context, meta *domain.RoomMe
 
 func (r *etcdRoomCoordImpl) Close(ctx context.Context, roomId string) {
 
-	l := log.L().Cmp("webrtc").Mth("etcd-coordination.close-room").F(log.FF{"room": roomId})
+	l := r.l().Mth("close").F(log.FF{"room": roomId})
 
 	// Acquire the lock for this roomID
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)

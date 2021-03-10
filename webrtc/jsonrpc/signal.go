@@ -9,6 +9,7 @@ import (
 	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
+	"gitlab.medzdrav.ru/prototype/webrtc/logger"
 	"gitlab.medzdrav.ru/prototype/webrtc/meta"
 	"sync"
 )
@@ -44,9 +45,13 @@ func newSignal(peer domain.Peer, webrtc domain.WebrtcService) *signal {
 	}
 }
 
+func (s *signal) l() log.CLogger {
+	return logger.L().Pr("jsonrpc").Cmp("webrtc")
+}
+
 func (s *signal) join(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (*webrtc.SessionDescription, error) {
 
-	l := log.L().C(ctx).Pr("jsonrpc").Cmp("webrtc").Mth("join")
+	l := s.l().Mth("join")
 
 	var join Join
 	err := json.Unmarshal(*req.Params, &join)
@@ -84,14 +89,14 @@ func (s *signal) join(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Re
 	l.TrcF("answer=%s", answer.SDP)
 
 	s.peer.OnOffer(func(offer *webrtc.SessionDescription) {
-		l := log.L().C(ctx).Pr("jsonrpc").Cmp("webrtc").Mth("on-offer").F(log.FF{"room": join.RoomId}).Dbg().TrcF("%v", *offer)
+		l := s.l().C(ctx).Mth("on-offer").F(log.FF{"room": join.RoomId}).Dbg().TrcF("%v", *offer)
 		if err := conn.Notify(ctx, "offer", offer); err != nil {
 			l.E(err).Err("sending offer")
 		}
 	})
 
 	s.peer.OnIceCandidate(func(candidate *webrtc.ICECandidateInit, target int) {
-		l := log.L().C(ctx).Pr("jsonrpc").Cmp("webrtc").Mth("on-ice-candidate").F(log.FF{"room": join.RoomId}).Dbg().TrcF("%v", candidate.Candidate)
+		l := s.l().C(ctx).Mth("on-ice-candidate").F(log.FF{"room": join.RoomId}).Dbg().TrcF("%v", candidate.Candidate)
 		if err := conn.Notify(ctx, "trickle", Trickle{
 			Candidate: *candidate,
 			Target:    target,
@@ -101,7 +106,7 @@ func (s *signal) join(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Re
 	})
 
 	s.peer.OnICEConnectionStateChange(func(ss webrtc.ICEConnectionState) {
-		l := log.L().C(ctx).Pr("jsonrpc").Cmp("webrtc").Mth("on-ice-conn-state").F(log.FF{"room": join.RoomId}).Inf(ss.String())
+		l := s.l().C(ctx).Mth("on-ice-conn-state").F(log.FF{"room": join.RoomId}).Inf(ss.String())
 		if ss == webrtc.ICEConnectionStateFailed || ss == webrtc.ICEConnectionStateClosed {
 			l.Inf("peer ice failed/closed, closing peer and websocket")
 			s.peer.Close(ctx)
@@ -114,7 +119,7 @@ func (s *signal) join(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Re
 
 func (s *signal) offer(ctx context.Context, req *jsonrpc2.Request) (*webrtc.SessionDescription, error) {
 
-	l := log.L().C(ctx).Pr("jsonrpc").Cmp("webrtc").Mth("offer").F(log.FF{"id": req.ID}).Dbg()
+	l := s.l().C(ctx).Mth("offer").F(log.FF{"id": req.ID}).Dbg()
 
 	var negotiation Negotiation
 	err := json.Unmarshal(*req.Params, &negotiation)
@@ -135,7 +140,7 @@ func (s *signal) offer(ctx context.Context, req *jsonrpc2.Request) (*webrtc.Sess
 
 func (s *signal) answer(ctx context.Context, req *jsonrpc2.Request) error {
 
-	l := log.L().C(ctx).Pr("jsonrpc").Cmp("webrtc").Mth("answer").F(log.FF{"id": req.ID}).Dbg()
+	l := s.l().C(ctx).Mth("answer").F(log.FF{"id": req.ID}).Dbg()
 
 	var negotiation Negotiation
 	err := json.Unmarshal(*req.Params, &negotiation)
@@ -155,7 +160,7 @@ func (s *signal) answer(ctx context.Context, req *jsonrpc2.Request) error {
 
 func (s *signal) trickle(ctx context.Context, req *jsonrpc2.Request) error {
 
-	l := log.L().C(ctx).Pr("jsonrpc").Cmp("webrtc").Mth("trickle").F(log.FF{"id": req.ID}).Dbg()
+	l := s.l().C(ctx).Mth("trickle").F(log.FF{"id": req.ID}).Dbg()
 
 	var trickle Trickle
 	err := json.Unmarshal(*req.Params, &trickle)
@@ -182,7 +187,7 @@ func (s *signal) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.
 		WithUser(s.peer.GetUserId(), s.peer.GetUsername()).
 		ToContext(ctx)
 
-	log.L().Pr("jsonrpc").C(ctx).Cmp("webrtc").Mth("handle").F(log.FF{"id": req.ID, "method": req.Method}).Dbg().TrcF("%v", req)
+	s.l().C(ctx).Mth("handle").F(log.FF{"id": req.ID, "method": req.Method}).Dbg().TrcF("%v", req)
 
 	s.Lock()
 	defer s.Unlock()

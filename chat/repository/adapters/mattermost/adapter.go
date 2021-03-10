@@ -3,13 +3,13 @@ package mattermost
 import (
 	"context"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
-	"gitlab.medzdrav.ru/prototype/kit/log"
+	"gitlab.medzdrav.ru/prototype/chat/logger"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"time"
 )
 
 type Adapter interface {
-	Init(ctx context.Context, cfg *kitConfig.Config) error
+	Init(ctx context.Context, cfg *config.Config) error
 	GetService() domain.MattermostService
 	Close(ctx context.Context)
 }
@@ -38,7 +38,7 @@ func (a *adapterImpl) MattermostKeepAlive(ctx context.Context) {
 
 	go func() {
 
-		l := log.L().Cmp("mm").Mth("keepalive")
+		l := logger.L().Cmp("mm").Mth("keepalive")
 
 		wasReady := false
 		for {
@@ -67,7 +67,7 @@ func (a *adapterImpl) MattermostKeepAlive(ctx context.Context) {
 	}()
 }
 
-func (a *adapterImpl) Init(ctx context.Context, cfg *kitConfig.Config) error {
+func (a *adapterImpl) Init(ctx context.Context, cfg *config.Config) error {
 	a.mmServiceImpl.setConfig(cfg)
 	a.MattermostKeepAlive(ctx)
 	return nil

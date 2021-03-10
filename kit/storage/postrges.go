@@ -2,14 +2,17 @@ package storage
 
 import (
 	"fmt"
-	"gitlab.medzdrav.ru/prototype/kit/log"
+	kitLog "gitlab.medzdrav.ru/prototype/kit/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
+	"time"
 )
 
 type Storage struct {
 	Instance *gorm.DB
 	DBName   string
+	logger   kitLog.CLoggerFunc
 }
 
 type Params struct {
@@ -20,10 +23,11 @@ type Params struct {
 	Host     string
 }
 
-func Open(params *Params) (*Storage, error) {
+func Open(params *Params, logger kitLog.CLoggerFunc) (*Storage, error) {
 
 	s := &Storage{
 		DBName: params.DBName,
+		logger: logger,
 	}
 
 	dsn := fmt.Sprintf("user=%s password=%s dbname=%s port=%s host=%s sslmode=disable TimeZone=Europe/Moscow",
@@ -36,14 +40,15 @@ func Open(params *Params) (*Storage, error) {
 
 	// uncomment to log all queries
 	cfg := &gorm.Config{
-		//Logger: logger.New(
-		//	log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
-		//	logger.Config{
-		//		SlowThreshold: time.Second * 10, // Slow SQL threshold
-		//		LogLevel:      logger.Info,      // Log level
-		//		Colorful:      true,             // Disable color
-		//	},
-		//),
+		Logger: gormLogger.New(
+			logger(),
+			//log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+			gormLogger.Config{
+				SlowThreshold: time.Second * 10,  // Slow SQL threshold
+				LogLevel:      gormLogger.Silent, // Log level
+				Colorful:      false,              // Disable color
+			},
+		),
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), cfg)
@@ -51,7 +56,7 @@ func Open(params *Params) (*Storage, error) {
 		return nil, err
 	}
 
-	log.L().Pr("db").Cmp(params.UserName).Inf("ok")
+	logger().Pr("db").Cmp(params.UserName).Inf("ok")
 
 	s.Instance = db
 
@@ -63,4 +68,3 @@ func (s *Storage) Close() {
 	db, _ := s.Instance.DB()
 	_ = db.Close()
 }
-

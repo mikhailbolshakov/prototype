@@ -6,10 +6,11 @@ import (
 	"github.com/pion/ion-sfu/pkg/middlewares/datachannel"
 	"github.com/pion/ion-sfu/pkg/sfu"
 	"gitlab.medzdrav.ru/prototype/kit/common"
-	"gitlab.medzdrav.ru/prototype/kit/config"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
+	"gitlab.medzdrav.ru/prototype/webrtc/logger"
 	"gitlab.medzdrav.ru/prototype/webrtc/meta"
 	"sync"
 )
@@ -49,6 +50,10 @@ func NewWebrtcService(roomCoord domain.RoomCoordinator, storage domain.WebrtcSto
 	s.BaseService = common.BaseService{Queue: queue}
 
 	return s
+}
+
+func (w *webrtcImpl) l() log.CLogger {
+	return logger.L().Cmp("webrtc")
 }
 
 func (w *webrtcImpl) Init(ctx context.Context, cfg *config.Config) error {
@@ -121,19 +126,9 @@ func (w *webrtcImpl) createLocal(ctx context.Context, roomId string, meta *domai
 
 }
 
-//func (w *webrtcImpl) ensureLocal(roomId string) *room {
-//
-//	if r, ok := w.getLocalRoom(roomId); ok {
-//		return r
-//	}
-//
-//	return w.createLocal(roomId, w.createMeta(roomId))
-//
-//}
-
 func (w *webrtcImpl) GetOrCreateRoom(ctx context.Context, roomId string) (*domain.RoomMeta, error) {
 
-	l := log.L().C(ctx).Cmp("webrtc").Mth("get-or-create-room").F(log.FF{"room": roomId}).Dbg()
+	l := w.l().C(ctx).Mth("get-or-create-room").F(log.FF{"room": roomId}).Dbg()
 
 	// check if there is a local room
 	if r, ok := w.getLocalRoom(roomId); ok {
@@ -188,7 +183,7 @@ func (w *webrtcImpl) GetOrCreateRoom(ctx context.Context, roomId string) (*domai
 //TODO: handle room closed correctly
 func (w *webrtcImpl) onRoomClosed(roomId string) {
 
-	l := log.L().Cmp("webrtc").Mth("room-closed").F(log.FF{"room": roomId})
+	l := w.l().Mth("room-closed").F(log.FF{"room": roomId})
 
 	w.roomCoord.Close(context.Background(), roomId)
 

@@ -1,12 +1,12 @@
 package metrcics
 
 import (
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"gitlab.medzdrav.ru/prototype/sessions/domain"
 )
 
 type Adapter interface {
-	Init(c *kitConfig.Config) error
+	Init(c *config.Config) error
 	GetService() domain.Metrics
 	Close()
 }
@@ -22,7 +22,7 @@ func NewAdapter() Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init(c *kitConfig.Config) error {
+func (a *adapterImpl) Init(c *config.Config) error {
 	return nil
 }
 

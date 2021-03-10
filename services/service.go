@@ -2,22 +2,20 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/services/domain"
 	"gitlab.medzdrav.ru/prototype/services/domain/impl"
 	"gitlab.medzdrav.ru/prototype/services/grpc"
+	"gitlab.medzdrav.ru/prototype/services/logger"
 	"gitlab.medzdrav.ru/prototype/services/meta"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/bp"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/services/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/services/repository/storage"
 )
-
-// NodeId - node id of a service
-// TODO: not to hardcode. Should be defined by service discovery procedure
-var nodeId = "1"
 
 type serviceImpl struct {
 	grpc           *grpc.Server
@@ -38,7 +36,7 @@ func New() service.Service {
 	s.configAdapter = config.NewAdapter()
 	s.configService = s.configAdapter.GetService()
 
-	s.queue = stan.New()
+	s.queue = stan.New(logger.LF())
 
 	s.bpAdapter = bp.NewAdapter()
 	bpService := s.bpAdapter.GetService()
@@ -55,36 +53,47 @@ func New() service.Service {
 	return s
 }
 
+func (s *serviceImpl) GetCode() string {
+	return meta.ServiceCode
+}
+
 func (s *serviceImpl) Init(ctx context.Context) error {
 
-	if err := s.configAdapter.Init(); err != nil {
+	if err := s.configAdapter.Init(true); err != nil {
 		return err
 	}
 
-	c, err := s.configService.Get()
+	cfg, err := s.configService.Get()
 	if err != nil {
 		return err
 	}
 
-	if err := s.storageAdapter.Init(c); err != nil {
+	// set logging params
+	if srvCfg, ok := cfg.Services[meta.ServiceCode]; ok {
+		logger.Logger.SetLevel(srvCfg.Log.Level)
+	} else {
+		return fmt.Errorf("service config isn't specified")
+	}
+
+	if err := s.storageAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.grpc.Init(c); err != nil {
+	if err := s.grpc.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.usersAdapter.Init(c); err != nil {
+	if err := s.usersAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.bpAdapter.Init(c); err != nil {
+	if err := s.bpAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, meta.ServiceCode + nodeId, &queue.Options{
-		Url:       c.Nats.Url,
-		ClusterId: c.Nats.ClusterId,
+	if err := s.queue.Open(ctx, meta.ServiceCode, &queue.Options{
+		Url:       cfg.Nats.Url,
+		ClusterId: cfg.Nats.ClusterId,
 	}); err != nil {
 		return err
 	}

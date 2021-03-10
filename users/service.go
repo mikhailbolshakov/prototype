@@ -2,21 +2,19 @@ package users
 
 import (
 	"context"
+	"fmt"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 	"gitlab.medzdrav.ru/prototype/users/domain"
 	"gitlab.medzdrav.ru/prototype/users/domain/impl"
 	"gitlab.medzdrav.ru/prototype/users/grpc"
+	"gitlab.medzdrav.ru/prototype/users/logger"
 	"gitlab.medzdrav.ru/prototype/users/meta"
 	"gitlab.medzdrav.ru/prototype/users/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/users/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/users/repository/storage"
 )
-
-// NodeId - node id of a service
-// TODO: not to hardcode. Should be defined by service discovery procedure
-var nodeId = "1"
 
 type serviceImpl struct {
 	domainService  domain.UserService
@@ -35,7 +33,7 @@ func New() service.Service {
 	s.configAdapter = config.NewAdapter()
 	s.configService = s.configAdapter.GetService()
 
-	s.queue = stan.New()
+	s.queue = stan.New(logger.LF())
 	s.storageAdapter = storage.NewAdapter()
 	strg := s.storageAdapter.GetService()
 	s.chatAdapter = chat.NewAdapter()
@@ -48,33 +46,43 @@ func New() service.Service {
 	return s
 }
 
+func (s *serviceImpl) GetCode() string {
+	return meta.ServiceCode
+}
+
 func (s *serviceImpl) Init(ctx context.Context) error {
 
-	if err := s.configAdapter.Init(); err != nil {
+	if err := s.configAdapter.Init(true); err != nil {
 		return err
 	}
 
-	c, err := s.configService.Get(ctx)
+	cfg, err := s.configService.Get(ctx)
 	if err != nil {
 		return err
 	}
 
-	if err := s.storageAdapter.Init(c); err != nil {
+	if srvCfg, ok := cfg.Services[meta.ServiceCode]; ok {
+		logger.Logger.SetLevel(srvCfg.Log.Level)
+	} else {
+		return fmt.Errorf("service config isn't specified")
+	}
+
+	if err := s.storageAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, meta.ServiceCode + nodeId, &queue.Options{
-		Url:       c.Nats.Url,
-		ClusterId: c.Nats.ClusterId,
+	if err := s.queue.Open(ctx, meta.NodeId, &queue.Options{
+		Url:       cfg.Nats.Url,
+		ClusterId: cfg.Nats.ClusterId,
 	}); err != nil {
 		return err
 	}
 
-	if err := s.grpc.Init(c); err != nil {
+	if err := s.grpc.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.chatAdapter.Init(c); err != nil {
+	if err := s.chatAdapter.Init(cfg); err != nil {
 		return err
 	}
 

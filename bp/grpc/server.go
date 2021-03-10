@@ -3,11 +3,12 @@ package grpc
 import (
 	"context"
 	"encoding/json"
+	"gitlab.medzdrav.ru/prototype/bp/logger"
 	"gitlab.medzdrav.ru/prototype/bp/meta"
 	bpmKit "gitlab.medzdrav.ru/prototype/kit/bpm"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/bp"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"log"
 )
 
@@ -23,7 +24,7 @@ func New(bpm bpmKit.Engine) *Server {
 	s := &Server{bpm: bpm}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer(meta.ServiceCode)
+	gs, err := kitGrpc.NewServer(meta.ServiceCode, logger.LF())
 	if err != nil {
 		panic(err)
 	}
@@ -33,8 +34,8 @@ func New(bpm bpmKit.Engine) *Server {
 	return s
 }
 
-func  (s *Server) Init(c *kitConfig.Config) error {
-	cfg := c.Services["bp"]
+func  (s *Server) Init(c *config.Config) error {
+	cfg := c.Services[meta.ServiceCode]
 	s.host = cfg.Grpc.Host
 	s.port = cfg.Grpc.Port
 	return nil

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/adacta-ru/mattermost-server/v6/model"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"go.uber.org/atomic"
 )
 
@@ -13,7 +13,7 @@ var notReadyErr = fmt.Errorf("[mattermost] not ready")
 
 type serviceImpl struct {
 	hub ChatSessionHub
-	cfg *kitConfig.Config
+	cfg *config.Config
 	ready *atomic.Bool
 }
 
@@ -57,7 +57,7 @@ func (s *serviceImpl) getClient(f *domain.From) (*Client, error) {
 }
 
 // TODO: I don't like. We have to pass config on new somehow
-func (s *serviceImpl) setConfig(cfg *kitConfig.Config) {
+func (s *serviceImpl) setConfig(cfg *config.Config) {
 	s.cfg = cfg
 }
 

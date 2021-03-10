@@ -2,14 +2,14 @@ package domain
 
 import (
 	"context"
-	kit "gitlab.medzdrav.ru/prototype/kit/config"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	userPb "gitlab.medzdrav.ru/prototype/proto/users"
 )
 
 type SessionStorage interface {}
 
 type CfgService interface {
-	Get(ctx context.Context) (*kit.Config, error)
+	Get(ctx context.Context) (*config.Config, error)
 }
 
 type UserService interface {

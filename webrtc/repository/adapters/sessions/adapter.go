@@ -1,14 +1,14 @@
 package sessions
 
 import (
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	pb "gitlab.medzdrav.ru/prototype/proto/sessions"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
 )
 
 type Adapter interface {
-	Init(c *kitConfig.Config) error
+	Init(c *config.Config) error
 	GetService() domain.SessionsService
 	Close()
 }
@@ -25,7 +25,7 @@ func NewAdapter() Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init(c *kitConfig.Config) error {
+func (a *adapterImpl) Init(c *config.Config) error {
 
 	cfg := c.Services["sessions"]
 	cl, err := kitGrpc.NewClient(cfg.Grpc.Host, cfg.Grpc.Port)

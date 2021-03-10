@@ -10,8 +10,8 @@
     - study approaches
 
 - Users & Sessions
-    - think of moving sessions from Api to a separate service
-    - reconnect for chat ws connection  
+    - think of moving sessions from Api to a separate service + 
+    - reconnect for chat ws connection 
     - check expiration of a token (depends on what identity provider is going to be used)
     - persistence - do we really need it?
     - cluster mode - broadcast a new session to all available nodes
@@ -19,7 +19,7 @@
 
 - Socket hub 
     - gRPC API to send socket messages from app (done through NATS) + 
-    - move to a separate service (now it's in Api)
+    - move to a separate service (now it's in Api) +
     - gracefully close socket connections (currently we got an error)
     - keep alive - close WS server after configured keep alive period of not getting ping message +
 
@@ -64,9 +64,8 @@
     - Master-Slave 
     
 - Cluster mode 
-    - support simple leader election based on Redis
+    - support simple leader election based on Etcd
     - gRpc LB
-    - coordinating with etcd
     
 - Mattermost
     - reconnect to NATS after NATS goes down +
@@ -82,7 +81,10 @@
     - queue topics must be declared as consts + 
     
 - Webrtc
-    - ION implementation
+    - ION implementation +
+    - recording + 
+    - close rooms gracefully
+    - rooms persistence
 
 - Deployment
     - microservices split

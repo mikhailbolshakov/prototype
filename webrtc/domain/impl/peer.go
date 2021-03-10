@@ -6,6 +6,7 @@ import (
 	"github.com/pion/webrtc/v3"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
+	"gitlab.medzdrav.ru/prototype/webrtc/logger"
 )
 
 type peerImpl struct {
@@ -30,28 +31,32 @@ func newPeer(ctx context.Context, sessionProvider sfu.SessionProvider, userId, u
 	sfuPeer.OnICEConnectionStateChange = p.onICEConnectionStateChange
 	p.sfuPeer = sfuPeer
 
-	log.L().C(ctx).Cmp("webrtc").Mth("new-peer").Dbg("ok")
+	p.l().C(ctx).Mth("new-peer").Dbg("ok")
 
 	return p
 
 }
 
+func (p *peerImpl) l() log.CLogger {
+	return logger.L().Cmp("webrtc-peer")
+}
+
 func (p *peerImpl) onOffer(o *webrtc.SessionDescription) {
-	log.L().Cmp("webrtc").Mth("peer-onoffer").Dbg().TrcF("%v", *o)
+	p.l().Mth("peer-onoffer").Dbg().TrcF("%v", *o)
 	if p.onOfferEv != nil {
 		p.onOfferEv(o)
 	}
 }
 
 func (p *peerImpl) onIceCandidate(c *webrtc.ICECandidateInit, t int) {
-	log.L().Cmp("webrtc").Mth("peer-onice").Dbg().TrcF("%v", *c)
+	p.l().Mth("peer-onice").Dbg().TrcF("%v", *c)
 	if p.onIceCandidateEv != nil {
 		p.onIceCandidateEv(c, t)
 	}
 }
 
 func (p *peerImpl) onICEConnectionStateChange(s webrtc.ICEConnectionState) {
-	log.L().Cmp("webrtc").Mth("on-ice-state").DbgF("%v", s)
+	p.l().Mth("on-ice-state").DbgF("%v", s)
 	if p.onIceConnectionStateChangeEv != nil {
 		p.onIceConnectionStateChangeEv(s)
 	}
@@ -59,7 +64,7 @@ func (p *peerImpl) onICEConnectionStateChange(s webrtc.ICEConnectionState) {
 
 func (p *peerImpl) Join(ctx context.Context, roomId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 
-	l := log.L().Cmp("webrtc").Mth("peer-join").F(log.FF{"room": roomId, "usr": p.userId}).Dbg().TrcF("%v", *offer)
+	l := p.l().Mth("peer-join").F(log.FF{"room": roomId, "usr": p.userId}).Dbg().TrcF("%v", *offer)
 
 	err := p.sfuPeer.Join(roomId, p.userId)
 	if err != nil {
@@ -76,22 +81,22 @@ func (p *peerImpl) Join(ctx context.Context, roomId string, offer *webrtc.Sessio
 }
 
 func (p *peerImpl) Offer(sdp *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
-	log.L().Cmp("webrtc").Mth("peer-offer").Dbg().TrcF("%v", *sdp)
+	p.l().Mth("peer-offer").Dbg().TrcF("%v", *sdp)
 	return p.sfuPeer.Answer(*sdp)
 }
 
 func (p *peerImpl) Answer(sdp *webrtc.SessionDescription) error {
-	log.L().Cmp("webrtc").Mth("peer-answer").Dbg().TrcF("%v", *sdp)
+	p.l().Mth("peer-answer").Dbg().TrcF("%v", *sdp)
 	return p.sfuPeer.SetRemoteDescription(*sdp)
 }
 
 func (p *peerImpl) Trickle(candidate webrtc.ICECandidateInit, target int) error {
-	log.L().Cmp("webrtc").Mth("peer-trickle").Dbg().TrcF("%v", candidate)
+	p.l().Mth("peer-trickle").Dbg().TrcF("%v", candidate)
 	return p.sfuPeer.Trickle(candidate, target)
 }
 
 func (p *peerImpl) Close(ctx context.Context) {
-	log.L().Cmp("webrtc").Mth("peer-close").Dbg()
+	p.l().Mth("peer-close").Dbg()
 	p.sfuPeer.Close()
 }
 

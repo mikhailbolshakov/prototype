@@ -2,6 +2,7 @@ package bp
 
 import (
 	"context"
+	"fmt"
 	"gitlab.medzdrav.ru/prototype/bp/domain"
 	"gitlab.medzdrav.ru/prototype/bp/domain/client_law_request"
 	"gitlab.medzdrav.ru/prototype/bp/domain/client_med_request"
@@ -9,6 +10,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/bp/domain/create_user"
 	"gitlab.medzdrav.ru/prototype/bp/domain/dentist_online_consultation"
 	"gitlab.medzdrav.ru/prototype/bp/grpc"
+	"gitlab.medzdrav.ru/prototype/bp/logger"
 	"gitlab.medzdrav.ru/prototype/bp/meta"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/bp_engine"
 	"gitlab.medzdrav.ru/prototype/bp/repository/adapters/chat"
@@ -22,10 +24,6 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 )
-
-// NodeId - node id of a service
-// TODO: not to hardcode. Should be defined by service discovery procedure
-var nodeId = "1"
 
 type serviceImpl struct {
 	tasksAdapter    tasks.Adapter
@@ -54,8 +52,8 @@ func New() service.Service {
 	s.configAdapter = config.NewAdapter()
 	s.configService = s.configAdapter.GetService()
 
-	s.queue = stan.New()
-	s.queueListener = listener.NewQueueListener(s.queue)
+	s.queue = stan.New(logger.LF())
+	s.queueListener = listener.NewQueueListener(s.queue, logger.LF())
 
 	s.servicesAdapter = services.NewAdapter()
 
@@ -84,48 +82,59 @@ func New() service.Service {
 	return s
 }
 
+func (s *serviceImpl) GetCode() string {
+	return meta.ServiceCode
+}
+
 func (s *serviceImpl) Init(ctx context.Context) error {
 
-	if err := s.configAdapter.Init(); err != nil {
+	if err := s.configAdapter.Init(true); err != nil {
 		return err
 	}
 
-	c, err := s.configService.Get()
+	cfg, err := s.configService.Get()
 	if err != nil {
 		return err
 	}
 
-	if err := s.keycloakAdapter.Init(c); err != nil {
+	// set logging params
+	if srvCfg, ok := cfg.Services[meta.ServiceCode]; ok {
+		logger.Logger.SetLevel(srvCfg.Log.Level)
+	} else {
+		return fmt.Errorf("service config isn't specified")
+	}
+
+	if err := s.keycloakAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.bpEngineAdapter.Init(c, s.bps, s.queueListener); err != nil {
+	if err := s.bpEngineAdapter.Init(cfg, s.bps, s.queueListener); err != nil {
 		return err
 	}
 
-	if err := s.grpc.Init(c); err != nil {
+	if err := s.grpc.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.tasksAdapter.Init(c); err != nil {
+	if err := s.tasksAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.usersAdapter.Init(c); err != nil {
+	if err := s.usersAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.chatAdapter.Init(c); err != nil {
+	if err := s.chatAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.servicesAdapter.Init(c); err != nil {
+	if err := s.servicesAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, meta.ServiceCode + nodeId, &queue.Options{
-		Url:       c.Nats.Url,
-		ClusterId: c.Nats.ClusterId,
+	if err := s.queue.Open(ctx, meta.NodeId, &queue.Options{
+		Url:       cfg.Nats.Url,
+		ClusterId: cfg.Nats.ClusterId,
 	}); err != nil {
 		return err
 	}

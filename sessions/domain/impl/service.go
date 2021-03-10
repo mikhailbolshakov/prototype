@@ -6,6 +6,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/sessions/domain"
+	"gitlab.medzdrav.ru/prototype/sessions/logger"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -25,9 +26,13 @@ func NewSessionsService(h Hub, auth auth.Service, userService domain.UserService
 	}
 }
 
+func (s *serviceImpl) l() log.CLogger {
+	return logger.L().Cmp("sessions")
+}
+
 func (s *serviceImpl) Login(ctx context.Context, rq *domain.LoginRequest) (*domain.LoginResponse, error) {
 
-	l := log.L().C(ctx).Cmp("sessions").Mth("login").F(log.FF{"user": rq.Username, "chat": rq.ChatLogin}).Inf()
+	l := s.l().C(ctx).Mth("login").F(log.FF{"user": rq.Username, "chat": rq.ChatLogin}).Inf()
 
 	usr := s.userService.Get(ctx, rq.Username)
 	if usr == nil || usr.Id == "" {
@@ -74,7 +79,7 @@ func (s *serviceImpl) Login(ctx context.Context, rq *domain.LoginRequest) (*doma
 
 func (s *serviceImpl) Logout(ctx context.Context, rq *domain.LogoutRequest) error {
 
-	l := log.L().C(ctx).Cmp("sessions").Mth("logout").F(log.FF{"user": rq.UserId}).Inf()
+	l := s.l().C(ctx).Mth("logout").F(log.FF{"user": rq.UserId}).Inf()
 
 	sessions := s.hub.getByUserId(rq.UserId)
 	if len(sessions) == 0 {
@@ -143,7 +148,7 @@ func (s *serviceImpl) GetByUser(ctx context.Context, rq *domain.GetByUserRequest
 
 func (s *serviceImpl) AuthSession(ctx context.Context, sid string) (*domain.Session, error) {
 
-	l := log.L().C(ctx).Cmp("sessions").Mth("auth").F(log.FF{"sid": sid}).Inf()
+	l := s.l().C(ctx).Mth("auth").F(log.FF{"sid": sid}).Inf()
 
 	ss := s.hub.getById(sid)
 	if ss == nil {

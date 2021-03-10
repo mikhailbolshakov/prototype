@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"gitlab.medzdrav.ru/prototype/kit"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
 	"gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/http/auth"
@@ -13,7 +12,9 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	"gitlab.medzdrav.ru/prototype/proto"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"gitlab.medzdrav.ru/prototype/sessions/domain"
+	"gitlab.medzdrav.ru/prototype/sessions/logger"
 	"sync"
 )
 
@@ -23,7 +24,7 @@ type hubImpl struct {
 	sessions     map[string]session
 	userSessions map[string][]session
 	httpServer   *http.Server
-	cfg          *kitConfig.Config
+	cfg          *config.Config
 	queue        queue.Queue
 	metrics      domain.Metrics
 }
@@ -37,7 +38,7 @@ type Hub interface {
 	GetOutgoingWsEventsHandler() listener.QueueMessageHandler
 }
 
-func NewHub(cfg *kitConfig.Config, srv *http.Server, metrics domain.Metrics) Hub {
+func NewHub(cfg *config.Config, srv *http.Server, metrics domain.Metrics) Hub {
 
 	h := &hubImpl{
 		httpServer:   srv,
@@ -52,9 +53,13 @@ func NewHub(cfg *kitConfig.Config, srv *http.Server, metrics domain.Metrics) Hub
 	return h
 }
 
+func (h *hubImpl) l() log.CLogger {
+	return logger.L().Cmp("hub")
+}
+
 func (h *hubImpl) newSession(ctx context.Context, uid, username, chatUid, chatSid string, jwt *auth.JWT) (string, error) {
 
-	l := log.L().Cmp("session-hub").Mth("new-session").F(log.FF{"uid": uid, "un": username}).C(ctx).Dbg()
+	l := h.l().Mth("new-session").F(log.FF{"uid": uid, "un": username}).C(ctx).Dbg()
 
 	s := newSession(uid, username, chatUid, chatSid, h.queue).setJWT(jwt)
 	sessionId := s.getId()
@@ -77,7 +82,7 @@ func (h *hubImpl) newSession(ctx context.Context, uid, username, chatUid, chatSi
 
 	}()
 
-	l.F(log.FF{"session-id": sessionId}).Inf().TrcF("%v", kit.MustJson(s))
+	l.F(log.FF{"sid": sessionId}).Inf().TrcF("%v", kit.MustJson(s))
 
 	return sessionId, nil
 }
@@ -92,7 +97,7 @@ func (h *hubImpl) GetOutgoingWsEventsHandler() listener.QueueMessageHandler {
 			return err
 		}
 
-		l := log.L().Pr("queue").Cmp("session-hub").Mth("ws-event-handler").C(ctx)
+		l := h.l().Pr("queue").Mth("ws-event-handler").C(ctx)
 		l.TrcF("ws message details %s", string(msg))
 
 		if wsEventMsgPl == nil {
@@ -134,11 +139,15 @@ func (h *hubImpl) GetOutgoingWsEventsHandler() listener.QueueMessageHandler {
 
 func (h *hubImpl) logout(ctx context.Context, userId string) error {
 
+	l := h.l().Mth("logout").Dbg()
+
 	h.Lock()
 	defer h.Unlock()
 
 	if _, ok := h.userSessions[userId]; !ok {
-		return fmt.Errorf("no sessions found for user %s", userId)
+		err := fmt.Errorf("no sessions found for user %s", userId)
+		l.E(err).Err()
+		return err
 	}
 
 	for _, s := range h.userSessions[userId] {
@@ -178,18 +187,24 @@ func (h *hubImpl) getByUserId(userId string) []session {
 
 func (h *hubImpl) setupWsConnection(sessionId string, wsConn *websocket.Conn) error {
 
+	l := h.l().Mth("setup-ws-conn").F(log.FF{"sid": sessionId}).Dbg()
+
 	s := h.getById(sessionId)
 
 	if s != nil {
 
 		if s.isWs() {
-			return fmt.Errorf("ws connection is already open for the session %s", sessionId)
+			err := fmt.Errorf("ws connection is already open for the session %s", sessionId)
+			l.E(err).Err()
+			return err
 		} else {
 			s.setWs(newWs(wsConn, s.getId(), s.getUserId()))
 		}
 
 	} else {
-		return fmt.Errorf("no active session found %s", sessionId)
+		err := fmt.Errorf("no active session found %s", sessionId)
+		l.E(err).Err()
+		return err
 	}
 
 	return nil

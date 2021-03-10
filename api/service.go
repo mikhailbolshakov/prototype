@@ -2,6 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
+	"gitlab.medzdrav.ru/prototype/api/logger"
+	"gitlab.medzdrav.ru/prototype/api/meta"
 	"gitlab.medzdrav.ru/prototype/api/public"
 	"gitlab.medzdrav.ru/prototype/api/public/bp"
 	"gitlab.medzdrav.ru/prototype/api/public/chat"
@@ -11,23 +14,18 @@ import (
 	"gitlab.medzdrav.ru/prototype/api/public/users"
 	bpRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/bp"
 	chatRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/chat"
-	"gitlab.medzdrav.ru/prototype/api/repository/adapters/config"
+	configAdapter "gitlab.medzdrav.ru/prototype/api/repository/adapters/config"
 	servRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/services"
 	"gitlab.medzdrav.ru/prototype/api/repository/adapters/sessions"
 	tasksRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/tasks"
 	usersRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/users"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 )
-
-// NodeId - node id of a service
-// TODO: not to hardcode. Should be defined by service discovery procedure
-var nodeId = "1"
-const serviceCode = "api"
 
 type serviceImpl struct {
 	http            *kitHttp.Server
@@ -42,7 +40,7 @@ type serviceImpl struct {
 	deliveryService public.DeliveryService
 	bpAdapter       bpRep.Adapter
 	bpService       public.BpService
-	configAdapter   config.Adapter
+	configAdapter   configAdapter.Adapter
 	configService   public.ConfigService
 	queue           queue.Queue
 	queueListener   listener.QueueListener
@@ -53,7 +51,7 @@ type serviceImpl struct {
 func New() service.Service {
 	s := &serviceImpl{}
 
-	s.configAdapter = config.NewAdapter()
+	s.configAdapter = configAdapter.NewAdapter()
 	s.configService = s.configAdapter.GetService()
 
 	s.userAdapter = usersRep.NewAdapter()
@@ -75,17 +73,21 @@ func New() service.Service {
 	s.sessionsAdapter = sessions.NewAdapter()
 	s.sessionsService = s.sessionsAdapter.GetService()
 
-	s.queue = stan.New()
-	s.queueListener = listener.NewQueueListener(s.queue)
+	s.queue = stan.New(logger.LF())
+	s.queueListener = listener.NewQueueListener(s.queue, logger.LF())
 
 	return s
 }
 
-func (s *serviceImpl) initHttpServer(ctx context.Context, c *kitConfig.Config) error {
+func (s *serviceImpl) GetCode() string {
+	return meta.ServiceCode
+}
+
+func (s *serviceImpl) initHttpServer(ctx context.Context, c *config.Config) error {
 
 	mdw := public.NewMiddleware(s.sessionsService)
 
-	s.http = kitHttp.NewHttpServer(c.Http.Host, c.Http.Port, c.Http.Tls.Cert, c.Http.Tls.Key)
+	s.http = kitHttp.NewHttpServer(c.Http.Host, c.Http.Port, c.Http.Tls.Cert, c.Http.Tls.Key, logger.LF())
 
 	s.http.SetAuthMiddleware(mdw.SessionMiddleware)
 	s.http.SetNoAuthMiddleware(mdw.NoSessionMiddleware)
@@ -109,47 +111,54 @@ func (s *serviceImpl) initHttpServer(ctx context.Context, c *kitConfig.Config) e
 
 func (s *serviceImpl) Init(ctx context.Context) error {
 
-	if err := s.configAdapter.Init(); err != nil {
+	if err := s.configAdapter.Init(true); err != nil {
 		return err
 	}
 
-	c, err := s.configService.Get()
+	cfg, err := s.configService.Get()
 	if err != nil {
 		return err
 	}
 
-	if err := s.initHttpServer(ctx, c); err != nil {
+	// set logging params
+	if srvCfg, ok := cfg.Services[meta.ServiceCode]; ok {
+		logger.Logger.SetLevel(srvCfg.Log.Level)
+	} else {
+		return fmt.Errorf("service config isn't specified")
+	}
+
+	if err := s.initHttpServer(ctx, cfg); err != nil {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, serviceCode + nodeId, &queue.Options{
-		Url:       c.Nats.Url,
-		ClusterId: c.Nats.ClusterId,
+	if err := s.queue.Open(ctx, meta.NodeId, &queue.Options{
+		Url:       cfg.Nats.Url,
+		ClusterId: cfg.Nats.ClusterId,
 	}); err != nil {
 		return err
 	}
 
-	if err := s.userAdapter.Init(c); err != nil {
+	if err := s.userAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.taskAdapter.Init(c); err != nil {
+	if err := s.taskAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.servAdapter.Init(c); err != nil {
+	if err := s.servAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.chatAdapter.Init(c); err != nil {
+	if err := s.chatAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.bpAdapter.Init(c); err != nil {
+	if err := s.bpAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.sessionsAdapter.Init(c); err != nil {
+	if err := s.sessionsAdapter.Init(cfg); err != nil {
 		return err
 	}
 

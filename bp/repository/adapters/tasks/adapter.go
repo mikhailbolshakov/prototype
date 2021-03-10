@@ -2,14 +2,14 @@ package tasks
 
 import (
 	"gitlab.medzdrav.ru/prototype/bp/domain"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	pb "gitlab.medzdrav.ru/prototype/proto/tasks"
 )
 
 type Adapter interface {
-	Init(c *kitConfig.Config) error
+	Init(c *config.Config) error
 	GetService() domain.TaskService
 	Close()
 }
@@ -26,7 +26,7 @@ func NewAdapter(queue queue.Queue) Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init(c *kitConfig.Config) error {
+func (a *adapterImpl) Init(c *config.Config) error {
 	cfg := c.Services["tasks"]
 	cl, err := kitGrpc.NewClient(cfg.Grpc.Host, cfg.Grpc.Port)
 	if err != nil {

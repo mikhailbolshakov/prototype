@@ -9,6 +9,7 @@ import (
 
 type Etcd struct {
 	Client *clientv3.Client
+	logger log.CLoggerFunc
 }
 
 type Options struct {
@@ -16,9 +17,11 @@ type Options struct {
 	Dial  *time.Duration
 }
 
-func Open(opt *Options) (*Etcd, error) {
+func Open(opt *Options, logger log.CLoggerFunc) (*Etcd, error) {
 
-	etcd := &Etcd{}
+	etcd := &Etcd{
+		logger: logger,
+	}
 
 	var dial = time.Second * 3
 
@@ -35,7 +38,7 @@ func Open(opt *Options) (*Etcd, error) {
 		return nil, err
 	}
 
-	log.L().Pr("etcd").Inf("ok")
+	logger().Cmp("etcd").Inf("ok")
 
 	etcd.Client = cl
 	return etcd, nil
@@ -43,7 +46,7 @@ func Open(opt *Options) (*Etcd, error) {
 }
 
 func (e *Etcd) Close() error {
-	log.L().Pr("etcd").Inf("closed")
+	e.logger().Cmp("etcd").Inf("closed")
 	if e.Client != nil {
 		return e.Client.Close()
 	}

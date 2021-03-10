@@ -1,14 +1,14 @@
 package chat
 
 import (
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/chat"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
 )
 
 type Adapter interface {
-	Init(c *kitConfig.Config) error
+	Init(c *config.Config) error
 	GetService() domain.ChatService
 	Close()
 }
@@ -25,7 +25,7 @@ func NewAdapter() Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init(c *kitConfig.Config) error {
+func (a *adapterImpl) Init(c *config.Config) error {
 
 	chatCfg := c.Services["chat"]
 

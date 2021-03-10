@@ -3,11 +3,11 @@ package keycloak
 import (
 	"github.com/Nerzal/gocloak/v7"
 	domain "gitlab.medzdrav.ru/prototype/bp/domain"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 )
 
 type Adapter interface {
-	Init(c *kitConfig.Config) error
+	Init(c *config.Config) error
 	GetProvider() domain.KeycloakProvider
 	Close()
 }
@@ -21,7 +21,7 @@ func NewAdapter() Adapter {
 	return c
 }
 
-func (c *adapterImpl) Init(cfg *kitConfig.Config) error {
+func (c *adapterImpl) Init(cfg *config.Config) error {
 	c.keycloak = gocloak.NewClient(cfg.Keycloak.Url)
 	return nil
 }

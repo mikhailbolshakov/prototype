@@ -2,8 +2,8 @@ package domain
 
 import (
 	"context"
-	kit "gitlab.medzdrav.ru/prototype/kit/config"
 	pb "gitlab.medzdrav.ru/prototype/proto/chat"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 )
 
 type UserStorage interface {
@@ -25,5 +25,5 @@ type ChatService interface {
 }
 
 type ConfigService interface {
-	Get(ctx context.Context) (*kit.Config, error)
+	Get(ctx context.Context) (*config.Config, error)
 }

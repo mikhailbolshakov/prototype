@@ -8,6 +8,9 @@ zeebe:
   port: 26500
   host: localhost
 
+bpmn:
+  src-folder: "../bp/bpmn/"
+
 keycloak:
   url: "http://localhost:8086"
   admin-username: admin
@@ -30,6 +33,7 @@ mattermost:
 http:
   host: localhost
   port: 8000
+  ws-host: localhost
   ws-port: 8001
   tls:
     cert: ""
@@ -104,6 +108,9 @@ webrtc:
       path: "/home/mikhailb/work/adacta/rgs-med/dev/prototype/recording/"
 
 services:
+  api:
+    log:
+      level: trace
   chat:
     database:
       dbname: mattermost
@@ -117,6 +124,8 @@ services:
     grpc:
       port: 51053
       host: localhost
+    log:
+      level: trace
   users:
     database:
       dbname: mattermost
@@ -130,6 +139,8 @@ services:
     grpc:
       port: 51051
       host: localhost
+    log:
+      level: trace
   tasks:
     database:
       dbname: mattermost
@@ -143,6 +154,8 @@ services:
     grpc:
       port: 51052
       host: localhost
+    log:
+      level: trace
   services:
     database:
       dbname: mattermost
@@ -156,14 +169,20 @@ services:
     grpc:
       port: 51054
       host: localhost
+    log:
+      level: trace
   bp:
     grpc:
       port: 51055
       host: localhost
+    log:
+      level: trace
   cfg:
     grpc:
       port: 51056
       host: localhost
+    log:
+      level: trace
   sessions:
     grpc:
       port: 51057
@@ -177,6 +196,8 @@ services:
       host-rw: localhost
       # read-only host
       host-ro: localhost
+    log:
+      level: trace
   webrtc:
     grpc:
       port: 51058
@@ -190,4 +211,5 @@ services:
       host-rw: localhost
       # read-only host
       host-ro: localhost
-
+    log:
+      level: trace

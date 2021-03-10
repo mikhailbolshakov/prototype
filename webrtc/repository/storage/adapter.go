@@ -2,14 +2,15 @@ package storage
 
 import (
 	kitCache "gitlab.medzdrav.ru/prototype/kit/cache"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	"gitlab.medzdrav.ru/prototype/kit/kv"
 	kitStorage "gitlab.medzdrav.ru/prototype/kit/storage"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
+	"gitlab.medzdrav.ru/prototype/webrtc/logger"
 )
 
 type Adapter interface {
-	Init(c *kitConfig.Config) error
+	Init(c *config.Config) error
 	GetService() domain.WebrtcStorage
 	GetRoomCoordinator() domain.RoomCoordinator
 	Close()
@@ -36,7 +37,7 @@ func NewAdapter() Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
+func (a *adapterImpl) Init(cfg *config.Config) error {
 
 	servCfg := cfg.Services["webrtc"]
 
@@ -49,7 +50,7 @@ func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
 		DBName:   servCfg.Database.Dbname,
 		Port:     servCfg.Database.Port,
 		Host:     servCfg.Database.HostRw,
-	})
+	}, logger.LF())
 	if err != nil {
 		return err
 	}
@@ -61,7 +62,7 @@ func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
 		DBName:   servCfg.Database.Dbname,
 		Port:     servCfg.Database.Port,
 		Host:     servCfg.Database.HostRo,
-	})
+	}, logger.LF())
 	if err != nil {
 		return err
 	}
@@ -72,12 +73,12 @@ func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
 		Port:     cfg.Redis.Port,
 		Password: cfg.Redis.Password,
 		Ttl:      uint(cfg.Redis.Ttl),
-	})
+	}, logger.LF())
 	if err != nil {
 		return err
 	}
 
-	a.container.Etcd, err = kv.Open(&kv.Options{Hosts: cfg.Etcd.Hosts})
+	a.container.Etcd, err = kv.Open(&kv.Options{Hosts: cfg.Etcd.Hosts}, logger.LF())
 	if err != nil {
 		return err
 	}

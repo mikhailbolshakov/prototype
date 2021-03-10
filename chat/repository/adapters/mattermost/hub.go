@@ -3,9 +3,10 @@ package mattermost
 import (
 	"context"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
+	"gitlab.medzdrav.ru/prototype/chat/logger"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"sync"
 )
 
@@ -32,11 +33,11 @@ type hubImpl struct {
 	chatUserSessions         map[string]ChatSession
 	adminSession, botSession ChatSession
 	userService              domain.UserService
-	cfg                      *kitConfig.Config
+	cfg                      *config.Config
 	queue                    queue.Queue
 }
 
-func NewHub(cfg *kitConfig.Config, userService domain.UserService, queue queue.Queue) ChatSessionHub {
+func NewHub(cfg *config.Config, userService domain.UserService, queue queue.Queue) ChatSessionHub {
 
 	h := &hubImpl{
 		userService:      userService,
@@ -50,9 +51,13 @@ func NewHub(cfg *kitConfig.Config, userService domain.UserService, queue queue.Q
 	return h
 }
 
+func (h *hubImpl) l() log.CLogger {
+	return logger.L().Cmp("mm-hub")
+}
+
 func (h *hubImpl) Init(ctx context.Context) error {
 
-	l := log.L().Cmp("mm-hub").Mth("init")
+	l := h.l().Mth("init")
 
 	var err error
 
@@ -75,7 +80,7 @@ func (h *hubImpl) Init(ctx context.Context) error {
 
 func (h *hubImpl) NewSession(ctx context.Context, userId, username, chatUserId string) (string, error) {
 
-	l := log.L().Cmp("mm-hub").Mth("new-session").C(ctx).F(log.FF{"user": username})
+	l := h.l().Mth("new-session").C(ctx).F(log.FF{"user": username})
 
 	// we hold the only session for the userId
 	h.RLock()
@@ -119,7 +124,7 @@ func (h *hubImpl) BotSession() ChatSession {
 
 func (h *hubImpl) Logout(ctx context.Context, chatUserId string) error {
 
-	l := log.L().Cmp("mm-hub").Mth("logout").C(ctx).F(log.FF{"chat-user": chatUserId})
+	l := h.l().Mth("logout").C(ctx).F(log.FF{"chat-user": chatUserId})
 
 	h.Lock()
 	defer h.Unlock()
@@ -174,7 +179,7 @@ func (h *hubImpl) GetByChatUserId(chatUserId string) ChatSession {
 
 func (h *hubImpl) Close(ctx context.Context) {
 
-	l := log.L().Cmp("mm-hub").Mth("close")
+	l := h.l().Mth("close")
 
 	h.Lock()
 	defer h.Unlock()

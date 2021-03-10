@@ -11,7 +11,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	taskPb "gitlab.medzdrav.ru/prototype/proto/tasks"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
-	"gitlab.medzdrav.ru/prototype/tasks/meta"
+	"gitlab.medzdrav.ru/prototype/tasks/logger"
 	"math/rand"
 	"time"
 )
@@ -49,11 +49,15 @@ func NewTaskService(
 	return s
 }
 
+func (t *serviceImpl) l() log.CLogger {
+	return logger.L().Cmp("task-domain")
+}
+
 func (t *serviceImpl) remindsSchedulerHandler(ctx context.Context, taskId string) {
 
 	task := t.Get(ctx, taskId)
 
-	l := log.L().Cmp(meta.ServiceCode).Mth("reminds-scheduler").C(ctx).F(log.FF{"task": task.Num}).Dbg("fired")
+	l := t.l().Mth("reminds-scheduler").C(ctx).F(log.FF{"task": task.Num}).Dbg("fired")
 
 	if task.ChannelId != "" {
 
@@ -78,7 +82,7 @@ func (t *serviceImpl) dueDateSchedulerHandler(ctx context.Context, taskId string
 
 	task := t.Get(ctx, taskId)
 
-	l := log.L().Cmp(meta.ServiceCode).Mth("duedate-scheduler").C(ctx).F(log.FF{"task": task.Num}).Dbg("fired")
+	l := t.l().Mth("duedate-scheduler").C(ctx).F(log.FF{"task": task.Num}).Dbg("fired")
 
 	if err := t.queue.Publish(ctx, queue.QUEUE_TYPE_AT_LEAST_ONCE, taskPb.QUEUE_TOPIC_TASK_DUEDATE, &queue.Message{Payload: task}); err != nil {
 		l.E(err).Err("publish failed")
@@ -105,7 +109,7 @@ func (t *serviceImpl) dueDateSchedulerHandler(ctx context.Context, taskId string
 
 func (t *serviceImpl) New(ctx context.Context, task *domain.Task) (*domain.Task, error) {
 
-	l := log.L().Cmp(meta.ServiceCode).Mth("new").C(ctx)
+	l := t.l().Mth("new").C(ctx)
 
 	// check configuration by the task type
 	cfg, err := t.config.Get(ctx, task.Type)
@@ -194,7 +198,7 @@ func (t *serviceImpl) New(ctx context.Context, task *domain.Task) (*domain.Task,
 	if tr.QueueTopic != "" {
 		go func() {
 			if err := t.queue.Publish(ctx, queue.QUEUE_TYPE_AT_LEAST_ONCE, tr.QueueTopic, &queue.Message{Payload: task}); err != nil {
-				log.L().Cmp(meta.ServiceCode).Mth("new").C(ctx).F(log.FF{"topic": tr.QueueTopic}).E(err).Err("publish failed")
+				t.l().Mth("new").C(ctx).F(log.FF{"topic": tr.QueueTopic}).E(err).Err("publish failed")
 			}
 		}()
 	}
@@ -212,7 +216,7 @@ func (t *serviceImpl) putHistory(ctx context.Context, task *domain.Task) {
 
 	go func() {
 
-		l := log.L().Cmp(meta.ServiceCode).Mth("put-hist").C(ctx).F(log.FF{"task": task.Num})
+		l := t.l().Mth("put-hist").C(ctx).F(log.FF{"task": task.Num})
 
 		r, err := context2.MustRequest(ctx)
 		if err != nil {
@@ -249,12 +253,16 @@ func (t *serviceImpl) newNum(cfg *domain.Config) (string, error) {
 
 func (t *serviceImpl) MakeTransition(ctx context.Context, taskId, transitionId string) (*domain.Task, error) {
 
+	l := t.l().Mth("make-transition").C(ctx).F(log.FF{"task": taskId, "tr": transitionId})
+
 	tm := time.Now().UTC()
 
 	// get task from storage
 	task := t.storage.Get(ctx, taskId)
 	if task == nil {
-		return nil, errors.New(fmt.Sprintf("task not found by id %s", taskId))
+		err := errors.New(fmt.Sprintf("task not found by id %s", taskId))
+		l.E(err).St().Err()
+		return nil, err
 	}
 
 	trs, err := t.config.NextTransitions(ctx, task.Type, task.Status)
@@ -270,7 +278,9 @@ func (t *serviceImpl) MakeTransition(ctx context.Context, taskId, transitionId s
 		}
 	}
 	if targetTr == nil {
-		return nil, errors.New(fmt.Sprintf("illegal transition %s", transitionId))
+		err := errors.New(fmt.Sprintf("illegal transition %s", transitionId))
+		l.E(err).St().Err()
+		return nil, err
 	}
 
 	// set new status
@@ -278,7 +288,9 @@ func (t *serviceImpl) MakeTransition(ctx context.Context, taskId, transitionId s
 
 	// check mandatory assigned user
 	if targetTr.AssignedUserMandatory && task.Assignee.UserId == "" {
-		return nil, fmt.Errorf("task transition is disallowed due to it's configured as assigned user is manadatory")
+		err := errors.New("task transition is disallowed due to it's configured as assigned user is manadatory")
+		l.E(err).St().Err()
+		return nil, err
 	}
 
 	if targetTr.AutoAssignType != "" {
@@ -292,11 +304,15 @@ func (t *serviceImpl) MakeTransition(ctx context.Context, taskId, transitionId s
 	}
 
 	if task.Assignee.Type == "" {
-		return nil, errors.New(fmt.Sprintf("task cannot be assigned on the type %s", task.Assignee.Type))
+		err := fmt.Errorf("task cannot be assigned on the type %s", task.Assignee.Type)
+		l.E(err).St().Err()
+		return nil, err
 	}
 
 	if task.Assignee.Group == "" {
-		return nil, errors.New(fmt.Sprintf("task cannot be assigned on the group %s", task.Assignee.Group))
+		err := fmt.Errorf("task cannot be assigned on the group %s", task.Assignee.Group)
+		l.E(err).St().Err()
+		return nil, err
 	}
 
 	// save to storage
@@ -318,6 +334,8 @@ func (t *serviceImpl) MakeTransition(ctx context.Context, taskId, transitionId s
 }
 
 func (t *serviceImpl) setAssignee(ctx context.Context, task *domain.Task, assignee *domain.Assignee) error {
+
+	t.l().Mth("set-assignee").C(ctx).F(log.FF{"task": task.Id}).Dbg()
 
 	if assignee.UserId != "" || assignee.Username != "" {
 		assigneeUser := t.usersService.Get(ctx, assignee.UserId, assignee.Username)
@@ -347,9 +365,13 @@ func (t *serviceImpl) setAssignee(ctx context.Context, task *domain.Task, assign
 
 func (t *serviceImpl) SetAssignee(ctx context.Context, taskId string, assignee *domain.Assignee) (*domain.Task, error) {
 
+	l := t.l().Mth("set-assignee").C(ctx).F(log.FF{"task": taskId}).Dbg()
+
 	task := t.Get(ctx, taskId)
 	if task == nil {
-		return nil, fmt.Errorf("task not found id = %s", taskId)
+		err := fmt.Errorf("task not found id = %s", taskId)
+		l.E(err).St().Err()
+		return nil, err
 	}
 
 	if err := t.setAssignee(ctx, task, assignee); err != nil {

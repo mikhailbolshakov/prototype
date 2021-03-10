@@ -13,6 +13,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/sessions/domain"
 	"gitlab.medzdrav.ru/prototype/sessions/domain/impl"
 	"gitlab.medzdrav.ru/prototype/sessions/grpc"
+	"gitlab.medzdrav.ru/prototype/sessions/logger"
 	"gitlab.medzdrav.ru/prototype/sessions/meta"
 	"gitlab.medzdrav.ru/prototype/sessions/repository/adapters/chat"
 	"gitlab.medzdrav.ru/prototype/sessions/repository/adapters/config"
@@ -20,10 +21,6 @@ import (
 	"gitlab.medzdrav.ru/prototype/sessions/repository/adapters/users"
 	"gitlab.medzdrav.ru/prototype/sessions/repository/storage"
 )
-
-// NodeId - node id of a service
-// TODO: not to hardcode. Should be defined by service discovery procedure
-var nodeId = "1"
 
 type serviceImpl struct {
 	http            *kitHttp.Server
@@ -46,8 +43,8 @@ func New() service.Service {
 
 	s := &serviceImpl{}
 
-	s.queue = stan.New()
-	s.queueListener = listener.NewQueueListener(s.queue)
+	s.queue = stan.New(logger.LF())
+	s.queueListener = listener.NewQueueListener(s.queue, logger.LF())
 
 	s.configAdapter = config.NewAdapter()
 	s.cfgService = s.configAdapter.GetService()
@@ -59,9 +56,13 @@ func New() service.Service {
 	return s
 }
 
+func (s *serviceImpl) GetCode() string {
+	return meta.ServiceCode
+}
+
 func (s *serviceImpl) Init(ctx context.Context) error {
 
-	if err := s.configAdapter.Init(); err != nil {
+	if err := s.configAdapter.Init(true); err != nil {
 		return err
 	}
 
@@ -82,7 +83,7 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 
 	authService := auth.New(ctx, s.keycloak, authClient)
 
-	s.http = kitHttp.NewHttpServer(c.Http.Host, c.Http.WsPort, c.Http.Tls.Cert, c.Http.Tls.Key)
+	s.http = kitHttp.NewHttpServer(c.Http.WsHost, c.Http.WsPort, c.Http.Tls.Cert, c.Http.Tls.Key, logger.LF())
 
 	// session HUB
 	hub := impl.NewHub(c, s.http, s.metricsAdapter.GetService())
@@ -114,7 +115,7 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, meta.ServiceCode+nodeId, &queue.Options{
+	if err := s.queue.Open(ctx, meta.NodeId, &queue.Options{
 		Url:       c.Nats.Url,
 		ClusterId: c.Nats.ClusterId,
 	}); err != nil {

@@ -2,7 +2,7 @@ package domain
 
 import (
 	"context"
-	kit "gitlab.medzdrav.ru/prototype/kit/config"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"time"
 )
@@ -24,7 +24,7 @@ type UserService interface {
 }
 
 type ConfigService interface {
-	Get() (*kit.Config, error)
+	Get() (*config.Config, error)
 }
 
 type BpService interface {

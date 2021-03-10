@@ -2,9 +2,11 @@ package chat
 
 import (
 	"context"
+	"fmt"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
 	"gitlab.medzdrav.ru/prototype/chat/domain/impl"
 	"gitlab.medzdrav.ru/prototype/chat/grpc"
+	"gitlab.medzdrav.ru/prototype/chat/logger"
 	"gitlab.medzdrav.ru/prototype/chat/meta"
 	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/chat/repository/adapters/mattermost"
@@ -14,10 +16,6 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
 	"gitlab.medzdrav.ru/prototype/kit/service"
 )
-
-// NodeId - node id of a service
-// TODO: not to hardcode. Should be defined by service discovery procedure
-var nodeId = "1"
 
 type serviceImpl struct {
 	domainService     domain.Service
@@ -42,24 +40,35 @@ func New() service.Service {
 	s.userAdapter = users.NewAdapter()
 	s.userService = s.userAdapter.GetService()
 
-	s.queue = stan.New()
-	s.queueListener = listener.NewQueueListener(s.queue)
+	s.queue = stan.New(logger.LF())
+	s.queueListener = listener.NewQueueListener(s.queue, logger.LF())
 
 	return s
 }
 
+func (s *serviceImpl) GetCode() string {
+	return meta.ServiceCode
+}
+
 func (s *serviceImpl) Init(ctx context.Context) error {
 
-	if err := s.configAdapter.Init(); err != nil {
+	if err := s.configAdapter.Init(true); err != nil {
 		return err
 	}
 
-	c, err := s.configService.Get()
+	cfg, err := s.configService.Get()
 	if err != nil {
 		return err
 	}
 
-	s.chatSessionHub = mattermost.NewHub(c, s.userService, s.queue)
+	// set logging params
+	if srvCfg, ok := cfg.Services[meta.ServiceCode]; ok {
+		logger.Logger.SetLevel(srvCfg.Log.Level)
+	} else {
+		return fmt.Errorf("service config isn't specified")
+	}
+
+	s.chatSessionHub = mattermost.NewHub(cfg, s.userService, s.queue)
 
 	s.mattermostAdapter = mattermost.NewAdapter(s.chatSessionHub)
 	mattermostService := s.mattermostAdapter.GetService()
@@ -67,21 +76,21 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 	s.domainService = impl.NewService(mattermostService)
 	s.grpc = grpc.New(s.domainService)
 
-	if err := s.mattermostAdapter.Init(ctx, c); err != nil {
+	if err := s.mattermostAdapter.Init(ctx, cfg); err != nil {
 		return err
 	}
 
-	if err := s.userAdapter.Init(c); err != nil {
+	if err := s.userAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.grpc.Init(c); err != nil {
+	if err := s.grpc.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, meta.ServiceCode + nodeId, &queue.Options{
-		Url:       c.Nats.Url,
-		ClusterId: c.Nats.ClusterId,
+	if err := s.queue.Open(ctx, meta.NodeId, &queue.Options{
+		Url:       cfg.Nats.Url,
+		ClusterId: cfg.Nats.ClusterId,
 	}); err != nil {
 		return err
 	}

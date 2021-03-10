@@ -3,6 +3,7 @@ package impl
 import (
 	"github.com/gorilla/websocket"
 	"gitlab.medzdrav.ru/prototype/kit/log"
+	"gitlab.medzdrav.ru/prototype/sessions/logger"
 	"go.uber.org/atomic"
 	"net"
 	"time"
@@ -51,6 +52,10 @@ func newWs(conn *websocket.Conn, sessionId, userId string) Ws {
 	}
 }
 
+func (w *wsImpl) l() log.CLogger {
+	return logger.L().Cmp("ws")
+}
+
 func (w *wsImpl) wsClosedEvent() <-chan struct{} {
 	return w.wsClosedChan
 }
@@ -75,7 +80,7 @@ func (w *wsImpl) close() {
 
 func (w *wsImpl) send(message []byte) {
 
-	l := log.L().Pr("ws").Cmp("hub").Mth("ws-send")
+	l := w.l().Mth("ws-send")
 	l.TrcF("%s", string(message))
 
 	defer func() {
@@ -98,7 +103,7 @@ func (w *wsImpl) write() {
 		w.close()
 	}()
 
-	l := log.L().Pr("ws").Cmp("hub").Mth("write")
+	l := w.l().Mth("write")
 
 	for {
 		select {
@@ -136,7 +141,7 @@ func (w *wsImpl) write() {
 }
 
 func (w *wsImpl) pingListener() {
-	l := log.L().Pr("ws").Cmp("hub").Mth("ping-listener")
+	l := w.l().Mth("ping-listener")
 	for {
 		select {
 		case <-w.pingChan:
@@ -164,7 +169,7 @@ func (w *wsImpl) pingHandler(message string) error {
 
 func (w *wsImpl) read() {
 
-	l := log.L().Pr("ws").Cmp("hub").Mth("read")
+	l := w.l().Mth("read")
 
 	defer func() {
 		close(w.receivedChan)

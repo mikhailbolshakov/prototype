@@ -16,14 +16,14 @@ func newImpl() *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) Get(ctx context.Context) (*kit.Config, error) {
+func (u *serviceImpl) Get(ctx context.Context) (*pb.Config, error) {
 
 	rs, err := u.ConfigServiceClient.Get(ctx, &pb.ConfigRequest{})
 	if err != nil {
 		return nil, err
 	}
 
-	var cfg = &kit.Config{}
+	var cfg = &pb.Config{}
 	if err := json.Unmarshal(rs.Config, cfg); err != nil {
 		return nil, err
 	}

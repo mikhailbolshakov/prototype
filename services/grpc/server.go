@@ -3,10 +3,11 @@ package grpc
 import (
 	"context"
 	"encoding/json"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	pb "gitlab.medzdrav.ru/prototype/proto/services"
 	"gitlab.medzdrav.ru/prototype/services/domain"
+	"gitlab.medzdrav.ru/prototype/services/logger"
 	"gitlab.medzdrav.ru/prototype/services/meta"
 	"log"
 )
@@ -29,7 +30,7 @@ func New(balanceService domain.UserBalanceService,
 	}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer(meta.ServiceCode)
+	gs, err := kitGrpc.NewServer(meta.ServiceCode, logger.LF())
 	if err != nil {
 		panic(err)
 	}
@@ -40,10 +41,10 @@ func New(balanceService domain.UserBalanceService,
 	return s
 }
 
-func  (s *Server) Init(c *kitConfig.Config) error {
-	usersCfg := c.Services["services"]
-	s.host = usersCfg.Grpc.Host
-	s.port = usersCfg.Grpc.Port
+func  (s *Server) Init(c *config.Config) error {
+	cfg := c.Services["services"]
+	s.host = cfg.Grpc.Host
+	s.port = cfg.Grpc.Port
 	return nil
 }
 
@@ -51,7 +52,7 @@ func  (s *Server) Init(c *kitConfig.Config) error {
 func (s *Server) ListenAsync() {
 
 	go func () {
-		err := s.Server.Listen("localhost", "50054")
+		err := s.Server.Listen(s.host, s.port)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -3,12 +3,13 @@ package mattermost
 import (
 	"context"
 	"github.com/adacta-ru/mattermost-server/v6/model"
+	"gitlab.medzdrav.ru/prototype/chat/logger"
 	"gitlab.medzdrav.ru/prototype/kit"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/proto"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"sync"
 )
 
@@ -62,7 +63,7 @@ type sessionImpl struct {
 	queue     queue.Queue
 }
 
-func newSession(ctx context.Context, userId, username, chatUserId string, cfg *kitConfig.Config, queue queue.Queue) (ChatSession, error) {
+func newSession(ctx context.Context, userId, username, chatUserId string, cfg *config.Config, queue queue.Queue) (ChatSession, error) {
 
 	s := &sessionImpl{
 		Id:         kit.NewId(),
@@ -89,7 +90,7 @@ func newSession(ctx context.Context, userId, username, chatUserId string, cfg *k
 	return s, nil
 }
 
-func newAdminSession(ctx context.Context, cfg *kitConfig.Config) (ChatSession, error) {
+func newAdminSession(ctx context.Context, cfg *config.Config) (ChatSession, error) {
 
 	s := &sessionImpl{
 		Id: kit.NewId(),
@@ -110,7 +111,7 @@ func newAdminSession(ctx context.Context, cfg *kitConfig.Config) (ChatSession, e
 	return s, nil
 }
 
-func newBotSession(ctx context.Context, cfg *kitConfig.Config) (ChatSession, error) {
+func newBotSession(ctx context.Context, cfg *config.Config) (ChatSession, error) {
 
 	s := &sessionImpl{
 		Id: kit.NewId(),
@@ -136,9 +137,13 @@ func (s *sessionImpl) skipEvent(eventType string) bool {
 	return ok
 }
 
+func (s *sessionImpl) l() log.CLogger {
+	return logger.L().Cmp("mm-session")
+}
+
 func (s *sessionImpl) forwardEvent(event *model.WebSocketEvent) {
 
-	l := log.L().Cmp("mm-hub").Mth("fwd-ev").F(log.FF{"type": event.EventType()})
+	l := s.l().Mth("fwd-ev").F(log.FF{"type": event.EventType()})
 
 	l.Dbg().Trc(event.ToJson())
 
@@ -192,7 +197,7 @@ func (s *sessionImpl) listen(ctx context.Context) {
 	go s.mmClient.WsApi.Listen()
 	go func() {
 
-		l := log.L().Cmp("mm-hub").Mth("listen")
+		l := s.l().Mth("listen")
 
 		for {
 			select {

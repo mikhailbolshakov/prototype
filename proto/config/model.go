@@ -21,6 +21,10 @@ type Zeebe struct {
 	Host string
 }
 
+type Bpmn struct {
+	SrcFolder string `config:"src-folder"`
+}
+
 type Keycloak struct {
 	Url           string
 	AdminUsername string `config:"admin-username"`
@@ -38,6 +42,7 @@ type Tls struct {
 type Http struct {
 	Host   string
 	Port   string
+	WsHost string `config:"ws-host"`
 	WsPort string `config:"ws-port"`
 	Tls    *Tls
 }
@@ -117,6 +122,7 @@ type Nats struct {
 
 type Config struct {
 	Redis      *Redis
+	Bpmn       *Bpmn
 	Zeebe      *Zeebe
 	Keycloak   *Keycloak
 	Mattermost *Mattermost

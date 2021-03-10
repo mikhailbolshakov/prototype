@@ -3,8 +3,8 @@ package domain
 import (
 	"context"
 	"github.com/Nerzal/gocloak/v7"
-	kit "gitlab.medzdrav.ru/prototype/kit/config"
 	pbChat "gitlab.medzdrav.ru/prototype/proto/chat"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	pbServ "gitlab.medzdrav.ru/prototype/proto/services"
 	pbTask "gitlab.medzdrav.ru/prototype/proto/tasks"
 	pbUser "gitlab.medzdrav.ru/prototype/proto/users"
@@ -23,7 +23,7 @@ type ChatService interface {
 }
 
 type ConfigService interface {
-	Get() (*kit.Config, error)
+	Get() (*config.Config, error)
 }
 
 type BalanceService interface {

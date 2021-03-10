@@ -10,6 +10,7 @@ import (
 type Redis struct {
 	Instance *redis.Client
 	Ttl      time.Duration
+	logger   log.CLoggerFunc
 }
 
 type Params struct {
@@ -19,9 +20,9 @@ type Params struct {
 	Ttl      uint
 }
 
-func Open(params *Params) (*Redis, error) {
+func Open(params *Params, logger log.CLoggerFunc) (*Redis, error) {
 
-	l := log.L().Cmp("redis").Mth("open")
+	l := logger().Cmp("redis").Mth("open")
 
 	client := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", params.Host, params.Port),

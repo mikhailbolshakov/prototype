@@ -2,13 +2,14 @@ package storage
 
 import (
 	kitCache "gitlab.medzdrav.ru/prototype/kit/cache"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitStorage "gitlab.medzdrav.ru/prototype/kit/storage"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"gitlab.medzdrav.ru/prototype/sessions/domain"
+	"gitlab.medzdrav.ru/prototype/sessions/logger"
 )
 
 type Adapter interface {
-	Init(c *kitConfig.Config) error
+	Init(c *config.Config) error
 	GetService() domain.SessionStorage
 	Close()
 }
@@ -31,7 +32,7 @@ func NewAdapter() Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
+func (a *adapterImpl) Init(cfg *config.Config) error {
 
 	servCfg := cfg.Services["tasks"]
 
@@ -44,7 +45,7 @@ func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
 		DBName:   servCfg.Database.Dbname,
 		Port:     servCfg.Database.Port,
 		Host:     servCfg.Database.HostRw,
-	})
+	}, logger.LF())
 	if err != nil {
 		return err
 	}
@@ -56,7 +57,7 @@ func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
 		DBName:   servCfg.Database.Dbname,
 		Port:     servCfg.Database.Port,
 		Host:     servCfg.Database.HostRo,
-	})
+	}, logger.LF())
 	if err != nil {
 		return err
 	}
@@ -67,7 +68,7 @@ func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
 		Port:     cfg.Redis.Port,
 		Password: cfg.Redis.Password,
 		Ttl:      uint(cfg.Redis.Ttl),
-	})
+	}, logger.LF())
 	if err != nil {
 		return err
 	}

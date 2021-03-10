@@ -17,20 +17,26 @@ import (
 const ERR_EXHAUSTED_RESOURCES_MAX_RETRY = 10
 
 type engineImpl struct {
-	params *bpm.Params
-	client zbc.Client
+	params     *bpm.Params
+	client     zbc.Client
 	jobWorkers []worker.JobWorker
+	logger     log.CLoggerFunc
 }
 
-func NewEngine() bpm.Engine {
+func NewEngine(logger log.CLoggerFunc) bpm.Engine {
 
 	zeebe := &engineImpl{
-		params: &bpm.Params{},
+		params:     &bpm.Params{},
 		jobWorkers: []worker.JobWorker{},
+		logger:     logger,
 	}
 
 	return zeebe
 
+}
+
+func (z *engineImpl) l() log.CLogger {
+	return z.logger().Cmp("zeebe")
 }
 
 func (z *engineImpl) Open(params *bpm.Params) error {
@@ -51,7 +57,7 @@ func (z *engineImpl) Open(params *bpm.Params) error {
 		UsePlaintextConnection: true,
 	}); err == nil {
 		z.client = zc
-		log.L().Cmp("zeebe").Mth("open").Inf("ok")
+		z.l().Mth("open").Inf("ok")
 	} else {
 		return err
 	}
@@ -70,7 +76,7 @@ func (z *engineImpl) Close() error {
 		if err != nil {
 			return err
 		}
-		log.L().Cmp("zeebe").Mth("close").Inf("closed")
+		z.l().Mth("close").Inf("closed")
 	}
 	return nil
 }
@@ -81,9 +87,9 @@ func (z *engineImpl) DeployBPMNs(paths []string) error {
 
 		absPath, _ := filepath.Abs(p)
 
-		go func(path string){
+		go func(path string) {
 
-			l := log.L().Cmp("zeebe").Mth("deploy").F(log.FF{"path": path})
+			l := z.l().Mth("deploy").F(log.FF{"path": path})
 			errRetryCount := 0
 
 			for {
@@ -126,7 +132,7 @@ func (z *engineImpl) RegisterTaskHandlers(handlers map[string]interface{}) error
 
 func (z *engineImpl) StartProcess(processId string, vars map[string]interface{}) (string, error) {
 
-	l := log.L().Cmp("zeebe").Mth("start").F(log.FF{"process-id": processId})
+	l := z.l().Mth("start").F(log.FF{"process-id": processId})
 
 	p, err := z.client.NewCreateInstanceCommand().BPMNProcessId(processId).LatestVersion().VariablesFromMap(vars)
 	if err != nil {
@@ -149,7 +155,7 @@ func (z *engineImpl) StartProcess(processId string, vars map[string]interface{})
 
 func (z *engineImpl) SendMessage(messageId string, correlationId string, vars map[string]interface{}) error {
 
-	l := log.L().Cmp("zeebe").Mth("send-message").F(log.FF{"msg-id": messageId, "corr-id": correlationId})
+	l := z.l().Mth("send-message").F(log.FF{"msg-id": messageId, "corr-id": correlationId})
 
 	ctx := context.Background()
 
@@ -172,7 +178,7 @@ func (z *engineImpl) SendMessage(messageId string, correlationId string, vars ma
 
 func (z *engineImpl) SendError(jobId int64, errCode, errMessage string) error {
 
-	l := log.L().Cmp("zeebe").Mth("send-err").F(log.FF{"jobId": jobId, "err-code": errCode, "err-m": errMessage})
+	l := z.l().Mth("send-err").F(log.FF{"jobId": jobId, "err-code": errCode, "err-m": errMessage})
 
 	m := z.client.NewThrowErrorCommand().JobKey(jobId).ErrorCode(errCode).ErrorMessage(errMessage)
 

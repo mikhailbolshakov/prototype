@@ -10,8 +10,6 @@ import (
 	"runtime"
 )
 
-var logger = logrus.New()
-
 const (
 	// PanicLevel level, highest level of severity. Logs and then calls panic with the
 	// message passed to Debug, Info, ...
@@ -33,28 +31,42 @@ const (
 	TraceLevel = "trace"
 )
 
-func GetLogger() *logrus.Logger {
-	return logger
+type Logger struct {
+	Logrus *logrus.Logger
 }
 
-func Init(level string) error {
+func Init(level string) *Logger {
 
-	lv, err := logrus.ParseLevel(level)
-	if err != nil {
-		return err
+	logger := &Logger{
+		Logrus: logrus.New(),
 	}
-	logger.SetOutput(os.Stdout)
-	logger.SetLevel(lv)
-	logger.SetFormatter(&Formatter{
-		FixedFields:            []string{"protocol", "component", "method"},
+	logger.SetLevel(level)
+	logger.Logrus.SetOutput(os.Stdout)
+	logger.Logrus.SetFormatter(&Formatter{
+		FixedFields:            []string{"service", "node", "protocol", "component", "method"},
 		TimestampFormat:        "2006-01-02T15:04:05-0700",
 		HideKeysForFixedFields: true,
 		NoColors:               true,
 		NoFieldsColors:         true,
 		NoFieldsSpace:          true,
 	})
-	return nil
+
+	return logger
 }
+
+func (l *Logger) GetLogger() *logrus.Logger {
+	return l.Logrus
+}
+
+func (l *Logger) SetLevel(level string) {
+	lv, err := logrus.ParseLevel(level)
+	if err != nil {
+		panic(err)
+	}
+	l.Logrus.SetLevel(lv)
+}
+
+type CLoggerFunc func() CLogger
 
 // CLogger provides structured logging abilities
 // !!!! Not thread safe. Don't share one CLogger instance through multiple goroutines
@@ -66,6 +78,8 @@ type CLogger interface {
 	Cmp(c string) CLogger          // Cmp - adds component
 	Mth(m string) CLogger          // Mth - adds method
 	Pr(m string) CLogger           // Pr - adds protocol
+	Srv(s string) CLogger          // Srv - adds service code
+	Nd(n string) CLogger           // Nd - adds node code
 	Inf(args ...interface{}) CLogger
 	InfF(format string, args ...interface{}) CLogger
 	Err(args ...interface{}) CLogger
@@ -79,29 +93,32 @@ type CLogger interface {
 	Fatal(args ...interface{}) CLogger
 	FatalF(format string, args ...interface{}) CLogger
 	Clone() CLogger
+	Printf(string, ...interface{})
 }
 
-func L() CLogger {
+func L(logger *Logger) CLogger {
 	return &clogger{
-		lre: logrus.NewEntry(logger),
+		logger: logger,
+		lre: logrus.NewEntry(logger.Logrus),
 	}
 }
 
 type clogger struct {
-	lre  *logrus.Entry
-	err  error
+	logger *Logger
+	lre *logrus.Entry
+	err error
 }
 
 // always use Clone when pass CLogger between goroutines
 func (cl *clogger) Clone() CLogger {
-	entry := logrus.NewEntry(logger)
+	entry := logrus.NewEntry(cl.logger.Logrus)
 	if len(cl.lre.Data) > 0 {
 		marshaled, _ := json.Marshal(cl.lre.Data)
 		_ = json.Unmarshal(marshaled, &entry.Data)
 	}
 	clone := &clogger{
-		lre:  entry,
-		err:  cl.err,
+		lre: entry,
+		err: cl.err,
 	}
 	return clone
 }
@@ -132,6 +149,16 @@ func (cl *clogger) St() CLogger {
 		runtime.Stack(buf, false)
 		cl.lre = cl.lre.WithField("st", fmt.Sprintf("%s", buf))
 	}
+	return cl
+}
+
+func (cl *clogger) Srv(s string) CLogger {
+	cl.lre = cl.lre.WithField("service", s)
+	return cl
+}
+
+func (cl *clogger) Nd(s string) CLogger {
+	cl.lre = cl.lre.WithField("node", s)
 	return cl
 }
 
@@ -205,7 +232,11 @@ func (cl *clogger) Fatal(args ...interface{}) CLogger {
 	return cl
 }
 
-func (cl *clogger) FatalF(format string, args ...interface{}) CLogger{
+func (cl *clogger) FatalF(format string, args ...interface{}) CLogger {
 	cl.lre.Fatalf(format, args...)
 	return cl
+}
+
+func (cl *clogger) Printf(f string, args ...interface{}) {
+	cl.DbgF(f, args...)
 }

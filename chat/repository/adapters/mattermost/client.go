@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/adacta-ru/mattermost-server/v6/model"
+	"gitlab.medzdrav.ru/prototype/chat/logger"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"net/http"
 )
@@ -44,11 +45,15 @@ func HandleResponse(rs *model.Response) error {
 	return nil
 }
 
+func (c *Client) l() log.CLogger {
+	return logger.L().Cmp("mm-client")
+}
+
 func Login(p *Params) (*Client, error) {
 
-	l := log.L().Cmp("mm-client").Mth("login").F(log.FF{"user": p.Account})
-
 	cl := &Client{Params: p}
+
+	l := cl.l().Mth("login").F(log.FF{"user": p.Account})
 
 	cl.RestApi = model.NewAPIv4Client(p.Url)
 
@@ -105,16 +110,21 @@ func ping(url, accessToken string) bool {
 
 func (c *Client) SetStatus(userId, status string) error {
 
+	l := c.l().Mth("set-status").Dbg()
+
 	s, rs := c.RestApi.UpdateUserStatus(userId, &model.Status{
 		UserId:         userId,
 		Status:         status,
 	})
 	if err := HandleResponse(rs); err != nil {
+		l.E(err).St().Err()
 		return err
 	}
 
 	if s.Status != status {
-		return fmt.Errorf("status hasn't been changed")
+		err := fmt.Errorf("status hasn't been changed")
+		l.E(err).St().Err()
+		return err
 	}
 
 	return nil
@@ -122,20 +132,20 @@ func (c *Client) SetStatus(userId, status string) error {
 
 func (c *Client) Logout() error {
 
-	l := log.L().Cmp("mm-client").Mth("del-user").F(log.FF{"user": c.User.Username})
+	l := c.l().Mth("logout").F(log.FF{"user": c.User.Username}).Dbg()
 
 	_, rs := c.RestApi.Logout()
 	if err := HandleResponse(rs); err != nil {
+		l.E(err).St().Err()
 		return err
 	}
-	l.Dbg("logged out")
 
 	return nil
 }
 
 func (c *Client) CreateUser(teamName, username, password, email string) (string, error) {
 
-	l := log.L().Cmp("mm-client").Mth("create-user").F(log.FF{"user": username})
+	l := c.l().Mth("create-user").F(log.FF{"user": username}).Dbg()
 
 	user, rs := c.RestApi.CreateUser(&model.User{
 		Username: username,
@@ -149,28 +159,28 @@ func (c *Client) CreateUser(teamName, username, password, email string) (string,
 	// add to team
 	team, rs := c.RestApi.GetTeamByName(teamName, "")
 	if err := HandleResponse(rs); err != nil {
+		l.E(err).St().Err()
 		return "", err
 	}
 
 	_, rs = c.RestApi.AddTeamMember(team.Id, user.Id)
 	if err := HandleResponse(rs); err != nil {
+		l.E(err).St().Err()
 		return "", err
 	}
-
-	l.Dbg("created")
 
 	return user.Id, nil
 }
 
 func (c *Client) DeleteUser(userId string) error {
 
-	l := log.L().Cmp("mm-client").Mth("del-user").F(log.FF{"user": userId})
+	l := c.l().Mth("del-user").F(log.FF{"user": userId}).Dbg()
 
 	_, rs := c.RestApi.DeleteUser(userId)
 	if err := HandleResponse(rs); err != nil {
+		l.E(err).St().Err()
 		return err
 	}
-	l.Dbg("deleted")
 
 	return nil
 
@@ -178,7 +188,7 @@ func (c *Client) DeleteUser(userId string) error {
 
 func (c *Client) CreateUserChannel(channelType, teamName, userId, displayName, name string) (string, error) {
 
-	l := log.L().Cmp("mm-client").Mth("create-channel").F(log.FF{"user": c.User.Username})
+	l := c.l().Mth("create-channel").F(log.FF{"user":  c.User.Username}).Dbg()
 
 	team, rs := c.RestApi.GetTeamByName(teamName, "")
 	if err := HandleResponse(rs); err != nil {
@@ -192,15 +202,15 @@ func (c *Client) CreateUserChannel(channelType, teamName, userId, displayName, n
 		Name:        name,
 	})
 	if err := HandleResponse(rs); err != nil {
+		l.E(err).St().Err()
 		return "", err
 	}
 
 	_, rs = c.RestApi.AddChannelMember(ch.Id, userId)
 	if err := HandleResponse(rs); err != nil {
+		l.E(err).St().Err()
 		return "", err
 	}
-
-	l.Dbg("created")
 
 	return ch.Id, nil
 }
@@ -215,7 +225,7 @@ func (c *Client) SubscribeUser(channelId string, userId string) error {
 
 func (c *Client) CreateEphemeralPost(channelId string, recipientUserId string, message string, attachments []*model.SlackAttachment) error {
 
-	l := log.L().Cmp("mm-client").Mth("create-eph-post").F(log.FF{"user": c.User.Username})
+	l := c.l().Mth("create-eph-post").F(log.FF{"user":  c.User.Username}).Dbg()
 
 	props := model.StringInterface{}
 	if attachments != nil && len(attachments) > 0 {
@@ -232,10 +242,9 @@ func (c *Client) CreateEphemeralPost(channelId string, recipientUserId string, m
 	}
 	_, rs := c.RestApi.CreatePostEphemeral(ep)
 	if err := HandleResponse(rs); err != nil {
+		l.E(err).St().Err()
 		return err
 	}
-
-	l.Dbg("posted")
 
 	return nil
 
@@ -243,7 +252,7 @@ func (c *Client) CreateEphemeralPost(channelId string, recipientUserId string, m
 
 func (c *Client) CreatePost(channelId string, message string, attachments []*model.SlackAttachment) error {
 
-	l := log.L().Cmp("mm-client").Mth("create-post").F(log.FF{"user": c.User.Username})
+	l := c.l().Mth("create-post").F(log.FF{"user":  c.User.Username}).Dbg()
 
 	props := model.StringInterface{}
 	if attachments != nil && len(attachments) > 0 {
@@ -258,10 +267,9 @@ func (c *Client) CreatePost(channelId string, message string, attachments []*mod
 
 	_, rs := c.RestApi.CreatePost(p)
 	if err := HandleResponse(rs); err != nil {
+		l.E(err).St().Err()
 		return err
 	}
-
-	l.Dbg("posted")
 
 	return nil
 

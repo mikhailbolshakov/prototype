@@ -6,6 +6,7 @@ import (
 	"github.com/zeebe-io/zeebe/clients/go/pkg/entities"
 	"github.com/zeebe-io/zeebe/clients/go/pkg/worker"
 	b "gitlab.medzdrav.ru/prototype/bp/domain"
+	"gitlab.medzdrav.ru/prototype/bp/logger"
 	"gitlab.medzdrav.ru/prototype/kit"
 	"gitlab.medzdrav.ru/prototype/kit/bpm"
 	"gitlab.medzdrav.ru/prototype/kit/bpm/zeebe"
@@ -16,7 +17,6 @@ import (
 	pbChat "gitlab.medzdrav.ru/prototype/proto/chat"
 	services2 "gitlab.medzdrav.ru/prototype/proto/services"
 	taskPb "gitlab.medzdrav.ru/prototype/proto/tasks"
-	"gitlab.medzdrav.ru/prototype/tasks/domain"
 	"time"
 )
 
@@ -31,6 +31,7 @@ type bpImpl struct {
 	chatService b.ChatService
 	balance     b.BalanceService
 	delivery    b.DeliveryService
+	utils       *zeebe.Utils
 	bpm.BpBase
 }
 
@@ -47,6 +48,7 @@ func NewBp(balanceService b.BalanceService,
 		taskService: taskService,
 		userService: userService,
 		chatService: chatService,
+		utils:       zeebe.NewUtils(logger.LF()),
 	}
 	bp.Engine = bpm
 
@@ -73,8 +75,8 @@ func (bp *bpImpl) GetId() string {
 	return "p-expert-online-consultation"
 }
 
-func (bp *bpImpl) GetBPMNPath() string {
-	return "../bp/domain/dentist_online_consultation/bp.bpmn"
+func (bp *bpImpl) GetBPMNFileName() string {
+	return "dentist_online_consultation.bpmn"
 }
 
 func (bp *bpImpl) registerBpmHandlers() error {
@@ -87,6 +89,10 @@ func (bp *bpImpl) registerBpmHandlers() error {
 	})
 }
 
+func (bp *bpImpl) l() log.CLogger {
+	return logger.L().Pr("zeebe").Cmp(bp.GetId())
+}
+
 func (bp *bpImpl) dueDateTaskHandler(msg []byte) error {
 
 	task := &taskPb.TaskMessagePayload{}
@@ -95,7 +101,7 @@ func (bp *bpImpl) dueDateTaskHandler(msg []byte) error {
 		return err
 	}
 
-	log.L().Pr("queue").Cmp(bp.GetId()).Mth("task-duedate").F(log.FF{"task-id": task.Id}).C(ctx).Dbg().Trc(string(msg))
+	bp.l().Mth("task-duedate").F(log.FF{"task-id": task.Id}).C(ctx).Dbg().Trc(string(msg))
 
 	_ = bp.SendMessage("msg-consultation-time", task.Id, nil)
 	return nil
@@ -103,15 +109,15 @@ func (bp *bpImpl) dueDateTaskHandler(msg []byte) error {
 
 func (bp *bpImpl) solvedTaskHandler(msg []byte) error {
 
-	task := &domain.Task{}
+	task := &taskPb.Task{}
 	ctx, err := queue.Decode(nil, msg, task)
 	if err != nil {
 		return err
 	}
 
-	log.L().Pr("queue").Cmp(bp.GetId()).Mth("task-solved").F(log.FF{"task-id": task.Id}).C(ctx).Dbg().Trc(string(msg))
+	bp.l().Mth("task-solved").F(log.FF{"task-id": task.Id}).C(ctx).Dbg().Trc(string(msg))
 
-	if task.Type.Type == TT_CLIENT && task.Type.SubType == TST_DENTIST_CONSULTATION {
+	if task.Type.Type == TT_CLIENT && task.Type.Subtype == TST_DENTIST_CONSULTATION {
 
 		vars := map[string]interface{}{}
 		vars["taskCompleted"] = true
@@ -129,19 +135,19 @@ func (bp *bpImpl) solvedTaskHandler(msg []byte) error {
 
 func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 
-	variables, ctx, err := zeebe.GetVarsAndCtx(job)
+	variables, ctx, err := bp.utils.GetVarsAndCtx(job)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
-	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
+	bp.l().Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	deliveryId := variables["deliveryId"].(string)
 
 	dl, err := bp.delivery.GetDelivery(ctx, deliveryId)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -151,7 +157,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	expertUserId := dl.Details["expertUserId"].(string)
 	consultationTime, err := time.Parse(time.RFC3339, dl.Details["consultationTime"].(string))
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -160,7 +166,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	// check if a channel with this expert already exists
 	channels, err := bp.chatService.GetChannelsForUserAndExpert(ctx, user.MMId, expert.MMId)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -176,7 +182,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 			Subscribers: []string{expert.MMId},
 		})
 		if err != nil {
-			zeebe.FailJob(client, job, err)
+			bp.utils.FailJob(client, job, err)
 			return
 		}
 		channelId = channelId
@@ -212,7 +218,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 		},
 	})
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -220,7 +226,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	dl.Details["channels"] = []string{channelId}
 	_, err = bp.delivery.UpdateDetails(ctx, dl.Id, dl.Details)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -241,7 +247,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 		"expert.url":        expert.ExpertDetails.PhotoUrl,
 		"expert.photo-url":  expert.ExpertDetails.PhotoUrl,
 	}); err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -253,13 +259,13 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 		"client.med-card":   "https://pmed.moi-service.ru/profile/medcard",
 		"due-date":          dueDateStr,
 	}); err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
-	err = zeebe.CompleteJob(client, job, variables)
+	err = bp.utils.CompleteJob(client, job, variables)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -269,20 +275,20 @@ func (bp *bpImpl) cancelConsultationHandler(client worker.JobClient, job entitie
 
 	jobKey := job.GetKey()
 
-	variables, ctx, err := zeebe.GetVarsAndCtx(job)
+	variables, ctx, err := bp.utils.GetVarsAndCtx(job)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
-	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
+	bp.l().Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	deliveryId := variables["deliveryId"].(string)
 	taskId := variables["expertTaskId"].(string)
 
 	dl, err := bp.delivery.GetDelivery(ctx, deliveryId)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -292,14 +298,14 @@ func (bp *bpImpl) cancelConsultationHandler(client worker.JobClient, job entitie
 		TransitionId: "5",
 	})
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
 	// cancel service delivery
 	_, err = bp.delivery.Cancel(ctx, deliveryId, nil)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -310,13 +316,13 @@ func (bp *bpImpl) cancelConsultationHandler(client worker.JobClient, job entitie
 		Quantity:      1,
 	})
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
 	_, err = client.NewCompleteJobCommand().JobKey(jobKey).Send(context.Background())
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -324,19 +330,19 @@ func (bp *bpImpl) cancelConsultationHandler(client worker.JobClient, job entitie
 
 func (bp *bpImpl) clientFeedbackHandler(client worker.JobClient, job entities.Job) {
 
-	variables, ctx, err := zeebe.GetVarsAndCtx(job)
+	variables, ctx, err := bp.utils.GetVarsAndCtx(job)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
-	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
+	bp.l().Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	deliveryId := variables["deliveryId"].(string)
 
 	dl, err := bp.delivery.GetDelivery(ctx, deliveryId)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -374,7 +380,7 @@ func (bp *bpImpl) clientFeedbackHandler(client worker.JobClient, job entities.Jo
 		},
 	})
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -382,14 +388,14 @@ func (bp *bpImpl) clientFeedbackHandler(client worker.JobClient, job entities.Jo
 	dl.Details["tasks"] = deliveryTasks
 	_, err = bp.delivery.UpdateDetails(ctx, dl.Id, dl.Details)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
 	variables["feedbackTaskNum"] = t.Num
-	err = zeebe.CompleteJob(client, job, variables)
+	err = bp.utils.CompleteJob(client, job, variables)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -399,13 +405,13 @@ func (bp *bpImpl) taskInProgressHandler(client worker.JobClient, job entities.Jo
 
 	jobKey := job.GetKey()
 
-	variables, ctx, err := zeebe.GetVarsAndCtx(job)
+	variables, ctx, err := bp.utils.GetVarsAndCtx(job)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
-	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
+	bp.l().Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	taskId := variables["expertTaskId"].(string)
 
@@ -414,13 +420,13 @@ func (bp *bpImpl) taskInProgressHandler(client worker.JobClient, job entities.Jo
 		TransitionId: "2",
 	})
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
 	_, err = client.NewCompleteJobCommand().JobKey(jobKey).Send(ctx)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
@@ -428,25 +434,25 @@ func (bp *bpImpl) taskInProgressHandler(client worker.JobClient, job entities.Jo
 
 func (bp *bpImpl) deliveryCompletedHandler(client worker.JobClient, job entities.Job) {
 
-	variables, ctx, err := zeebe.GetVarsAndCtx(job)
+	variables, ctx, err := bp.utils.GetVarsAndCtx(job)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
-	log.L().Pr("zeebe").Cmp(bp.GetId()).Mth(job.Type).C(ctx).Dbg().Trc(job.String())
+	bp.l().Mth(job.Type).C(ctx).Dbg().Trc(job.String())
 
 	deliveryId := variables["deliveryId"].(string)
 
 	_, err = bp.delivery.Complete(ctx, deliveryId, nil)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 
-	err = zeebe.CompleteJob(client, job, nil)
+	err = bp.utils.CompleteJob(client, job, nil)
 	if err != nil {
-		zeebe.FailJob(client, job, err)
+		bp.utils.FailJob(client, job, err)
 		return
 	}
 

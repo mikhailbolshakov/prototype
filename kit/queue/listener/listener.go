@@ -15,7 +15,7 @@ type QueueListener interface {
 	Clear()
 }
 
-func NewQueueListener(q queue.Queue) QueueListener {
+func NewQueueListener(q queue.Queue, logger log.CLoggerFunc) QueueListener {
 
 	th := map[queue.QueueType]map[string][]QueueMessageHandler{}
 	th[queue.QUEUE_TYPE_AT_LEAST_ONCE] = make(map[string][]QueueMessageHandler)
@@ -25,6 +25,7 @@ func NewQueueListener(q queue.Queue) QueueListener {
 		topicHandlers: th,
 		listening:     false,
 		queue:         q,
+		logger:        logger,
 	}
 }
 
@@ -34,6 +35,7 @@ type queueListener struct {
 	topicHandlers map[queue.QueueType]map[string][]QueueMessageHandler
 	quit          chan struct{}
 	listening     bool
+	logger        log.CLoggerFunc
 }
 
 func (q *queueListener) Add(qt queue.QueueType, topic string, h ...QueueMessageHandler) {
@@ -58,7 +60,7 @@ func (q *queueListener) Add(qt queue.QueueType, topic string, h ...QueueMessageH
 
 func (q *queueListener) ListenAsync() {
 
-	for queueType, topicHandlers := range q.topicHandlers{
+	for queueType, topicHandlers := range q.topicHandlers {
 		for topic, handlers := range topicHandlers {
 			go func(qt queue.QueueType, tp string, hnds []QueueMessageHandler) {
 				c := make(chan []byte)
@@ -70,7 +72,7 @@ func (q *queueListener) ListenAsync() {
 							m := msg
 							h := h
 							go func() {
-								l := log.L().Pr("queue").Cmp("listener").F(log.FF{"topic": tp})
+								l := q.logger().Pr("queue").Cmp("listener").F(log.FF{"topic": tp})
 								l.TrcF("%s", string(m))
 								if err := h(m); err != nil {
 									l.E(err).St().Err()

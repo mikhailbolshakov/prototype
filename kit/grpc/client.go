@@ -7,6 +7,7 @@ import (
 )
 
 type Client struct {
+	*readinessAwaiter
 	Conn *grpc.ClientConn
 }
 
@@ -23,6 +24,8 @@ func NewClient(host, port string) (*Client, error) {
 	c := &Client{
 		Conn: gc,
 	}
+
+	c.readinessAwaiter = newReadinessAwaiter(gc)
 
 	return c, nil
 }

@@ -1,14 +1,14 @@
 package users
 
 import (
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"gitlab.medzdrav.ru/prototype/sessions/domain"
 )
 
 type Adapter interface {
-	Init(c *kitConfig.Config) error
+	Init(c *config.Config) error
 	GetUserService() domain.UserService
 	Close()
 }
@@ -25,7 +25,7 @@ func NewAdapter() Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init(c *kitConfig.Config) error {
+func (a *adapterImpl) Init(c *config.Config) error {
 
 	usersCfg := c.Services["users"]
 

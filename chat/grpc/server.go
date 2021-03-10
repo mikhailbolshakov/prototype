@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"gitlab.medzdrav.ru/prototype/chat/domain"
+	"gitlab.medzdrav.ru/prototype/chat/logger"
 	"gitlab.medzdrav.ru/prototype/chat/meta"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/chat"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"log"
 )
 
@@ -25,7 +26,7 @@ func New(domain domain.Service) *Server {
 	s := &Server{domain: domain}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer(meta.ServiceCode)
+	gs, err := kitGrpc.NewServer(meta.ServiceCode, logger.LF())
 	if err != nil {
 		panic(err)
 	}
@@ -37,7 +38,7 @@ func New(domain domain.Service) *Server {
 	return s
 }
 
-func (s *Server) Init(c *kitConfig.Config) error {
+func (s *Server) Init(c *config.Config) error {
 	usersCfg := c.Services["chat"]
 	s.host = usersCfg.Grpc.Host
 	s.port = usersCfg.Grpc.Port

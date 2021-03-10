@@ -2,7 +2,7 @@ package domain
 
 import (
 	"context"
-	kit "gitlab.medzdrav.ru/prototype/kit/config"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 )
 
@@ -25,7 +25,7 @@ type ChatService interface {
 }
 
 type CfgService interface {
-	Get(ctx context.Context) (*kit.Config, error)
+	Get(ctx context.Context) (*config.Config, error)
 }
 
 type UserService interface {

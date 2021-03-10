@@ -3,8 +3,8 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"gitlab.medzdrav.ru/prototype/chat/logger"
 	kit "gitlab.medzdrav.ru/prototype/kit/config"
-	"gitlab.medzdrav.ru/prototype/kit/log"
 	pb "gitlab.medzdrav.ru/prototype/proto/config"
 )
 
@@ -17,9 +17,9 @@ func newImpl() *serviceImpl {
 	return a
 }
 
-func (u *serviceImpl) Get() (*kit.Config, error) {
+func (u *serviceImpl) Get() (*pb.Config, error) {
 
-	l := log.L().Pr("grpc").Cmp("config").Mth("get")
+	l := logger.L().Pr("grpc").Cmp("config").Mth("get")
 
 	rs, err := u.ConfigServiceClient.Get(context.Background(), &pb.ConfigRequest{})
 	if err != nil {
@@ -27,7 +27,7 @@ func (u *serviceImpl) Get() (*kit.Config, error) {
 		return nil, err
 	}
 
-	var cfg = &kit.Config{}
+	var cfg = &pb.Config{}
 	if err := json.Unmarshal(rs.Config, cfg); err != nil {
 		return nil, err
 	}

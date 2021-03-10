@@ -7,11 +7,12 @@ import (
 	"github.com/pion/ion-sfu/pkg/sfu"
 	"github.com/pion/webrtc/v3"
 	"gitlab.medzdrav.ru/prototype/kit"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	log "gitlab.medzdrav.ru/prototype/kit/log"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
+	"gitlab.medzdrav.ru/prototype/webrtc/logger"
 	"gitlab.medzdrav.ru/prototype/webrtc/meta"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,7 +34,7 @@ func New(domain domain.WebrtcService) *Server {
 	s := &Server{webrtc: domain}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer(meta.ServiceCode)
+	gs, err := kitGrpc.NewServer(meta.ServiceCode, logger.LF())
 	if err != nil {
 		panic(err)
 	}
@@ -42,7 +43,7 @@ func New(domain domain.WebrtcService) *Server {
 	return s
 }
 
-func  (s *Server) Init(c *kitConfig.Config) error {
+func  (s *Server) Init(c *config.Config) error {
 
 	cfg := c.Services["webrtc"]
 	s.host = cfg.Grpc.Host
@@ -58,7 +59,6 @@ func (s *Server) ListenAsync() {
 	go func () {
 		err := s.Server.Listen(s.host, s.port)
 		if err != nil {
-			log.L().Pr("grpc").Mth("listen").E(err).Err()
 			return
 		}
 	}()
@@ -90,7 +90,7 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 
 	peer := s.webrtc.NewPeer(ctx, rq.GetUserId(), rq.GetUsername())
 
-	l := log.L().Pr("grpc").Cmp("webrtc").Mth("signal").C(ctx).Dbg()
+	l := logger.L().Pr("grpc").Cmp("webrtc").Mth("signal").C(ctx).Dbg()
 
 	for {
 		in, err := stream.Recv()

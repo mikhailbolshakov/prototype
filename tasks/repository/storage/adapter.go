@@ -2,14 +2,15 @@ package storage
 
 import (
 	kitCache "gitlab.medzdrav.ru/prototype/kit/cache"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	"gitlab.medzdrav.ru/prototype/kit/search"
 	kitStorage "gitlab.medzdrav.ru/prototype/kit/storage"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
+	"gitlab.medzdrav.ru/prototype/tasks/logger"
 )
 
 type Adapter interface {
-	Init(c *kitConfig.Config) error
+	Init(c *config.Config) error
 	GetService() domain.TaskStorage
 	Close()
 }
@@ -33,7 +34,7 @@ func NewAdapter() Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
+func (a *adapterImpl) Init(cfg *config.Config) error {
 
 	servCfg := cfg.Services["tasks"]
 
@@ -46,7 +47,7 @@ func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
 		DBName:   servCfg.Database.Dbname,
 		Port:     servCfg.Database.Port,
 		Host:     servCfg.Database.HostRw,
-	})
+	}, logger.LF())
 	if err != nil {
 		return err
 	}
@@ -58,7 +59,7 @@ func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
 		DBName:   servCfg.Database.Dbname,
 		Port:     servCfg.Database.Port,
 		Host:     servCfg.Database.HostRo,
-	})
+	}, logger.LF())
 	if err != nil {
 		return err
 	}
@@ -69,13 +70,13 @@ func (a *adapterImpl) Init(cfg *kitConfig.Config) error {
 		Port:     cfg.Redis.Port,
 		Password: cfg.Redis.Password,
 		Ttl:      uint(cfg.Redis.Ttl),
-	})
+	}, logger.LF())
 	if err != nil {
 		return err
 	}
 
 	// Index search
-	a.container.Search, err = search.NewEs(cfg.Es.Url, cfg.Es.Trace)
+	a.container.Search, err = search.NewEs(cfg.Es.Url, cfg.Es.Trace, logger.LF())
 	if err != nil {
 		return err
 	}

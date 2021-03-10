@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/pion/ion-sfu/pkg/sfu"
 	"github.com/pion/webrtc/v3"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 )
 
 type RoomMeta struct {
@@ -40,12 +40,12 @@ type RoomRecorder interface {
 
 // Recording creates a new peer and connects to SFU to relay all the tracks
 type Recording interface {
-	Init(ctx context.Context, cfg *kitConfig.Config, webrtc WebrtcService) error
+	Init(ctx context.Context, cfg *config.Config, webrtc WebrtcService) error
 	NewRoomRecorder(ctx context.Context, roomId string) (RoomRecorder, error)
 }
 
 type WebrtcService interface {
-	Init(ctx context.Context, cfg *kitConfig.Config) error
+	Init(ctx context.Context, cfg *config.Config) error
 	NewPeer(ctx context.Context, userId, username string) Peer
 	GetSFU() *sfu.SFU
 	GetOrCreateRoom(ctx context.Context, roomId string) (*RoomMeta, error)

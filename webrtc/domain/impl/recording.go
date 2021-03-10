@@ -8,10 +8,11 @@ import (
 	"github.com/pion/ion-avp/pkg/elements"
 	sfu "github.com/pion/ion-sfu/cmd/signal/grpc/proto"
 	"github.com/pion/webrtc/v3"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	"gitlab.medzdrav.ru/prototype/kit/log"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
 	avpCstm "gitlab.medzdrav.ru/prototype/webrtc/domain/impl/avp"
+	"gitlab.medzdrav.ru/prototype/webrtc/logger"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"io"
@@ -20,7 +21,7 @@ import (
 )
 
 type recordingIml struct {
-	cfg       *kitConfig.Config
+	cfg       *config.Config
 	sfuClient sfu.SFUClient
 	webrtc    domain.WebrtcService
 }
@@ -33,7 +34,11 @@ func NewRecording() domain.Recording {
 	return &recordingIml{}
 }
 
-func (r *recordingIml) Init(ctx context.Context, cfg *kitConfig.Config, webrtc domain.WebrtcService) error {
+func (r *recordingIml) l() log.CLogger {
+	return logger.L().Cmp("webrtc-rec")
+}
+
+func (r *recordingIml) Init(ctx context.Context, cfg *config.Config, webrtc domain.WebrtcService) error {
 
 	r.cfg = cfg
 	r.webrtc = webrtc
@@ -74,7 +79,7 @@ func (r *recordingIml) NewRoomRecorderGRPC(ctx context.Context, roomId string) (
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	l := log.L().C(ctx).Cmp("webrtc").Mth("new-room-recorder").F(log.FF{"room": roomId}).Dbg()
+	l := r.l().C(ctx).Mth("new-room-recorder").F(log.FF{"room": roomId}).Dbg()
 
 	webrtcTransport := avpCstm.NewAvpPeer(roomId, r.cfg.Webrtc.Avp, r.createWebmSaver())
 	webrtcTransport.OnClose(func() {
@@ -258,7 +263,7 @@ func (r *recordingIml) NewRoomRecorderGRPC(ctx context.Context, roomId string) (
 
 func (r *recordingIml) NewRoomRecorder(ctx context.Context, roomId string) (domain.RoomRecorder, error) {
 
-	l := log.L().C(ctx).Cmp("webrtc").Mth("new-room-recorder").F(log.FF{"room": roomId})
+	l := r.l().C(ctx).Mth("new-room-recorder").F(log.FF{"room": roomId})
 
 	ctx, cancel := context.WithCancel(ctx)
 

@@ -10,6 +10,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/proto"
+	"gitlab.medzdrav.ru/prototype/sessions/logger"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -62,6 +63,10 @@ func newSession(userId, username, chatUserId string, chatSessionId string, queue
 	return s
 }
 
+func (h *sessionImpl) l() log.CLogger {
+	return logger.L().Cmp("session")
+}
+
 func (s *sessionImpl) getId() string {
 	return s.id
 }
@@ -100,9 +105,7 @@ func (s *sessionImpl) getAccessToken() string {
 
 func (s *sessionImpl) forwardIncomingWsMessage(msg []byte) {
 
-	l := log.L().Pr("ws").Cmp("hub").Mth("fwd-incoming-msg")
-
-	l.TrcF("%s", string(msg))
+	l := s.l().Mth("fwd-incoming-msg").Dbg().TrcF("%s", string(msg))
 
 	var wsMessage *proto.WsMessage
 	err := json.Unmarshal(msg, &wsMessage)
@@ -165,7 +168,7 @@ func (s *sessionImpl) wsListen(ws Ws) {
 
 func (s *sessionImpl) sendWsMessage(msg *proto.WsMessage) error {
 
-	l := log.L().Pr("ws").Cmp("hub").Mth("send-ws")
+	l := s.l().Mth("send-ws").Dbg()
 
 	msgb, err := json.Marshal(msg)
 	if err != nil {
@@ -222,6 +225,6 @@ func (s *sessionImpl) close(ctx context.Context) {
 		s.ws = nil
 	}
 
-	log.L().Pr("ws").Cmp("hub").Mth("session-close").C(ctx).Dbg("closed")
+	s.l().Mth("session-close").C(ctx).Dbg("closed")
 
 }

@@ -11,17 +11,25 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 )
 
-
 type stanImpl struct {
-	conn stan.Conn
+	conn     stan.Conn
 	clientId string
+	logger   log.CLoggerFunc
 }
 
-func New() queue.Queue {
-	return &stanImpl{}
+func New(logger log.CLoggerFunc) queue.Queue {
+	return &stanImpl{
+		logger: logger,
+	}
+}
+
+func (s *stanImpl) l() log.CLogger {
+	return s.logger().Pr("queue").Cmp("stan")
 }
 
 func (s *stanImpl) Open(ctx context.Context, clientId string, options *queue.Options) error {
+
+	l := s.l().Mth("open").F(log.FF{"client": clientId, "url": options.Url}).Dbg("connecting")
 
 	s.clientId = clientId
 	c, err := stan.Connect(options.ClusterId, clientId, stan.NatsURL(options.Url))
@@ -30,7 +38,7 @@ func (s *stanImpl) Open(ctx context.Context, clientId string, options *queue.Opt
 	}
 	s.conn = c
 
-	log.L().Pr("queue").Cmp("nats").Mth("open").F(log.FF{"client": clientId}).Inf("ok")
+	l.Inf("ok")
 
 	return nil
 }
@@ -42,14 +50,14 @@ func (s *stanImpl) Close() error {
 		if err != nil {
 			return err
 		}
-		log.L().Pr("queue").Cmp("nats").Mth("close").Inf("closed")
+		s.l().Mth("close").Inf("closed")
 	}
 	return nil
 }
 
 func (s *stanImpl) Publish(ctx context.Context, qt queue.QueueType, topic string, msg *queue.Message) error {
 
-	l := log.L().Pr("queue").Cmp("nats").Mth("publish").F(log.FF{"topic": topic, "type": qt.String()})
+	l := s.l().Mth("publish").F(log.FF{"topic": topic, "type": qt.String()})
 
 	if msg.Ctx == nil {
 		msg.Ctx = kitContext.NewRequestCtx().Queue().WithNewRequestId()
@@ -79,7 +87,7 @@ func (s *stanImpl) Publish(ctx context.Context, qt queue.QueueType, topic string
 
 func (s *stanImpl) Subscribe(qt queue.QueueType, topic string, receiverChan chan<- []byte) error {
 
-	l := log.L().Pr("queue").Cmp("nats").Mth("received").F(log.FF{"topic": topic, "type": qt.String()})
+	l := s.l().Mth("received").F(log.FF{"topic": topic, "type": qt.String()})
 
 	if qt == queue.QUEUE_TYPE_AT_LEAST_ONCE {
 		_, err := s.conn.Subscribe(topic, func(m *stan.Msg) {
@@ -87,7 +95,7 @@ func (s *stanImpl) Subscribe(qt queue.QueueType, topic string, receiverChan chan
 			receiverChan <- m.Data
 		}, stan.DurableName(s.clientId))
 		return err
-	} else if  qt == queue.QUEUE_TYPE_AT_MOST_ONCE {
+	} else if qt == queue.QUEUE_TYPE_AT_MOST_ONCE {
 		_, err := s.conn.NatsConn().Subscribe(topic, func(m *nats.Msg) {
 			l.TrcF("%s\n", string(m.Data))
 			receiverChan <- m.Data

@@ -6,6 +6,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/common"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
+	"gitlab.medzdrav.ru/prototype/tasks/logger"
 	"sync"
 	"time"
 )
@@ -52,7 +53,7 @@ func (r *reminderImpl) remindFunc(ctx context.Context, taskId string) {
 
 func (r *reminderImpl) ScheduleTask(ctx context.Context, ts *domain.Task) {
 
-	l := log.L().Cmp("task-sch").Mth("schedule").C(ctx).F(log.FF{"task": ts.Num})
+	l := logger.L().Cmp("task-sch").Mth("schedule").C(ctx).F(log.FF{"task": ts.Num})
 
 	if r.config.IsFinalStatus(ctx, ts.Type, ts.Status) {
 		return
@@ -105,7 +106,7 @@ func (r *reminderImpl) ScheduleTask(ctx context.Context, ts *domain.Task) {
 
 func (r *reminderImpl) start(ctx context.Context) {
 
-	l := log.L().Cmp("task-sch").Mth("start").C(ctx)
+	l := logger.L().Cmp("task-sch").Mth("start").C(ctx)
 
 	// TODO: retrieve tasks which have Reminder in the future
 	// TODO: paging

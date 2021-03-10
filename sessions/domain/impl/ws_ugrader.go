@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/websocket"
 	http2 "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/log"
+	"gitlab.medzdrav.ru/prototype/sessions/logger"
 	"net/http"
 )
 
@@ -22,7 +23,7 @@ func (u *upgrader) Set(noAuthRouter *mux.Router, upgrader *websocket.Upgrader) {
 
 	noAuthRouter.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 
-		l := log.L().Pr("ws").Cmp("mdw").Mth("upgrade")
+		l := logger.L().Pr("ws").Cmp("mdw").Mth("upgrade")
 
 		w.Header().Set("Content-Type", "application/json")
 		wsConn, err := upgrader.Upgrade(w, r, nil)

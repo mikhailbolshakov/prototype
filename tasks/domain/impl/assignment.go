@@ -6,6 +6,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
+	"gitlab.medzdrav.ru/prototype/tasks/logger"
 	"sync"
 	"time"
 )
@@ -54,9 +55,13 @@ type daemonImpl struct {
 	storage     domain.TaskStorage
 }
 
+func (d *daemonImpl) l() log.CLogger {
+	return logger.L().Cmp("assign-daemon")
+}
+
 func (d *daemonImpl) assign(ctx context.Context, tt *assignmentTask) error {
 
-	ll := log.L().Cmp("task-assignment").Mth("assign").C(ctx)
+	ll := d.l().Mth("assign").C(ctx)
 
 	logSuccess := func(log *domain.AssignmentLog) {
 		log.Status = "success"
@@ -213,7 +218,7 @@ func (d *daemonImpl) Run(ctx context.Context) {
 						return
 					}
 				case <-tt.ctx.Done():
-					log.L().Cmp("task-assignment").Mth("run").F(log.FF{"task-type": tt.taskType}).C(ctx).Dbg("cancelled")
+					d.l().Mth("run").F(log.FF{"task-type": tt.taskType}).C(ctx).Dbg("cancelled")
 					return
 				}
 

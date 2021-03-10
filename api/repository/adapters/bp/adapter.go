@@ -2,13 +2,13 @@ package bp
 
 import (
 	"gitlab.medzdrav.ru/prototype/api/public"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	pb "gitlab.medzdrav.ru/prototype/proto/bp"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 )
 
 type Adapter interface {
-	Init(c *kitConfig.Config) error
+	Init(c *config.Config) error
 	GetService() public.BpService
 	Close()
 }
@@ -25,7 +25,7 @@ func NewAdapter() Adapter {
 	return a
 }
 
-func (a *adapterImpl) Init(c *kitConfig.Config) error {
+func (a *adapterImpl) Init(c *config.Config) error {
 	cfg := c.Services["bp"]
 	cl, err := kitGrpc.NewClient(cfg.Grpc.Host, cfg.Grpc.Port)
 	if err != nil {

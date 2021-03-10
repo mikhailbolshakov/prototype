@@ -2,11 +2,11 @@ package grpc
 
 import (
 	"context"
-	kitConfig "gitlab.medzdrav.ru/prototype/kit/config"
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
-	log "gitlab.medzdrav.ru/prototype/kit/log"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	pb "gitlab.medzdrav.ru/prototype/proto/sessions"
 	"gitlab.medzdrav.ru/prototype/sessions/domain"
+	"gitlab.medzdrav.ru/prototype/sessions/logger"
 	"gitlab.medzdrav.ru/prototype/sessions/meta"
 )
 
@@ -24,7 +24,7 @@ func New(domain domain.SessionsService, monitor domain.SessionMonitor) *Server {
 	s := &Server{domain: domain, monitor: monitor}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer(meta.ServiceCode)
+	gs, err := kitGrpc.NewServer(meta.ServiceCode, logger.LF())
 	if err != nil {
 		panic(err)
 	}
@@ -35,7 +35,7 @@ func New(domain domain.SessionsService, monitor domain.SessionMonitor) *Server {
 	return s
 }
 
-func (s *Server) Init(c *kitConfig.Config) error {
+func (s *Server) Init(c *config.Config) error {
 	cfg := c.Services["sessions"]
 	s.host = cfg.Grpc.Host
 	s.port = cfg.Grpc.Port
@@ -47,7 +47,6 @@ func (s *Server) ListenAsync() {
 	go func() {
 		err := s.Server.Listen(s.host, s.port)
 		if err != nil {
-			log.L().Pr("grpc").Mth("listen").E(err).Err()
 			return
 		}
 	}()

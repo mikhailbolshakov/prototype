@@ -1,0 +1,98 @@
+version: "3.7"
+
+services:
+
+  api:
+    container_name: mmsrv-api
+    networks:
+      - mm
+    build:
+      dockerfile: ./api/Dockerfile
+      context: .
+    env_file:
+      - ./api/.env
+
+  bp:
+    container_name: mmsrv-bp
+    networks:
+      - mm
+    build:
+      dockerfile: ./bp/Dockerfile
+      context: .
+    env_file:
+      - ./bp/.env
+
+  chat:
+    container_name: mmsrv-chat
+    networks:
+      - mm
+    build:
+      dockerfile: ./chat/Dockerfile
+      context: .
+    env_file:
+      - ./chat/.env
+
+  config:
+    container_name: mmsrv-config
+    networks:
+      - mm
+    build:
+      dockerfile: ./config/Dockerfile
+      context: .
+    env_file:
+      - ./config/.env
+
+  services:
+    container_name: mmsrv-services
+    networks:
+      - mm
+    build:
+      dockerfile: ./services/Dockerfile
+      context: .
+    env_file:
+      - ./services/.env
+
+  sessions:
+    container_name: mmsrv-sessions
+    networks:
+      - mm
+    build:
+      dockerfile: ./sessions/Dockerfile
+      context: .
+    env_file:
+      - ./sessions/.env
+
+  tasks:
+    container_name: mmsrv-tasks
+    networks:
+      - mm
+    build:
+      dockerfile: ./tasks/Dockerfile
+      context: .
+    env_file:
+      - ./tasks/.env
+
+  users:
+    container_name: mmsrv-users
+    networks:
+      - mm
+    build:
+      dockerfile: ./users/Dockerfile
+      context: .
+    env_file:
+      - ./users/.env
+
+  webrtc:
+    container_name: mmsrv-webrtc
+    networks:
+      - mm
+    build:
+      dockerfile: ./webrtc/Dockerfile
+      context: .
+    env_file:
+      - ./webrtc/.env
+
+networks:
+  mm:
+    #    driver: bridge
+    external: true

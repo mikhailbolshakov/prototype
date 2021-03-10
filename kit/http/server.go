@@ -15,6 +15,7 @@ type Server struct {
 	NoAuthRouter *mux.Router
 	WsUpgrader   *websocket.Upgrader
 	Cert, Key    string
+	logger       log.CLoggerFunc
 }
 
 type RouteSetter interface {
@@ -25,7 +26,7 @@ type WsUpgrader interface {
 	Set(noAuthRouter *mux.Router, upgrader *websocket.Upgrader)
 }
 
-func NewHttpServer(host, port, cert, key string) *Server {
+func NewHttpServer(host, port, cert, key string, logger log.CLoggerFunc) *Server {
 
 	r := mux.NewRouter()
 	noAuthRouter := r.MatcherFunc(func(r *http.Request, rm *mux.RouteMatch) bool {
@@ -51,8 +52,9 @@ func NewHttpServer(host, port, cert, key string) *Server {
 		},
 		AuthRouter:   authRouter,
 		NoAuthRouter: noAuthRouter,
-		Cert: cert,
-		Key: key,
+		Cert:         cert,
+		Key:          key,
+		logger:       logger,
 	}
 
 	return s
@@ -90,7 +92,7 @@ func (s *Server) SetMiddleware(mdws ...mux.MiddlewareFunc) {
 func (s *Server) Listen() {
 	go func() {
 
-		l := log.L().Pr("http").Cmp("server").Mth("listen").F(log.FF{"url": s.Srv.Addr})
+		l := s.logger().Pr("http").Cmp("server").Mth("listen").F(log.FF{"url": s.Srv.Addr})
 		l.Inf("start listening")
 
 		// if tls parameters are specified, list tls connection

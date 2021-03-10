@@ -9,6 +9,7 @@ import (
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
+	"gitlab.medzdrav.ru/prototype/webrtc/logger"
 	meta "gitlab.medzdrav.ru/prototype/webrtc/meta"
 	"net/http"
 	"net/url"
@@ -47,7 +48,7 @@ func (s *Server) Set(noAuthRouter *mux.Router, upgrader *websocket.Upgrader) {
 		sid := r.URL.Query().Get("session")
 		room := r.URL.Query().Get("room")
 
-		l := log.L().Cmp("ion").Mth("ws-handler").F(log.FF{"sid": sid, "room": room}).Dbg()
+		l := logger.L().Cmp("ion").Mth("ws-handler").F(log.FF{"sid": sid, "room": room}).Dbg()
 
 		if sid == "" {
 			l.Err("sid empty")

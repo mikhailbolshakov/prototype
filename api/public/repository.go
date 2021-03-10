@@ -2,8 +2,8 @@ package public
 
 import (
 	"context"
-	kit "gitlab.medzdrav.ru/prototype/kit/config"
 	bpPb "gitlab.medzdrav.ru/prototype/proto/bp"
+	"gitlab.medzdrav.ru/prototype/proto/config"
 	servPb "gitlab.medzdrav.ru/prototype/proto/services"
 	sessionPb "gitlab.medzdrav.ru/prototype/proto/sessions"
 	taskPb "gitlab.medzdrav.ru/prototype/proto/tasks"
@@ -16,7 +16,7 @@ type BpService interface {
 }
 
 type ConfigService interface {
-	Get() (*kit.Config, error)
+	Get() (*config.Config, error)
 }
 
 type BalanceService interface {

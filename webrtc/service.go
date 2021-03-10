@@ -2,6 +2,7 @@ package webrtc
 
 import (
 	"context"
+	"fmt"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/stan"
@@ -10,6 +11,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/webrtc/domain/impl"
 	"gitlab.medzdrav.ru/prototype/webrtc/grpc"
 	"gitlab.medzdrav.ru/prototype/webrtc/jsonrpc"
+	"gitlab.medzdrav.ru/prototype/webrtc/logger"
 	"gitlab.medzdrav.ru/prototype/webrtc/meta"
 	"gitlab.medzdrav.ru/prototype/webrtc/repository/adapters/config"
 	"gitlab.medzdrav.ru/prototype/webrtc/repository/adapters/sessions"
@@ -35,7 +37,7 @@ func New() service.Service {
 	s.configAdapter = config.NewAdapter()
 	s.configService = s.configAdapter.GetService()
 
-	s.queue = stan.New()
+	s.queue = stan.New(logger.LF())
 	s.storageAdapter = storage.NewAdapter()
 
 	s.sessionsAdapter = sessions.NewAdapter()
@@ -45,42 +47,52 @@ func New() service.Service {
 	return s
 }
 
+func (s *serviceImpl) GetCode() string {
+	return meta.ServiceCode
+}
+
 func (s *serviceImpl) Init(ctx context.Context) error {
 
-	if err := s.configAdapter.Init(); err != nil {
+	if err := s.configAdapter.Init(true); err != nil {
 		return err
 	}
 
-	c, err := s.configService.Get(ctx)
+	cfg, err := s.configService.Get(ctx)
 	if err != nil {
 		return err
 	}
 
-	if err := s.storageAdapter.Init(c); err != nil {
+	if srvCfg, ok := cfg.Services[meta.ServiceCode]; ok {
+		logger.Logger.SetLevel(srvCfg.Log.Level)
+	} else {
+		return fmt.Errorf("service config isn't specified")
+	}
+
+	if err := s.storageAdapter.Init(cfg); err != nil {
 		return err
 	}
 
-	if err := s.sessionsAdapter.Init(c); err != nil {
+	if err := s.sessionsAdapter.Init(cfg); err != nil {
 		return err
 	}
 
 	if err := s.queue.Open(ctx, meta.ServiceCode+meta.NodeId, &queue.Options{
-		Url:       c.Nats.Url,
-		ClusterId: c.Nats.ClusterId,
+		Url:       cfg.Nats.Url,
+		ClusterId: cfg.Nats.ClusterId,
 	}); err != nil {
 		return err
 	}
 
-	if err := s.webrtcService.Init(ctx, c); err != nil {
+	if err := s.webrtcService.Init(ctx, cfg); err != nil {
 		return err
 	}
 
 	s.grpc = grpc.New(s.webrtcService)
-	if err := s.grpc.Init(c); err != nil {
+	if err := s.grpc.Init(cfg); err != nil {
 		return err
 	}
 
-	s.http = kitHttp.NewHttpServer(c.Webrtc.Signal.Host, c.Webrtc.Signal.Port, "", "")
+	s.http = kitHttp.NewHttpServer(cfg.Webrtc.Signal.Host, cfg.Webrtc.Signal.Port, "", "", logger.LF())
 
 	s.jsonRpc = jsonrpc.New(s.http, s.sessionsAdapter.GetService(), s.webrtcService)
 

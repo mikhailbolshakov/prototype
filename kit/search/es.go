@@ -27,17 +27,20 @@ type Search interface {
 
 type esImpl struct {
 	client *elastic.Client
+	logger log.CLoggerFunc
 }
 
-func NewEs(url string, trace bool) (Search, error) {
+func NewEs(url string, trace bool, logger log.CLoggerFunc) (Search, error) {
 
-	l := log.L().Cmp("es").Mth("new").F(log.FF{"url": url})
+	s := &esImpl{
+		logger: logger,
+	}
 
-	s := &esImpl{}
+	l := s.l().Mth("new").F(log.FF{"url": url})
 
 	opts := []elastic.ClientOptionFunc{elastic.SetURL(url)}
 	if trace {
-		opts = append(opts, elastic.SetTraceLog(log.GetLogger()))
+		opts = append(opts, elastic.SetTraceLog(logger()))
 	}
 
 	cl, err := elastic.NewClient(opts...)
@@ -47,6 +50,10 @@ func NewEs(url string, trace bool) (Search, error) {
 	s.client = cl
 	l.Inf("ok")
 	return s, nil
+}
+
+func (s *esImpl) l() log.CLogger {
+	return s.logger().Cmp("es")
 }
 
 const (
@@ -68,7 +75,7 @@ func (s *esImpl) createIndex(index string, mapping *Mapping) error {
 	}
 }}`
 
-	l := log.L().Cmp("es").Mth("create-index")
+	l := s.l().Mth("create-index")
 
 	// here is a trick with closure to put commas correctly (avoid comma after the last item)
 	isLast := func() func() bool {
@@ -105,7 +112,7 @@ func (s *esImpl) createIndex(index string, mapping *Mapping) error {
 
 func (s *esImpl) CreateIndexIfNotExists(index string, mapping *Mapping) error {
 
-	l := log.L().Cmp("es").Mth("create-index")
+	l := s.l().Mth("create-index")
 
 	exists, err := s.client.IndexExists(index).Do(context.Background())
 	if err != nil {
@@ -123,7 +130,7 @@ func (s *esImpl) CreateIndexIfNotExists(index string, mapping *Mapping) error {
 
 func (s *esImpl) Index(index string, id string, data interface{}) error {
 
-	log.L().Cmp("es").Mth("indexation").F(log.FF{"index": index, "id": id}).Dbg().Trc(kit.Json(data))
+	s.l().Mth("indexation").F(log.FF{"index": index, "id": id}).Dbg().Trc(kit.Json(data))
 
 	_, err := s.client.Index().
 		Index(index).
@@ -141,7 +148,7 @@ func (s *esImpl) IndexAsync(index string, id string, data interface{}) {
 
 	go func() {
 
-		l := log.L().Cmp("es").Mth("indexation").F(log.FF{"index": index, "id": id}).Dbg().Trc(kit.Json(data))
+		l := s.l().Mth("indexation").F(log.FF{"index": index, "id": id}).Dbg().Trc(kit.Json(data))
 
 		_, err := s.client.Index().
 			Index(index).
