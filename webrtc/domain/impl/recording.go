@@ -20,10 +20,12 @@ import (
 	"path"
 )
 
+const RECORDING_PEER_CODE = "avp"
+
 type recordingIml struct {
-	cfg       *config.Config
-	sfuClient sfu.SFUClient
-	webrtc    domain.WebrtcService
+	cfg         *config.Config
+	sfuClient   sfu.SFUClient
+	webrtc      domain.WebrtcService
 }
 
 type webmSaverRoomRecorderImpl struct {
@@ -268,17 +270,18 @@ func (r *recordingIml) NewRoomRecorder(ctx context.Context, roomId string) (doma
 	ctx, cancel := context.WithCancel(ctx)
 
 	// create sfu-peer
-	peer := r.webrtc.NewPeer(ctx, "avp", "avp")
+	peer := r.webrtc.NewPeer(ctx, RECORDING_PEER_CODE, RECORDING_PEER_CODE)
 
 	// create avp-peer
 	avpPeer := avpCstm.NewAvpPeer(roomId, r.cfg.Webrtc.Avp, r.createWebmSaver())
 
 	avpPeer.OnClose(func() {
 		l.Clone().F(log.FF{"peer": "avp", "event": "on-close"}).Dbg("on close")
+		peer.Close(ctx)
 		cancel()
 	})
 
-	peer.OnICEConnectionStateChange( func(c webrtc.ICEConnectionState) {
+	peer.OnICEConnectionStateChange(func(c webrtc.ICEConnectionState) {
 		l.Clone().F(log.FF{"peer": peer.GetUsername(), "event": "on-ice-state"}).Dbg(c)
 		avpPeer.OnIceConnectionStateChanged(c)
 	})

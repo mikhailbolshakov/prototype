@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	log "github.com/pion/ion-log"
@@ -13,6 +14,7 @@ import (
 	"github.com/pion/webrtc/v3/pkg/media"
 	"github.com/pion/webrtc/v3/pkg/media/ivfwriter"
 	"github.com/pion/webrtc/v3/pkg/media/oggwriter"
+	webrtcApi "gitlab.medzdrav.ru/prototype/api/public/webrtc"
 	"strings"
 	//_ "github.com/pion/mediadevices/pkg/driver/audiotest"
 	_ "github.com/pion/mediadevices/pkg/driver/camera"     // This is required to register camera adapter
@@ -35,7 +37,7 @@ func (h *TestHelper) WebrtcWs(sessionId, roomId string) (*websocket.Conn, chan s
 
 type peer struct {
 	id string
-	c *sdk.Client
+	c  *sdk.Client
 }
 
 func (p *peer) save(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
@@ -255,6 +257,30 @@ func sender(sid, peer string) {
 		} else {
 			break // only publish first track, thanks
 		}
+	}
+
+}
+
+func (h *TestHelper) CreateRoom(channelId string) (*webrtcApi.Room, error) {
+
+	rq := &webrtcApi.CreateRoomRequest{ChannelId: channelId}
+	rqb, _ := json.Marshal(rq)
+	rs, err := h.POST(fmt.Sprintf("%s/api/rooms", BASE_URL), rqb)
+	if err != nil {
+		return nil, err
+	} else {
+
+		var room *webrtcApi.Room
+		err = json.Unmarshal(rs, &room)
+		if err != nil {
+			return nil, err
+		}
+
+		if room == nil || room.Id == "" {
+			return nil, fmt.Errorf("task invalid")
+		}
+
+		return room, nil
 	}
 
 }

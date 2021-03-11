@@ -212,4 +212,4 @@ services:
       # read-only host
       host-ro: localhost
     log:
-      level: trace
+      level: debug

@@ -4,25 +4,31 @@ import (
 	"context"
 	"github.com/pion/ion-sfu/pkg/sfu"
 	"github.com/pion/webrtc/v3"
+	"gitlab.medzdrav.ru/prototype/kit"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
 	"gitlab.medzdrav.ru/prototype/webrtc/logger"
 )
 
 type peerImpl struct {
+	peerId                       string
 	userId                       string
 	username                     string
+	roomId                       string // roomId - currently joined room (there couldn't be more then one room for the same peer, right ?)
 	sfuPeer                      *sfu.Peer
 	onOfferEv                    domain.OnOfferEvent
 	onIceCandidateEv             domain.OnIceCandidateEvent
 	onIceConnectionStateChangeEv domain.OnICEConnectionStateChangeEvent
+	roomService                  domain.RoomService
 }
 
-func newPeer(ctx context.Context, sessionProvider sfu.SessionProvider, userId, username string) domain.Peer {
+func newPeer(ctx context.Context, sessionProvider sfu.SessionProvider, roomService domain.RoomService, userId, username string) domain.Peer {
 
 	p := &peerImpl{
-		userId: userId,
-		username: username,
+		peerId:      kit.NewId(),
+		userId:      userId,
+		username:    username,
+		roomService: roomService,
 	}
 
 	sfuPeer := sfu.NewPeer(sessionProvider)
@@ -38,7 +44,7 @@ func newPeer(ctx context.Context, sessionProvider sfu.SessionProvider, userId, u
 }
 
 func (p *peerImpl) l() log.CLogger {
-	return logger.L().Cmp("webrtc-peer")
+	return logger.L().Cmp("webrtc-peer").F(log.FF{"peer": p.sfuPeer.ID()})
 }
 
 func (p *peerImpl) onOffer(o *webrtc.SessionDescription) {
@@ -66,7 +72,7 @@ func (p *peerImpl) Join(ctx context.Context, roomId string, offer *webrtc.Sessio
 
 	l := p.l().Mth("peer-join").F(log.FF{"room": roomId, "usr": p.userId}).Dbg().TrcF("%v", *offer)
 
-	err := p.sfuPeer.Join(roomId, p.userId)
+	err := p.sfuPeer.Join(roomId, p.peerId)
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +82,14 @@ func (p *peerImpl) Join(ctx context.Context, roomId string, offer *webrtc.Sessio
 		return nil, err
 	}
 	l.F(log.FF{"answer": answer}).Trc()
+
+	// persistence
+	_, err = p.roomService.Join(ctx, roomId, p.userId, p.username, p.peerId)
+	if err != nil {
+		return nil, err
+	}
+
+	p.roomId = roomId
 
 	return answer, nil
 }
@@ -96,8 +110,19 @@ func (p *peerImpl) Trickle(candidate webrtc.ICECandidateInit, target int) error 
 }
 
 func (p *peerImpl) Close(ctx context.Context) {
-	p.l().Mth("peer-close").Dbg()
-	p.sfuPeer.Close()
+
+	l := p.l().Mth("peer-close").Dbg()
+
+	if err := p.sfuPeer.Close(); err != nil {
+		l.E(err).St().Err("sfu close")
+	}
+
+	if p.roomId != "" {
+		if _, err := p.roomService.Leave(ctx, p.roomId, p.peerId); err != nil {
+			l.E(err).St().Err("persistence leave")
+		}
+	}
+
 }
 
 func (p *peerImpl) OnOffer(e domain.OnOfferEvent) {

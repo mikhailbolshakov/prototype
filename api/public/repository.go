@@ -8,6 +8,7 @@ import (
 	sessionPb "gitlab.medzdrav.ru/prototype/proto/sessions"
 	taskPb "gitlab.medzdrav.ru/prototype/proto/tasks"
 	userPb "gitlab.medzdrav.ru/prototype/proto/users"
+	webrtcPb "gitlab.medzdrav.ru/prototype/proto/webrtc"
 	"time"
 )
 
@@ -72,4 +73,9 @@ type SessionsService interface {
 type SessionMonitor interface {
 	UserSessions(ctx context.Context, userId string) (*sessionPb.UserSessionsInfo, error)
 	TotalSessions(ctx context.Context) (*sessionPb.TotalSessionInfo, error)
+}
+
+type RoomService interface {
+	Create(ctx context.Context, channelId string) (*webrtcPb.Room, error)
+	Get(ctx context.Context, roomId string) (*webrtcPb.Room, error)
 }

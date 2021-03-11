@@ -39,6 +39,14 @@
             </div>
         </div>
       </p>
+      <p>
+        <b>room:</b>
+      <div class="row">
+        <div class="col-12">
+          <input type="text" id="room"/>
+        </div>
+      </div>
+      </p>
 
       <div class="row" id="start-btns">
         <div class="col-12">
@@ -167,8 +175,9 @@
       const start = () => {
 
         let sid = document.getElementById("sid").value;
+        let room = document.getElementById("room").value;
 
-        const signalLocal = new Signal.IonSFUJSONRPCSignal("ws://localhost:8002/webrtc?session=" + sid + "&room=123");
+        const signalLocal = new Signal.IonSFUJSONRPCSignal("ws://localhost:8002/webrtc?session=" + sid + "&room=" + room);
         const clientLocal = new IonSDK.Client(signalLocal, config);
 
         clientLocal.ontrack = (track, stream) => {
@@ -191,7 +200,7 @@
           }
         };
 
-        signalLocal.onopen = () => clientLocal.join("123");
+        signalLocal.onopen = () => clientLocal.join(room);
 
         IonSDK.LocalStream.getUserMedia({
           resolution: "vga",

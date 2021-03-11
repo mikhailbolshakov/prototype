@@ -12,6 +12,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/api/public/services"
 	"gitlab.medzdrav.ru/prototype/api/public/tasks"
 	"gitlab.medzdrav.ru/prototype/api/public/users"
+	webrtc2 "gitlab.medzdrav.ru/prototype/api/public/webrtc"
 	bpRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/bp"
 	chatRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/chat"
 	configAdapter "gitlab.medzdrav.ru/prototype/api/repository/adapters/config"
@@ -19,6 +20,7 @@ import (
 	"gitlab.medzdrav.ru/prototype/api/repository/adapters/sessions"
 	tasksRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/tasks"
 	usersRep "gitlab.medzdrav.ru/prototype/api/repository/adapters/users"
+	"gitlab.medzdrav.ru/prototype/api/repository/adapters/webrtc"
 	kitHttp "gitlab.medzdrav.ru/prototype/kit/http"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/kit/queue/listener"
@@ -42,6 +44,8 @@ type serviceImpl struct {
 	bpService       public.BpService
 	configAdapter   configAdapter.Adapter
 	configService   public.ConfigService
+	roomService     public.RoomService
+	roomAdapter     webrtc.Adapter
 	queue           queue.Queue
 	queueListener   listener.QueueListener
 	sessionsAdapter sessions.Adapter
@@ -73,6 +77,9 @@ func New() service.Service {
 	s.sessionsAdapter = sessions.NewAdapter()
 	s.sessionsService = s.sessionsAdapter.GetService()
 
+	s.roomAdapter = webrtc.NewAdapter()
+	s.roomService = s.roomAdapter.GetService()
+
 	s.queue = stan.New(logger.LF())
 	s.queueListener = listener.NewQueueListener(s.queue, logger.LF())
 
@@ -98,13 +105,15 @@ func (s *serviceImpl) initHttpServer(ctx context.Context, c *config.Config) erro
 	bpController := bp.NewController(s.bpService)
 	chatController := chat.NewController(s.chatService)
 	monitorController := monitoring.NewController(s.sessionsAdapter.GetMonitor())
+	webrtcController := webrtc2.NewController(s.roomService)
 
 	s.http.SetRouters(users.NewRouter(userController),
 		tasks.NewRouter(taskController),
 		services.NewRouter(servController),
 		bp.NewRouter(bpController),
 		chat.NewRouter(chatController),
-		monitoring.NewRouter(monitorController))
+		monitoring.NewRouter(monitorController),
+		webrtc2.NewRouter(webrtcController))
 
 	return nil
 }
@@ -158,6 +167,10 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
+	if err := s.roomAdapter.Init(cfg); err != nil {
+		return err
+	}
+
 	if err := s.sessionsAdapter.Init(cfg); err != nil {
 		return err
 	}
@@ -181,5 +194,6 @@ func (s *serviceImpl) Close(context.Context) {
 	s.chatAdapter.Close()
 	s.configAdapter.Close()
 	s.sessionsAdapter.Close()
+	s.roomAdapter.Close()
 	s.http.Close()
 }

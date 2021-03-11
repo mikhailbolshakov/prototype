@@ -24,6 +24,7 @@ type serviceImpl struct {
 	jsonRpc         *jsonrpc.Server
 	configAdapter   config.Adapter
 	configService   domain.ConfigService
+	roomService     domain.RoomService
 	storageAdapter  storage.Adapter
 	webrtcService   domain.WebrtcService
 	queue           queue.Queue
@@ -40,9 +41,10 @@ func New() service.Service {
 	s.queue = stan.New(logger.LF())
 	s.storageAdapter = storage.NewAdapter()
 
+	s.roomService = impl.NewRoomService(s.storageAdapter.GetService())
 	s.sessionsAdapter = sessions.NewAdapter()
 
-	s.webrtcService = impl.NewWebrtcService(s.storageAdapter.GetRoomCoordinator(), s.storageAdapter.GetService(), s.queue)
+	s.webrtcService = impl.NewWebrtcService(s.storageAdapter.GetRoomCoordinator(), s.roomService, s.queue)
 
 	return s
 }
@@ -87,7 +89,7 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	s.grpc = grpc.New(s.webrtcService)
+	s.grpc = grpc.New(s.webrtcService, s.roomService)
 	if err := s.grpc.Init(cfg); err != nil {
 		return err
 	}

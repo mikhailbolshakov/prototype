@@ -1,13 +1,15 @@
 - BusinessProcesses
+    - export to somewhere 
+    - handle lost calls from zeebe which happens just after app starts
 
 - Logging
     - improve logging with Fields and Context + 
-    - setup logging configuration for each service
+    - setup logging configuration for each service +
     - logging to external system (sentry, loki etc.)
     - mdw for tracing all gRPC/HTTP requests
 
 - Translations
-    - study approaches
+    - study approaches 
 
 - Users & Sessions
     - think of moving sessions from Api to a separate service + 
@@ -24,7 +26,7 @@
     - keep alive - close WS server after configured keep alive period of not getting ping message +
 
 - Configuration (config + .env) 
-    - make configuration available before initialization
+    - make configuration available before initialization +
 
 - panic recover
     - decide on which level recover makes sense
@@ -73,9 +75,6 @@
     
 - Prometheus
     - metrics support
-    
-- Processes
-    - handle lost calls from zeebe which happens just after app starts
 
 - Refactoring
     - queue topics must be declared as consts + 
@@ -85,14 +84,16 @@
     - recording + 
     - close rooms gracefully
     - rooms persistence
+    - use redis/nats for discovery. Get rid of etcd
 
 - Deployment
-    - microservices split
-    - prepare Makefile/Dockerfiles
-    - prepare Kuber configs
+    - microservices split +
+    - prepare Makefile/Dockerfiles +
+    - prepare Kuber configs 
     - run app under Skaffold
     - initial configuration (db, chat etc.)
-    - put mattermost to Docker from source (there is an issue with Frontend)
+    - put mattermost to Docker from source (there is an issue with Frontend) +/-
+    - migrations
      
 - Documentation
     - code guide

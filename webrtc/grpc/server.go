@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	sfuPb "github.com/pion/ion-sfu/cmd/signal/grpc/proto"
@@ -11,27 +12,27 @@ import (
 	kitGrpc "gitlab.medzdrav.ru/prototype/kit/grpc"
 	log "gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/proto/config"
+	webrtcPb "gitlab.medzdrav.ru/prototype/proto/webrtc"
 	"gitlab.medzdrav.ru/prototype/webrtc/domain"
 	"gitlab.medzdrav.ru/prototype/webrtc/logger"
 	"gitlab.medzdrav.ru/prototype/webrtc/meta"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"io"
-	"sync"
 )
 
 type Server struct {
 	host, port string
-	// TODO: mutex per stream
-	sync.Mutex
 	*kitGrpc.Server
-	webrtc domain.WebrtcService
+	webrtc      domain.WebrtcService
+	roomService domain.RoomService
 	sfuPb.UnimplementedSFUServer
+	webrtcPb.UnimplementedRoomsServer
 }
 
-func New(domain domain.WebrtcService) *Server {
+func New(webrtc domain.WebrtcService, roomService domain.RoomService) *Server {
 
-	s := &Server{webrtc: domain}
+	s := &Server{webrtc: webrtc, roomService: roomService}
 
 	// grpc server
 	gs, err := kitGrpc.NewServer(meta.ServiceCode, logger.LF())
@@ -43,12 +44,13 @@ func New(domain domain.WebrtcService) *Server {
 	return s
 }
 
-func  (s *Server) Init(c *config.Config) error {
+func (s *Server) Init(c *config.Config) error {
 
 	cfg := c.Services["webrtc"]
 	s.host = cfg.Grpc.Host
 	s.port = cfg.Grpc.Port
 	sfuPb.RegisterSFUServer(s.Srv, s)
+	webrtcPb.RegisterRoomsServer(s.Srv, s)
 	//sfuPb.RegisterSFUServer(s.Srv, sfuServer.NewServer(s.webrtc.GetSFU()))
 
 	return nil
@@ -56,7 +58,7 @@ func  (s *Server) Init(c *config.Config) error {
 
 func (s *Server) ListenAsync() {
 
-	go func () {
+	go func() {
 		err := s.Server.Listen(s.host, s.port)
 		if err != nil {
 			return
@@ -65,8 +67,6 @@ func (s *Server) ListenAsync() {
 }
 
 func (s *Server) streamSend(stream sfuPb.SFU_SignalServer, r *sfuPb.SignalReply) error {
-	s.Lock()
-	defer s.Unlock()
 	return stream.Send(r)
 }
 
@@ -127,7 +127,7 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 					ll.E(err).St().Err()
 					return
 				}
-				err = s.streamSend(stream,&sfuPb.SignalReply{
+				err = s.streamSend(stream, &sfuPb.SignalReply{
 					Payload: &sfuPb.SignalReply_Trickle{
 						Trickle: &sfuPb.Trickle{
 							Init:   string(bytes),
@@ -164,7 +164,7 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 				}
 			})
 
-			peer.OnICEConnectionStateChange( func(c webrtc.ICEConnectionState) {
+			peer.OnICEConnectionStateChange(func(c webrtc.ICEConnectionState) {
 				ll := l.Clone().F(log.FF{"event": "on-ice-state", "peer": peer.GetUsername()}).Dbg().TrcF("%v", c)
 
 				err = s.streamSend(stream, &sfuPb.SignalReply{
@@ -342,7 +342,20 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 					return status.Errorf(codes.Unknown, fmt.Sprintf("negotiate error: %v", err))
 				}
 			}
-
 		}
 	}
+}
+
+func (s *Server) Create(ctx context.Context, rq *webrtcPb.CreateRoomRequest) (*webrtcPb.Room, error) {
+
+	room, err := s.roomService.Create(ctx, rq.ChannelId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+	return s.toRoomPb(room), nil
+}
+
+func (s *Server) Get(ctx context.Context, rq *webrtcPb.GetRoomRequest) (*webrtcPb.Room, error) {
+	room:= s.roomService.Get(ctx, rq.Id)
+	return s.toRoomPb(room), nil
 }

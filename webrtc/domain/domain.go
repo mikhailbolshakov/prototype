@@ -5,6 +5,7 @@ import (
 	"github.com/pion/ion-sfu/pkg/sfu"
 	"github.com/pion/webrtc/v3"
 	"gitlab.medzdrav.ru/prototype/proto/config"
+	"time"
 )
 
 type RoomMeta struct {
@@ -49,4 +50,35 @@ type WebrtcService interface {
 	NewPeer(ctx context.Context, userId, username string) Peer
 	GetSFU() *sfu.SFU
 	GetOrCreateRoom(ctx context.Context, roomId string) (*RoomMeta, error)
+}
+
+type RoomParticipants struct {
+	PeerId   string     `json:"peerId"`
+	UserId   string     `json:"userId"`
+	Username string     `json:"username"`
+	JoinedAt time.Time  `json:"joinedAt"`
+	LeaveAt  *time.Time `json:"leaveAt"`
+}
+
+type RoomDetails struct {
+	ChannelId    string              `json:"channelId"`
+	Participants []*RoomParticipants `json:"participants"`
+}
+
+type Room struct {
+	Id         string       `json:"id"`
+	OpenedAt   *time.Time   `json:"openedAt"`
+	ClosedAt   *time.Time   `json:"closedAt"`
+	Details    *RoomDetails `json:"details"`
+	CreatedAt  time.Time    `json:"createdAt"`
+	ModifiedAt time.Time    `json:"modifiedAt"`
+	DeletedAt  *time.Time   `json:"deletedAt,omitempty"`
+}
+
+type RoomService interface {
+	Create(ctx context.Context, channelId string) (*Room, error)
+	Get(ctx context.Context, roomId string) *Room
+	Join(ctx context.Context, roomId, userId, username, peerId string) (*Room, error)
+	Leave(ctx context.Context, roomId, peerId string) (*Room, error)
+	Close(ctx context.Context, roomId string) (*Room, error)
 }

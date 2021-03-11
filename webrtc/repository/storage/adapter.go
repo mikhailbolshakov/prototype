@@ -11,7 +11,7 @@ import (
 
 type Adapter interface {
 	Init(c *config.Config) error
-	GetService() domain.WebrtcStorage
+	GetService() domain.RoomStorage
 	GetRoomCoordinator() domain.RoomCoordinator
 	Close()
 }
@@ -86,7 +86,7 @@ func (a *adapterImpl) Init(cfg *config.Config) error {
 	return nil
 }
 
-func (a *adapterImpl) GetService() domain.WebrtcStorage {
+func (a *adapterImpl) GetService() domain.RoomStorage {
 	return a.storageImpl
 }
 

@@ -1,19 +1,18 @@
 #### Development
 
-- rename `./.env-default` to `./.env file`
+- rename `./.env-default` to `./.env`
 - setup these variables in your environment by either explicitly setting in IDE or by running the shell command `source .env`
 - check and configure `./config.yml` properly (make sure your have all infrastructure components up and running)
 - run ./cmd/main
 
 ##### Build
 
-````
-make build
-````
+``make build``
 
 ##### Docker
 
-- rename `./.env-default` to `./.env file` for all the services
+- create a docker network `mm` or make sure it has been created before
+- rename `./.env-default` to `./.env` for all the services
     - ./api
     - ./bp
     - ./chat

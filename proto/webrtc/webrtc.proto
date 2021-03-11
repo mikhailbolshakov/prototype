@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package webrtc;
+option go_package = "proto/webrtc";
+
+import "google/protobuf/timestamp.proto";
+
+message RoomParticipants {
+  string UserId = 1;
+  string Username = 2;
+  google.protobuf.Timestamp JoinedAt = 3;
+  google.protobuf.Timestamp LeaveAt = 4;
+}
+
+message RoomDetails {
+  string ChannelId = 1;
+  repeated RoomParticipants Participants = 2;
+}
+
+message Room {
+  string Id = 1;
+  RoomDetails Details = 2;
+  google.protobuf.Timestamp OpenedAt = 3;
+  google.protobuf.Timestamp ClosedAt = 4;
+}
+
+message CreateRoomRequest {
+  string ChannelId = 1;
+}
+
+message GetRoomRequest {
+  string Id = 1;
+}
+
+service Rooms {
+  rpc Create(CreateRoomRequest) returns (Room) {}
+  rpc Get(GetRoomRequest) returns (Room) {}
+}
+
+
+

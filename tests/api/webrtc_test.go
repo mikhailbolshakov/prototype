@@ -88,10 +88,10 @@ func Test_Webrtc_jsonrpc_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	user3, err := helper.CreateClient()
-	if err != nil {
-		t.Fatal(err)
-	}
+	//user3, err := helper.CreateClient()
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
 
 	_ = helper.Logout(TEST_USER)
 
@@ -107,11 +107,18 @@ func Test_Webrtc_jsonrpc_Success(t *testing.T) {
 	}
 	log.Printf("sid-2: %s", s2)
 
-	s3, _, err := helper.Login(user3.Username)
+	//s3, _, err := helper.Login(user3.Username)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//log.Printf("sid-3: %s", s3)
+
+	room, err := helper.CreateRoom("1234")
 	if err != nil {
 		t.Fatal(err)
 	}
-	log.Printf("sid-3: %s", s3)
+
+	log.Printf("%s", kit.MustJson(room))
 
 	select{}
 }

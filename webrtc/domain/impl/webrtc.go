@@ -2,10 +2,12 @@ package impl
 
 import (
 	"context"
+	"fmt"
 	"github.com/pion/ion-sfu/pkg/buffer"
 	"github.com/pion/ion-sfu/pkg/middlewares/datachannel"
 	"github.com/pion/ion-sfu/pkg/sfu"
 	"gitlab.medzdrav.ru/prototype/kit/common"
+	kitContext "gitlab.medzdrav.ru/prototype/kit/context"
 	"gitlab.medzdrav.ru/prototype/kit/log"
 	"gitlab.medzdrav.ru/prototype/kit/queue"
 	"gitlab.medzdrav.ru/prototype/proto/config"
@@ -28,7 +30,7 @@ type webrtcImpl struct {
 	sync.RWMutex
 	common.BaseService
 	sfu             *sfu.SFU
-	storage         domain.WebrtcStorage
+	roomService     domain.RoomService
 	sfuTransportCfg sfu.WebRTCTransportConfig
 	rooms           map[string]*room
 	roomLeases      map[string]context.CancelFunc
@@ -39,13 +41,13 @@ type webrtcImpl struct {
 	recording       domain.Recording
 }
 
-func NewWebrtcService(roomCoord domain.RoomCoordinator, storage domain.WebrtcStorage, queue queue.Queue) domain.WebrtcService {
+func NewWebrtcService(roomCoord domain.RoomCoordinator, roomService domain.RoomService, queue queue.Queue) domain.WebrtcService {
 
 	s := &webrtcImpl{
-		storage:         storage,
-		rooms:           make(map[string]*room),
-		roomCoord:       roomCoord,
-		roomLeases:      make(map[string]context.CancelFunc),
+		roomService: roomService,
+		rooms:       make(map[string]*room),
+		roomCoord:   roomCoord,
+		roomLeases:  make(map[string]context.CancelFunc),
 	}
 	s.BaseService = common.BaseService{Queue: queue}
 
@@ -77,7 +79,7 @@ func (w *webrtcImpl) GetSFU() *sfu.SFU {
 }
 
 func (w *webrtcImpl) NewPeer(ctx context.Context, userId, username string) domain.Peer {
-	return newPeer(ctx, w.sfu, userId, username)
+	return newPeer(ctx, w.sfu, w.roomService, userId, username)
 	//return newPeer(ctx, w)
 }
 
@@ -115,7 +117,7 @@ func (w *webrtcImpl) createLocal(ctx context.Context, roomId string, meta *domai
 	r := &room{
 		id: roomId,
 		//sfuSession: sfuS,
-		meta:     meta,
+		meta: meta,
 	}
 
 	w.Lock()
@@ -129,6 +131,14 @@ func (w *webrtcImpl) createLocal(ctx context.Context, roomId string, meta *domai
 func (w *webrtcImpl) GetOrCreateRoom(ctx context.Context, roomId string) (*domain.RoomMeta, error) {
 
 	l := w.l().C(ctx).Mth("get-or-create-room").F(log.FF{"room": roomId}).Dbg()
+
+	// get persistent room
+	rm := w.roomService.Get(ctx, roomId)
+	if rm == nil || rm.ClosedAt != nil {
+		err := fmt.Errorf("no opened room found")
+		l.E(err).St().Err()
+		return nil, err
+	}
 
 	// check if there is a local room
 	if r, ok := w.getLocalRoom(roomId); ok {
@@ -197,6 +207,13 @@ func (w *webrtcImpl) onRoomClosed(roomId string) {
 
 	if _, ok := w.rooms[roomId]; ok {
 		delete(w.rooms, roomId)
+	}
+
+	ctx := kitContext.NewRequestCtx().WithNewRequestId().Webrtc().ToContext(nil)
+	_, err := w.roomService.Close(ctx, roomId)
+	if err != nil {
+		l.E(err).St().Err("persistence error")
+		return
 	}
 
 	l.Dbg("closed")

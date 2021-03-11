@@ -125,7 +125,11 @@ func (cl *clogger) Clone() CLogger {
 
 func (cl *clogger) C(ctx context.Context) CLogger {
 	if r, ok := kitContext.Request(ctx); ok {
-		cl.F(FF{"rid": r.GetRequestId(), "un": r.GetUsername(), "cl": r.GetClientType()})
+		cl.F(FF{"ctx-cl": r.GetClientType(),
+				"ctx-rid": r.GetRequestId(),
+				"ctx-un": r.GetUsername(),
+				"ctx-sid": r.GetSessionId(),
+				})
 	}
 	return cl
 }
