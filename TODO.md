@@ -55,7 +55,6 @@
     - monitoring of tools (zeebe, Postgre, Nats, etc)
 
 - Validation 
-    - study go-playground/validator
     - implement basic validations for business services
     
 - Integrations with external systems
