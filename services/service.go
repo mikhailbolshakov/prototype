@@ -54,7 +54,7 @@ func New() service.Service {
 }
 
 func (s *serviceImpl) GetCode() string {
-	return meta.ServiceCode
+	return meta.Meta.ServiceCode()
 }
 
 func (s *serviceImpl) Init(ctx context.Context) error {
@@ -69,7 +69,7 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 	}
 
 	// set logging params
-	if srvCfg, ok := cfg.Services[meta.ServiceCode]; ok {
+	if srvCfg, ok := cfg.Services[meta.Meta.ServiceCode()]; ok {
 		logger.Logger.SetLevel(srvCfg.Log.Level)
 	} else {
 		return fmt.Errorf("service config isn't specified")
@@ -91,7 +91,7 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, meta.ServiceCode, &queue.Options{
+	if err := s.queue.Open(ctx, meta.Meta.InstanceId(), &queue.Options{
 		Url:       cfg.Nats.Url,
 		ClusterId: cfg.Nats.ClusterId,
 	}); err != nil {

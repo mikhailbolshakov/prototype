@@ -87,7 +87,7 @@ func (w *webrtcImpl) createMeta(roomId string) *domain.RoomMeta {
 	return &domain.RoomMeta{
 		Id:       roomId,
 		Endpoint: meta.Endpoint,
-		NodeId:   meta.NodeId,
+		NodeId:   meta.Meta.InstanceId(),
 	}
 }
 

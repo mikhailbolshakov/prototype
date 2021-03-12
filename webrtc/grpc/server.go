@@ -35,7 +35,7 @@ func New(webrtc domain.WebrtcService, roomService domain.RoomService) *Server {
 	s := &Server{webrtc: webrtc, roomService: roomService}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer(meta.ServiceCode, logger.LF())
+	gs, err := kitGrpc.NewServer(meta.Meta.ServiceCode(), logger.LF())
 	if err != nil {
 		panic(err)
 	}
@@ -197,7 +197,7 @@ func (s *Server) Signal(stream sfuPb.SFU_SignalServer) error {
 			}
 
 			// TODO: redirect
-			if roomMeta.NodeId != meta.NodeId {
+			if roomMeta.NodeId != meta.Meta.InstanceId() {
 				l.WarnF("redirecting to %s node", roomMeta.NodeId)
 				return nil
 			}

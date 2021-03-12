@@ -85,7 +85,7 @@ func (s *Server) Set(noAuthRouter *mux.Router, upgrader *websocket.Upgrader) {
 			return
 		}
 
-		if roomMeta.NodeId != meta.NodeId {
+		if roomMeta.NodeId != meta.Meta.InstanceId() {
 			endpoint := fmt.Sprintf("%s/webrtc?session=%s&room=%s", roomMeta.Endpoint, sid, roomMeta.Id)
 			l.DbgF("redirecting to %s", endpoint)
 			u, err := url.Parse(endpoint)

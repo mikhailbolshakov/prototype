@@ -7,6 +7,7 @@ import (
 	pb "gitlab.medzdrav.ru/prototype/proto/users"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
 	"gitlab.medzdrav.ru/prototype/tasks/logger"
+	"go.uber.org/atomic"
 	"sync"
 	"time"
 )
@@ -17,20 +18,16 @@ type assignmentTask struct {
 	quit     chan struct{}
 	cancel   context.CancelFunc
 	ctx      context.Context
-	run      bool
+	run      *atomic.Bool
 	sync.Mutex
 }
 
 func (t *assignmentTask) setRun(v bool) {
-	t.Lock()
-	defer t.Unlock()
-	t.run = v
+	t.run.Store(v)
 }
 
 func (t *assignmentTask) getRun() bool {
-	t.Lock()
-	defer t.Unlock()
-	return t.run
+	return t.run.Load()
 }
 
 func NewAssignmentDaemon(cfgService domain.ConfigService,
@@ -257,6 +254,7 @@ func (d *daemonImpl) Init(ctx context.Context) error {
 				quit:     make(chan struct{}),
 				ctx:      ctx,
 				cancel:   cancel,
+				run:      atomic.NewBool(false),
 			})
 		}
 

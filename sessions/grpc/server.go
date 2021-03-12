@@ -24,7 +24,7 @@ func New(domain domain.SessionsService, monitor domain.SessionMonitor) *Server {
 	s := &Server{domain: domain, monitor: monitor}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer(meta.ServiceCode, logger.LF())
+	gs, err := kitGrpc.NewServer(meta.Meta.ServiceCode(), logger.LF())
 	if err != nil {
 		panic(err)
 	}

@@ -13,6 +13,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/joho/godotenv v1.3.0
 	github.com/mitchellh/mapstructure v1.4.1
+	github.com/nats-io/graft v0.0.0-20200605173148-348798afea05
 	github.com/nats-io/nats-streaming-server v0.21.1 // indirect
 	github.com/nats-io/nats.go v1.10.0
 	github.com/nats-io/stan.go v0.8.3

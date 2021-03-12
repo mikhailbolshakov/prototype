@@ -1,6 +1,10 @@
 package meta
 
-const ServiceCode = "users"
-var NodeId = ServiceCode + "-1"
+import (
+	"gitlab.medzdrav.ru/prototype/kit"
+	"gitlab.medzdrav.ru/prototype/kit/service"
+)
+
+var Meta = service.NewMetaInfo("users", kit.UUID(4))
 
 

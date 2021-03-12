@@ -95,8 +95,10 @@ func (s *serviceImpl) GrpcSettings(context.Context) *config.Grpc {
 	s.RLock()
 	defer s.RUnlock()
 
+	grpcCfg := s.config.Services["cfg"].Grpc
+
 	return &config.Grpc{
-		Port: s.config.Services["cfg"].Grpc.Port,
-		Host: s.config.Services["cfg"].Grpc.Host,
+		Port: grpcCfg.Port,
+		Host: grpcCfg.Host,
 	}
 }

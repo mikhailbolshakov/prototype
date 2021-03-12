@@ -18,6 +18,7 @@ import (
 )
 
 type serviceImpl struct {
+	service.Cluster
 	taskService       domain.TaskService
 	taskConfigService domain.ConfigService
 	assignTasksDaemon domain.AssignmentDaemon
@@ -33,7 +34,9 @@ type serviceImpl struct {
 
 func New() service.Service {
 
-	s := &serviceImpl{}
+	s := &serviceImpl{
+		Cluster: service.NewCluster(logger.LF(), meta.Meta),
+	}
 
 	s.queue = stan.New(logger.LF())
 	s.storageAdapter = storage.NewAdapter()
@@ -63,7 +66,7 @@ func New() service.Service {
 }
 
 func (s *serviceImpl) GetCode() string {
-	return meta.ServiceCode
+	return meta.Meta.ServiceCode()
 }
 
 func (s *serviceImpl) Init(ctx context.Context) error {
@@ -78,10 +81,16 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 	}
 
 	// set logging params
-	if srvCfg, ok := cfg.Services[meta.ServiceCode]; ok {
+	srvCfg, ok := cfg.Services[meta.Meta.ServiceCode()]
+	if ok {
 		logger.Logger.SetLevel(srvCfg.Log.Level)
 	} else {
 		return fmt.Errorf("service config isn't specified")
+	}
+
+	// init cluster
+	if err := s.Cluster.Init(srvCfg.Cluster.Size, cfg.Nats.Url, s.onClusterLeaderChanged(ctx)); err != nil {
+		return err
 	}
 
 	if err := s.storageAdapter.Init(cfg); err != nil {
@@ -100,7 +109,7 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, meta.NodeId, &queue.Options{
+	if err := s.queue.Open(ctx, meta.Meta.InstanceId(), &queue.Options{
 		Url:       cfg.Nats.Url,
 		ClusterId: cfg.Nats.ClusterId,
 	}); err != nil {
@@ -115,23 +124,46 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 
 }
 
+func (s *serviceImpl) onClusterLeaderChanged(ctx context.Context) service.OnLeaderChangedEvent {
+
+	// if the current node is getting a leader, run daemons
+	return func(l bool) {
+		if l {
+			s.startDaemons(ctx)
+		}
+	}
+
+}
+
+func (s *serviceImpl) startDaemons(ctx context.Context) {
+	s.assignTasksDaemon.Run(ctx)
+	s.scheduler.StartAsync(ctx)
+}
+
 func (s *serviceImpl) ListenAsync(ctx context.Context) error {
 
+	// start cluster
+	if err := s.Cluster.Start(); err != nil {
+		return err
+	}
+
+	// serve gRPC connection
 	s.grpc.ListenAsync()
-	//s.assignTasksDaemon.Run(ctx)
-	//s.scheduler.StartAsync(ctx)
+
+	// start daemon (on leader only)
+	if meta.Meta.Leader() {
+		s.startDaemons(ctx)
+	}
 
 	return nil
 }
 
 func (s *serviceImpl) Close(ctx context.Context) {
-
+	s.Cluster.Close()
 	s.configAdapter.Close()
-
 	_ = s.assignTasksDaemon.Stop(ctx)
 	s.chatAdapter.Close()
 	s.usersAdapter.Close()
-
 	_ = s.queue.Close()
 	s.storageAdapter.Close()
 	s.grpc.Close()

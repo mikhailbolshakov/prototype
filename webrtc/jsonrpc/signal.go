@@ -69,7 +69,7 @@ func (s *signal) join(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Re
 	}
 
 	// Redirect to another node
-	if meta.NodeId != roomMeta.NodeId {
+	if meta.Meta.InstanceId() != roomMeta.NodeId {
 		payload, _ := json.Marshal(roomMeta)
 		// room exists on other node, let client know
 		l.Warn("redirect")

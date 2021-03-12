@@ -24,7 +24,7 @@ func New(domain domain.TaskService) *Server {
 	s := &Server{domain: domain}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer(meta.ServiceCode, logger.LF())
+	gs, err := kitGrpc.NewServer(meta.Meta.ServiceCode(), logger.LF())
 	if err != nil {
 		panic(err)
 	}

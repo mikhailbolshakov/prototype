@@ -9,7 +9,7 @@ var Logger = log.Init(log.TraceLevel)
 
 func LF() log.CLoggerFunc {
 	return func() log.CLogger {
-		return log.L(Logger).Srv(meta.ServiceCode).Nd(meta.NodeId)
+		return log.L(Logger).Srv(meta.Meta.InstanceId())
 	}
 }
 

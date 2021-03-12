@@ -1,6 +1,6 @@
 - BusinessProcesses
     - export to somewhere 
-    - handle lost calls from zeebe which happens just after app starts
+    - handle lost calls from zeebe which happens just after app starts - the reason is a timer task
 
 - Logging
     - improve logging with Fields and Context + 
@@ -13,14 +13,14 @@
 
 - Users & Sessions
     - think of moving sessions from Api to a separate service + 
-    - reconnect for chat ws connection 
+    - reconnect to chat ws connection 
     - check expiration of a token (depends on what identity provider is going to be used)
     - persistence - do we really need it?
     - cluster mode - broadcast a new session to all available nodes
     - roles and groups
 
 - Socket hub 
-    - gRPC API to send socket messages from app (done through NATS) + 
+    - API to send socket messages from app (done through NATS) + 
     - move to a separate service (now it's in Api) +
     - gracefully close socket connections (currently we got an error)
     - keep alive - close WS server after configured keep alive period of not getting ping message +
@@ -40,7 +40,7 @@
     - suggest a common approach for caching (the current idea is to cache on the storage level and leave it up to storage implementation) 
 
 - Error handling
-    - the main question: do we need a custom type for errors? the main issue is to recognize errors type (code isn't available)
+    - the main question: do we need a custom type for errors? the main issue is to recognize error types (code isn't available)
     
 - API versioning
     - protobuf message versioning
@@ -66,7 +66,7 @@
     - Master-Slave 
     
 - Cluster mode 
-    - support simple leader election based on Etcd
+    - support simple RAFT (leader election) based on NATS +  (done for config and tasks services)
     - gRpc LB
     
 - Mattermost

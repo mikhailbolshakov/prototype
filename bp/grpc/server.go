@@ -24,7 +24,7 @@ func New(bpm bpmKit.Engine) *Server {
 	s := &Server{bpm: bpm}
 
 	// grpc server
-	gs, err := kitGrpc.NewServer(meta.ServiceCode, logger.LF())
+	gs, err := kitGrpc.NewServer(meta.Meta.ServiceCode(), logger.LF())
 	if err != nil {
 		panic(err)
 	}
@@ -35,7 +35,7 @@ func New(bpm bpmKit.Engine) *Server {
 }
 
 func  (s *Server) Init(c *config.Config) error {
-	cfg := c.Services[meta.ServiceCode]
+	cfg := c.Services[meta.Meta.ServiceCode()]
 	s.host = cfg.Grpc.Host
 	s.port = cfg.Grpc.Port
 	return nil

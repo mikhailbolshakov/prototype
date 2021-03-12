@@ -57,7 +57,7 @@ func New() service.Service {
 }
 
 func (s *serviceImpl) GetCode() string {
-	return meta.ServiceCode
+	return meta.Meta.ServiceCode()
 }
 
 func (s *serviceImpl) Init(ctx context.Context) error {
@@ -115,7 +115,7 @@ func (s *serviceImpl) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.queue.Open(ctx, meta.NodeId, &queue.Options{
+	if err := s.queue.Open(ctx, meta.Meta.InstanceId(), &queue.Options{
 		Url:       c.Nats.Url,
 		ClusterId: c.Nats.ClusterId,
 	}); err != nil {

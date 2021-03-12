@@ -111,6 +111,8 @@ services:
   api:
     log:
       level: trace
+    cluster:
+      size: 1
   chat:
     database:
       dbname: mattermost
@@ -126,6 +128,8 @@ services:
       host: chat
     log:
       level: trace
+    cluster:
+      size: 1
   users:
     database:
       dbname: mattermost
@@ -141,6 +145,8 @@ services:
       host: users
     log:
       level: trace
+    cluster:
+      size: 1
   tasks:
     database:
       dbname: mattermost
@@ -156,6 +162,8 @@ services:
       host: tasks
     log:
       level: trace
+    cluster:
+      size: 1
   services:
     database:
       dbname: mattermost
@@ -171,6 +179,8 @@ services:
       host: services
     log:
       level: trace
+    cluster:
+      size: 1
   bp:
     grpc:
       port: 51055
@@ -183,6 +193,8 @@ services:
       host: config
     log:
       level: trace
+    cluster:
+      size: 1
   sessions:
     grpc:
       port: 51057
@@ -198,6 +210,8 @@ services:
       host-ro: db
     log:
       level: trace
+    cluster:
+      size: 1
   webrtc:
     grpc:
       port: 51058
@@ -213,3 +227,5 @@ services:
       host-ro: db
     log:
       level: trace
+    cluster:
+      size: 1

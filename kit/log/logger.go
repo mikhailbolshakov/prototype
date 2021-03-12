@@ -43,7 +43,7 @@ func Init(level string) *Logger {
 	logger.SetLevel(level)
 	logger.Logrus.SetOutput(os.Stdout)
 	logger.Logrus.SetFormatter(&Formatter{
-		FixedFields:            []string{"service", "node", "protocol", "component", "method"},
+		FixedFields:            []string{"service", "protocol", "component", "method"},
 		TimestampFormat:        "2006-01-02T15:04:05-0700",
 		HideKeysForFixedFields: true,
 		NoColors:               true,
@@ -78,8 +78,7 @@ type CLogger interface {
 	Cmp(c string) CLogger          // Cmp - adds component
 	Mth(m string) CLogger          // Mth - adds method
 	Pr(m string) CLogger           // Pr - adds protocol
-	Srv(s string) CLogger          // Srv - adds service code
-	Nd(n string) CLogger           // Nd - adds node code
+	Srv(s string) CLogger          // Srv - adds service instance code
 	Inf(args ...interface{}) CLogger
 	InfF(format string, args ...interface{}) CLogger
 	Err(args ...interface{}) CLogger
@@ -158,11 +157,6 @@ func (cl *clogger) St() CLogger {
 
 func (cl *clogger) Srv(s string) CLogger {
 	cl.lre = cl.lre.WithField("service", s)
-	return cl
-}
-
-func (cl *clogger) Nd(s string) CLogger {
-	cl.lre = cl.lre.WithField("node", s)
 	return cl
 }
 

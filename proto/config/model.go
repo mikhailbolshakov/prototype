@@ -73,10 +73,15 @@ type Grpc struct {
 	Host string
 }
 
+type SrvCluster struct {
+	Size int
+}
+
 type SrvCfg struct {
 	Database *Database
 	Grpc     *Grpc
 	Log      *Log
+	Cluster  *SrvCluster
 }
 
 type Etcd struct {
