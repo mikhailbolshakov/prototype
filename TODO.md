@@ -97,3 +97,4 @@
 - Documentation
     - code guide
     - architecture (main points)
+    - swagger

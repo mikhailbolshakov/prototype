@@ -23,5 +23,6 @@ WORKDIR /usr/local/bin/users
 
 RUN apk --no-cache add ca-certificates
 COPY --from=0 /main ./main
+COPY ./users/db/migrations ./migrations
 
 ENTRYPOINT ["./main"]

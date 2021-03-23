@@ -60,12 +60,13 @@ type Mattermost struct {
 }
 
 type Database struct {
-	Dbname   string
-	User     string
-	Password string
-	Port     string
-	HostRw   string `config:"host-rw"`
-	HostRo   string `config:"host-ro"`
+	Dbname        string
+	User          string
+	Password      string
+	Port          string
+	HostRw        string `config:"host-rw"`
+	HostRo        string `config:"host-ro"`
+	MigrationsSrc string `config:"mig-src"`
 }
 
 type Grpc struct {

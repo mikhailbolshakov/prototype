@@ -54,9 +54,11 @@ func Test_SpecificTime(t *testing.T) {
 func Test_SpecificTime2(t *testing.T) {
 
 	s := gocron.NewScheduler(time.UTC)
+	s.StartAsync()
 
-	expectedTime, _ := time.Parse(time.RFC3339, "2021-01-14T17:20:00+03:00")
-	fmt.Println("expectedTime = ", expectedTime)
+	expectedTime, _ := time.Parse(time.RFC3339, "2021-03-23T08:20:00.000Z")
+	fmt.Println("expectedTime = ", expectedTime.String())
+	//expectedTime := time.Date(2021, time.March, 23, 07, 46, 30, 0, time.UTC)
 
 	quit := make(chan bool)
 
@@ -65,8 +67,6 @@ func Test_SpecificTime2(t *testing.T) {
 		quit <- true
 	})
 	fmt.Println("next run = ", j.NextRun())
-
-	s.StartAsync()
 
 	select {
 	case <-time.After(time.Minute * 2):
@@ -143,6 +143,31 @@ func Test_SpecificTimeZones(t *testing.T) {
 	select {
 	case <-time.After(time.Minute * 10):
 		fmt.Println("time out")
+	}
+
+}
+
+func Test_SpecificTime_WithIncorrectParams(t *testing.T) {
+
+	quit := make(chan bool)
+
+	action := func(s1, s2 string) {
+		fmt.Printf("fired: %s, %s", s1, s2)
+		quit <- true
+	}
+
+	s := gocron.NewScheduler(time.UTC)
+	s.StartAsync()
+
+	j, _ := s.Every(1).Day().StartAt(time.Now().UTC().Add(time.Second * 10)).Do(action, "s1")
+	fmt.Println("next run = ", j.NextRun())
+
+	select {
+	case <-time.After(time.Second * 20):
+		fmt.Println("time out")
+		t.Fatal()
+	case <-quit:
+		fmt.Println("passed")
 	}
 
 }

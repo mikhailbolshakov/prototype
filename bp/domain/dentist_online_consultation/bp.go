@@ -109,7 +109,7 @@ func (bp *bpImpl) dueDateTaskHandler(msg []byte) error {
 
 func (bp *bpImpl) solvedTaskHandler(msg []byte) error {
 
-	task := &taskPb.Task{}
+	task := &taskPb.TaskMessagePayload{}
 	ctx, err := queue.Decode(nil, msg, task)
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (bp *bpImpl) solvedTaskHandler(msg []byte) error {
 
 	bp.l().Mth("task-solved").F(log.FF{"task-id": task.Id}).C(ctx).Dbg().Trc(string(msg))
 
-	if task.Type.Type == TT_CLIENT && task.Type.Subtype == TST_DENTIST_CONSULTATION {
+	if task.Type.Type == TT_CLIENT && task.Type.SubType == TST_DENTIST_CONSULTATION {
 
 		vars := map[string]interface{}{}
 		vars["taskCompleted"] = true

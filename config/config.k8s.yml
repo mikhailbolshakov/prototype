@@ -1,0 +1,237 @@
+redis:
+  port: 6379
+  host: redis-master
+  password: ${REDIS_PASSWORD|}
+  ttl: 7200
+
+zeebe:
+  port: 26500
+  host: zeebe
+
+bpmn:
+  src-folder: "./bpmn/"
+
+keycloak:
+  url: "http://keycloak:8086"
+  admin-username: admin
+  admin-password: ${KK_ADMIN_PASSWORD|admin}
+  client-id: app
+  client-secret: "d6dbae97-8570-4758-a081-9077b7899a7d"
+  client-realm: prototype
+
+mattermost:
+  url: "http://mattermost:8065"
+  ws: "ws://mattermost:8065"
+  admin-username: admin
+  admin-password: ${MM_ADMIN_PASSWORD|admin}
+  admin-access-token: ${MM_BOT_ACCESS_TOKEN|oj9hp7iqyfrztxj9qah3u8n8we}
+  team: rgs
+  default-password: ${MM_DEFAULT_PASSWORD|12345}
+  bot-username: bot.rgs
+  bot-access-token: ${MM_BOT_ACCESS_TOKEN|jg88x5sb63yk8ng6kcfkb37iho}
+
+http:
+  host: api
+  port: 8000
+  ws-host: sessions
+  ws-port: 8001
+  tls:
+    cert: ""
+    key: ""
+
+es:
+  url: "http://es-elasticsearch-coordinating-only:9200"
+  trace: false
+
+nats:
+  url: "nats://nats:4222"
+  clusterId: "test-cluster"
+
+etcd:
+  hosts:
+    - "etcd:2379"
+
+webrtc:
+
+  signal:
+    host: webrtc
+    port: 8002
+
+# https://github.com/pion/ion-sfu/blob/master/config.toml
+  pion:
+    sfu:
+      ballast: 0
+      withstats: false
+    router:
+      maxbandwidth: 1500
+      maxpackettrack: 500
+      audiolevelthreshold: 40
+      audiolevelinterval: 1000
+      audiolevelfilter: 20
+      simulcast:
+        bestqualityfirst: true
+        enabletemporallayer: false
+    webrtc:
+      iceportrange:
+        - 5000
+        - 5200
+#      iceservers:
+#        - urls:
+#            - "stun:stun.stunprotocol.org:3478"
+#        - urls:
+#            - "turn:turn.awsome.org:3478"
+#              username: "awsome"
+#              credential: "awsome"
+      sdpsemantics: "unified-plan"
+      mdns: true
+    turn:
+      enabled: false
+      realm: "ion"
+      address: "0.0.0.0:3478"
+      auth:
+        credentials: "pion=ion,pion2=ion2"
+    log:
+      level: trace
+
+  avp:
+    samplebuilder:
+      audiomaxlate: 100
+      videomaxlate: 200
+    webrtc:
+      plicycle: 1000
+    log:
+      level: trace
+
+  recording:
+    file:
+      enabled: true
+      path: "./recording/"
+
+services:
+  api:
+    log:
+      level: trace
+    cluster:
+      size: 1
+  chat:
+    database:
+      dbname: postgres
+      user: chat
+      password: ${DB_CHAT_PASSWORD|chat}
+      port: 5432
+      # read-write host
+      host-rw: db
+      # read-only host
+      host-ro: db
+      mig-src: "./migrations"
+    grpc:
+      port: 51053
+      host: chat
+    log:
+      level: trace
+    cluster:
+      size: 1
+  users:
+    database:
+      dbname: postgres
+      user: users
+      password: ${DB_USERS_PASSWORD|users}
+      port: 5432
+      # read-write host
+      host-rw: pg-postgresql
+      # read-only host
+      host-ro: pg-postgresql
+      mig-src: "./migrations"
+    grpc:
+      port: 51051
+      host: users
+    log:
+      level: trace
+    cluster:
+      size: 1
+  tasks:
+    database:
+      dbname: postgres
+      user: tasks
+      password: ${DB_TASKS_PASSWORD|tasks}
+      port: 5432
+      # read-write host
+      host-rw: db
+      # read-only host
+      host-ro: db
+      mig-src: "./migrations"
+    grpc:
+      port: 51052
+      host: tasks
+    log:
+      level: trace
+    cluster:
+      size: 1
+  services:
+    database:
+      dbname: postgres
+      user: services
+      password: ${DB_SERVICES_PASSWORD|services}
+      port: 5432
+      # read-write host
+      host-rw: db
+      # read-only host
+      host-ro: db
+      mig-src: "./migrations"
+    grpc:
+      port: 51054
+      host: services
+    log:
+      level: trace
+    cluster:
+      size: 1
+  bp:
+    grpc:
+      port: 51055
+      host: bp
+    log:
+      level: trace
+  cfg:
+    grpc:
+      port: 51056
+      host: config
+    log:
+      level: trace
+    cluster:
+      size: 1
+  sessions:
+    grpc:
+      port: 51057
+      host: sessions
+    database:
+      dbname: postgres
+      user: sessions
+      password: ${DB_SESSIONS_PASSWORD|sessions}
+      port: 5432
+      # read-write host
+      host-rw: db
+      # read-only host
+      host-ro: db
+      mig-src: "./migrations"
+    log:
+      level: trace
+    cluster:
+      size: 1
+  webrtc:
+    grpc:
+      port: 51058
+      host: webrtc
+    database:
+      dbname: postgres
+      user: webrtc
+      password: ${DB_WEBRTC_PASSWORD|webrtc}
+      port: 5432
+      # read-write host
+      host-rw: db
+      # read-only host
+      host-ro: db
+      mig-src: "./migrations"
+    log:
+      level: trace
+    cluster:
+      size: 1

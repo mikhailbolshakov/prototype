@@ -34,7 +34,7 @@ func (s *Server) Listen(host, port string) error {
 
 	l := s.logger().Cmp(s.Service).Pr("grpc").Mth("listen").F(log.FF{"host": host, "port": port}).Inf("start listening")
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", host, port))
+	lis, err := net.Listen("tcp", fmt.Sprint(":", port))
 	if err != nil {
 		l.E(err).Err("net.listen error")
 		return err

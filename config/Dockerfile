@@ -23,6 +23,6 @@ WORKDIR /usr/local/bin/config
 
 RUN apk --no-cache add ca-certificates
 COPY --from=0 /main ./main
-COPY ./config/config.yml ./config.yml
+COPY ./config/config.docker.yml ./config.yml
 
 ENTRYPOINT ["./main"]

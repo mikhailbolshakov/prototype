@@ -1,12 +1,15 @@
 package storage
 
 import (
+	"context"
 	kitCache "gitlab.medzdrav.ru/prototype/kit/cache"
 	"gitlab.medzdrav.ru/prototype/kit/search"
 	kitStorage "gitlab.medzdrav.ru/prototype/kit/storage"
 	"gitlab.medzdrav.ru/prototype/proto/config"
 	"gitlab.medzdrav.ru/prototype/tasks/domain"
 	"gitlab.medzdrav.ru/prototype/tasks/logger"
+	"gitlab.medzdrav.ru/prototype/tasks/meta"
+	"golang.org/x/sync/errgroup"
 )
 
 type Adapter interface {
@@ -36,52 +39,76 @@ func NewAdapter() Adapter {
 
 func (a *adapterImpl) Init(cfg *config.Config) error {
 
-	servCfg := cfg.Services["tasks"]
+	servCfg := cfg.Services[meta.Meta.ServiceCode()]
 
-	var err error
+	grp, _ := errgroup.WithContext(context.Background())
 
 	// storage R/W
-	a.container.Db, err = kitStorage.Open(&kitStorage.Params{
-		UserName: servCfg.Database.User,
-		Password: servCfg.Database.Password,
-		DBName:   servCfg.Database.Dbname,
-		Port:     servCfg.Database.Port,
-		Host:     servCfg.Database.HostRw,
-	}, logger.LF())
-	if err != nil {
-		return err
-	}
+	grp.Go(func() error {
+		var err error
+		a.container.Db, err = kitStorage.Open(&kitStorage.Params{
+			UserName: servCfg.Database.User,
+			Password: servCfg.Database.Password,
+			DBName:   servCfg.Database.Dbname,
+			Port:     servCfg.Database.Port,
+			Host:     servCfg.Database.HostRw,
+		}, logger.LF())
+		if err != nil {
+			return err
+		}
+
+		// applying migrations (leader only)
+		if meta.Meta.Leader() {
+			db, _ := a.container.Db.Instance.DB()
+			m := kitStorage.NewMigration(db, servCfg.Database.MigrationsSrc, logger.LF())
+			if err := m.Up(); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 
 	// storage Readonly
-	a.container.ReadOnlyDB, err = kitStorage.Open(&kitStorage.Params{
-		UserName: servCfg.Database.User,
-		Password: servCfg.Database.Password,
-		DBName:   servCfg.Database.Dbname,
-		Port:     servCfg.Database.Port,
-		Host:     servCfg.Database.HostRo,
-	}, logger.LF())
-	if err != nil {
+	grp.Go(func() error {
+		var err error
+		a.container.ReadOnlyDB, err = kitStorage.Open(&kitStorage.Params{
+			UserName: servCfg.Database.User,
+			Password: servCfg.Database.Password,
+			DBName:   servCfg.Database.Dbname,
+			Port:     servCfg.Database.Port,
+			Host:     servCfg.Database.HostRo,
+		}, logger.LF())
 		return err
-	}
+	})
 
 	// Redis
-	a.container.Cache, err = kitCache.Open(&kitCache.Params{
-		Host:     cfg.Redis.Host,
-		Port:     cfg.Redis.Port,
-		Password: cfg.Redis.Password,
-		Ttl:      uint(cfg.Redis.Ttl),
-	}, logger.LF())
-	if err != nil {
+	grp.Go(func() error {
+		var err error
+		a.container.Cache, err = kitCache.Open(&kitCache.Params{
+			Host:     cfg.Redis.Host,
+			Port:     cfg.Redis.Port,
+			Password: cfg.Redis.Password,
+			Ttl:      uint(cfg.Redis.Ttl),
+		}, logger.LF())
 		return err
-	}
+	})
 
 	// Index search
-	a.container.Search, err = search.NewEs(cfg.Es.Url, cfg.Es.Trace, logger.LF())
-	if err != nil {
+	grp.Go(func() error {
+		var err error
+		a.container.Search, err = search.NewEs(cfg.Es.Url, cfg.Es.Trace, logger.LF())
+		if err != nil {
+			return err
+		}
+		err = a.storageImpl.ensureIndex()
+		if err != nil {
+			return err
+		}
 		return err
-	}
-	err = a.storageImpl.ensureIndex()
-	if err != nil {
+	})
+
+	if err := grp.Wait(); err != nil {
+		logger.L().E(err).St().Err("init storage")
 		return err
 	}
 

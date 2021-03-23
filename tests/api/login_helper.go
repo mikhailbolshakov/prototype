@@ -18,6 +18,7 @@ func (h *TestHelper) Login(username string) (string, chan struct{}, error) {
 	rq := &users.LoginRequest{
 		Username: username,
 		Password: DEFAULT_PWD,
+		ChatLogin: true,
 	}
 
 	rqJ, _ := json.Marshal(rq)

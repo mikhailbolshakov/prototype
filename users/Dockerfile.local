@@ -1,0 +1,16 @@
+FROM alpine:3.12.3
+
+WORKDIR /usr/local/bin/users
+
+# grpcurl - curl for gRPC
+RUN mkdir /tmp/grpcurl && \
+    wget https://github.com/fullstorydev/grpcurl/releases/download/v1.8.0/grpcurl_1.8.0_linux_x86_64.tar.gz -O /tmp/grpcurl/grpcurl.tar.gz  && \
+    tar -xzf /tmp/grpcurl/grpcurl.tar.gz -C /tmp/grpcurl && \
+    cp /tmp/grpcurl/grpcurl /usr/local/bin/grpcurl && \
+    rm -f /tmp/grpcurl/*
+
+RUN apk --no-cache add ca-certificates
+COPY ./users/bin/main ./main
+COPY ./users/db/migrations ./migrations
+
+ENTRYPOINT ["./main"]

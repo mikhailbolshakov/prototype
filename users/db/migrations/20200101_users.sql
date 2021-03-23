@@ -40,7 +40,6 @@ insert into groups values('client', 'client', 'клиент');
 insert into groups values('consultant-lawyer', 'consultant', 'консультант юрист');
 insert into groups values('consultant-med', 'consultant', 'медконсультант');
 insert into groups values('consultant', 'consultant', 'консультант по общим вопросам');
-insert into groups values('consultant-med', 'consultant', 'медконсультант');
 insert into groups values('doctor-dentist','expert', 'врач стоматолог');
 insert into groups values('doctor-orthopedist','expert', 'врач ортопед');
 insert into groups values('supervisor-rgs', 'supervisor', 'супервизор РГС');

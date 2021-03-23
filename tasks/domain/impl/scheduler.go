@@ -33,6 +33,8 @@ func NewScheduler(config domain.ConfigService, storage domain.TaskStorage) domai
 
 func (r *reminderImpl) dueDateFunc(ctx context.Context, taskId string) {
 
+	logger.L().Cmp("task-sch").Mth("due-date-fired").C(ctx).Dbg()
+
 	r.handlerMutex.RLock()
 	defer r.handlerMutex.RUnlock()
 
@@ -42,6 +44,8 @@ func (r *reminderImpl) dueDateFunc(ctx context.Context, taskId string) {
 }
 
 func (r *reminderImpl) remindFunc(ctx context.Context, taskId string) {
+
+	logger.L().Cmp("task-sch").Mth("remind-fired").C(ctx).Dbg()
 
 	r.handlerMutex.RLock()
 	defer r.handlerMutex.RUnlock()
@@ -60,8 +64,8 @@ func (r *reminderImpl) ScheduleTask(ctx context.Context, ts *domain.Task) {
 	}
 
 	if ts.DueDate != nil && ts.DueDate.After(time.Now().UTC()) {
-		_, _ = r.dueDateScheduler.Every(1).Hours().StartAt(*ts.DueDate).Do(r.dueDateFunc, ts.Id)
-		l.TrcF("duedate scheduled at %v\n", ts.DueDate)
+		j, _ := r.dueDateScheduler.Every(1).Day().StartAt(*ts.DueDate).Do(r.dueDateFunc, ctx, ts.Id)
+		l.TrcF("duedate scheduled at %v (next run: %v)\n", *ts.DueDate, j.NextRun())
 	}
 
 	for _, rmnd := range ts.Reminders {
@@ -88,14 +92,14 @@ func (r *reminderImpl) ScheduleTask(ctx context.Context, ts *domain.Task) {
 			schTime := ts.DueDate.Add(-time.Duration(d))
 
 			if schTime.After(time.Now().UTC()) {
-				_, _ = r.reminderScheduler.Every(1).Hours().StartAt(schTime).Do(r.remindFunc, ts.Id)
+				_, _ = r.reminderScheduler.Every(1).Day().StartAt(schTime).Do(r.remindFunc, ctx, ts.Id)
 				l.TrcF("scheduled reminder at %v", schTime)
 			}
 
 		}
 
 		if rmnd.SpecificTime != nil && rmnd.SpecificTime.At != nil && rmnd.SpecificTime.At.After(time.Now().UTC()) {
-			_, _ = r.reminderScheduler.Every(1).Day().StartAt(*rmnd.SpecificTime.At).Do(r.remindFunc, ts.Id)
+			_, _ = r.reminderScheduler.Every(1).Day().StartAt(*rmnd.SpecificTime.At).Do(r.remindFunc, ctx, ts.Id)
 			l.DbgF("scheduled reminder at %v", rmnd.SpecificTime.At)
 		}
 
@@ -107,6 +111,11 @@ func (r *reminderImpl) ScheduleTask(ctx context.Context, ts *domain.Task) {
 func (r *reminderImpl) start(ctx context.Context) {
 
 	l := logger.L().Cmp("task-sch").Mth("start").C(ctx)
+
+	r.reminderScheduler.StartAsync()
+	r.dueDateScheduler.StartAsync()
+
+	l.Dbg("scheduler started")
 
 	// TODO: retrieve tasks which have Reminder in the future
 	// TODO: paging
@@ -128,9 +137,6 @@ func (r *reminderImpl) start(ctx context.Context) {
 	for _, t := range rs.Tasks {
 		r.ScheduleTask(ctx, t)
 	}
-
-	r.reminderScheduler.StartAsync()
-	r.dueDateScheduler.StartAsync()
 }
 
 func (r *reminderImpl) StartAsync(ctx context.Context) {

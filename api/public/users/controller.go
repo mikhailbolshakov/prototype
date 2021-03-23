@@ -51,6 +51,7 @@ func (c *ctrlImpl) Login(w http.ResponseWriter, r *http.Request) {
 	sid, err := c.sessionsService.Login(r.Context(), &sessionPb.LoginRequest{
 		Username: rq.Username,
 		Password: rq.Password,
+		ChatLogin: rq.ChatLogin,
 	})
 
 	if err != nil {

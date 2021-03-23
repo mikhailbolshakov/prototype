@@ -64,7 +64,7 @@ func (a *adapterImpl) Init(awaitReadiness bool) error {
 
 	// await remote service starts serving
 	if awaitReadiness {
-		return a.awaitReadiness()
+		return a.awaitReadiness(cfgServiceHost, cfgServicePort)
 	}
 
 	return nil
@@ -75,8 +75,8 @@ func (a *adapterImpl) GetService() domain.ConfigService {
 	return a.serviceImpl
 }
 
-func (a *adapterImpl) awaitReadiness() error {
-	l := a.l().Mth("await").DbgF("awaiting config-server readiness, timeout=%v", AWAIT_TIMEOUT)
+func (a *adapterImpl) awaitReadiness(host, port string) error {
+	l := a.l().Mth("await").DbgF("awaiting config-server readiness on %s:%s, timeout=%v", host, port, AWAIT_TIMEOUT)
 	if !a.client.AwaitReadiness(AWAIT_TIMEOUT) {
 		err := fmt.Errorf("not ready within timeout")
 		l.E(err).Err()

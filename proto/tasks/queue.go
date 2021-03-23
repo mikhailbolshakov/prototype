@@ -43,6 +43,6 @@ type TaskMessagePayload struct {
 	Assignee    *TaskAssigneePayload
 	Description string
 	Title       string
-	Details     string
+	Details     map[string]interface{}
 	ChannelId   string
 }

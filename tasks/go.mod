@@ -10,7 +10,7 @@ replace gitlab.medzdrav.ru/prototype/proto => ../proto
 require (
 	github.com/armon/go-metrics v0.3.4 // indirect
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/go-co-op/gocron v0.7.1
+	github.com/go-co-op/gocron v1.0.0
 	github.com/google/uuid v1.2.0
 	github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.0 // indirect

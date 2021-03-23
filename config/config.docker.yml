@@ -123,6 +123,7 @@ services:
       host-rw: db
       # read-only host
       host-ro: db
+      mig-src: "./migrations"
     grpc:
       port: 51053
       host: chat
@@ -140,6 +141,7 @@ services:
       host-rw: db
       # read-only host
       host-ro: db
+      mig-src: "./migrations"
     grpc:
       port: 51051
       host: users
@@ -157,6 +159,7 @@ services:
       host-rw: db
       # read-only host
       host-ro: db
+      mig-src: "./migrations"
     grpc:
       port: 51052
       host: tasks
@@ -174,6 +177,7 @@ services:
       host-rw: db
       # read-only host
       host-ro: db
+      mig-src: "./migrations"
     grpc:
       port: 51054
       host: services
@@ -208,6 +212,7 @@ services:
       host-rw: db
       # read-only host
       host-ro: db
+      mig-src: "./migrations"
     log:
       level: trace
     cluster:
@@ -225,6 +230,7 @@ services:
       host-rw: db
       # read-only host
       host-ro: db
+      mig-src: "./migrations"
     log:
       level: trace
     cluster:
