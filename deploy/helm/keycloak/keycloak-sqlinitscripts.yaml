@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-sqlinitscripts
+data:
+  test.sql: |
+    CREATE ROLE keycloak LOGIN PASSWORD 'keycloak' NOINHERIT CREATEDB;
+    CREATE SCHEMA keycloak AUTHORIZATION keycloak;
+    GRANT USAGE ON SCHEMA keycloak TO PUBLIC;

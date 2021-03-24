@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mattermost
+  labels:
+    app: mattermost
+    group: mattermost
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: null
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      app: mattermost
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.extraPodAnnotations }}
+        {{- .Values.extraPodAnnotations | toYaml | nindent 8 }}
+        {{- end }}
+      labels:
+        app: mattermost
+        group: mattermost
+    spec:
+      securityContext:
+        {{- if .Values.security.userId }}
+        runAsUser: {{- .Values.security.userId }}
+        {{- end }}
+        {{- if .Values.security.groupId }}
+        runAsGroup: {{- .Values.security.groupId }}
+        fsGroup: {{- .Values.security.groupId }}
+        {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+        {{ toYaml .Values.nodeSelector | indent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+        {{ toYaml .Values.affinity | indent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations:
+        {{ toYaml .Values.tolerations | indent 8 }}
+      {{- end }}
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{ toYaml .Values.imagePullSecrets }}
+      {{- end }}
+      initContainers:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.imagePullPolicy }}
+        envFrom:
+          - configMapRef:
+              name: cm-mattermost
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.internalPort }}
+          protocol: TCP
+        livenessProbe:
+          initialDelaySeconds: 90
+          timeoutSeconds: 5
+          periodSeconds: 15
+          httpGet:
+            path: /api/v4/system/ping
+            port: http
+        readinessProbe:
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+          periodSeconds: 15
+          httpGet:
+            path: /api/v4/system/ping
+            port: http
+        volumeMounts:
+        - mountPath: /mattermost/config
+          name: vm-mattermost-config
+        - mountPath: /mattermost/data
+          name: vm-mattermost-data
+        - mountPath: /mattermost/plugins
+          name: vm-mattermost-plugins
+        resources:
+          {{- .Values.resources | toYaml | nindent 12 }}
+      volumes:
+      - name: vm-mattermost-config
+        persistentVolumeClaim:
+          claimName: pvc-mattermost-config
+      - name: vm-mattermost-data
+        persistentVolumeClaim:
+          claimName: pvc-mattermost-data
+      - name: vm-mattermost-plugins
+        persistentVolumeClaim:
+          claimName: pvc-mattermost-plugins

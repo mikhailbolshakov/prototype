@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-env
+  labels:
+    app: config
+    group: config
+data:
+  CONFIG_CFG_GRPC_HOST: "config"
+  CONFIG_CFG_GRPC_PORT: "51056"
+  CONFIG_SOURCE_PATH: "config.yml"

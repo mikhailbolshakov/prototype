@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: users
+    group: users
+  name: users
+spec:
+  selector:
+    matchLabels:
+      app: users
+  strategy:
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: users
+        group: users
+    spec:
+#      nodeSelector:
+#        type: application
+      imagePullSecrets:
+        - name: prototype-docker-registry
+      containers:
+        - image: docker.medzdrav.ru/prototype/users:0.1.0
+          imagePullPolicy: Always
+          name: users
+          ports:
+            - containerPort: 51051
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: users-env
+#            - secretRef:
+#                name: users-secrets

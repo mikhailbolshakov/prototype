@@ -1,0 +1,54 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mattermost-plugins
+  labels:
+    app: mattermost
+spec:
+  capacity:
+    storage: "{{ .Values.volumes.plugins.size }}"
+  storageClassName: pv-mattermost-plugins
+  volumeMode: Filesystem
+  accessModes:
+    - "{{ .Values.volumes.plugins.accessMode }}"
+  {{- if .Values.volumes.plugins.hostPath }}
+  hostPath:
+    path: {{ .Values.volumes.plugins.hostPath }}
+  {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mattermost-data
+  labels:
+    app: mattermost
+spec:
+  capacity:
+    storage: "{{ .Values.volumes.data.size }}"
+  storageClassName: pv-mattermost-data
+  volumeMode: Filesystem
+  accessModes:
+    - "{{ .Values.volumes.data.accessMode }}"
+  {{- if .Values.volumes.data.hostPath }}
+  hostPath:
+    path: {{ .Values.volumes.data.hostPath }}
+  {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mattermost-config
+  labels:
+    app: mattermost
+spec:
+  capacity:
+    storage: "{{ .Values.volumes.config.size }}"
+  storageClassName: pv-mattermost-config
+  volumeMode: Filesystem
+  accessModes:
+    - "{{ .Values.volumes.config.accessMode }}"
+  {{- if .Values.volumes.config.hostPath }}
+  hostPath:
+    path: {{ .Values.volumes.config.hostPath }}
+  {{- end }}

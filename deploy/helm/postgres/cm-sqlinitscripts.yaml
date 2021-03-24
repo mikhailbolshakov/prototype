@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-sqlinitscripts
+data:
+  test.sql: |
+    CREATE ROLE sessions LOGIN PASSWORD 'sessions' NOINHERIT CREATEDB;
+    CREATE SCHEMA sessions AUTHORIZATION sessions;
+    GRANT USAGE ON SCHEMA sessions TO PUBLIC;
+    CREATE ROLE users LOGIN PASSWORD 'users' NOINHERIT CREATEDB;
+    CREATE SCHEMA users AUTHORIZATION users;
+    GRANT USAGE ON SCHEMA users TO PUBLIC;
+    CREATE ROLE keycloak LOGIN PASSWORD 'keycloak' NOINHERIT CREATEDB;
+    CREATE SCHEMA keycloak AUTHORIZATION keycloak;
+    GRANT USAGE ON SCHEMA keycloak TO PUBLIC;
+    CREATE ROLE mattermost LOGIN PASSWORD 'mattermost' NOINHERIT CREATEDB;
+    CREATE SCHEMA mattermost AUTHORIZATION mattermost;
+    GRANT USAGE ON SCHEMA mattermost TO PUBLIC;

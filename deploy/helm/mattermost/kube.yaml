@@ -1,0 +1,226 @@
+---
+# Source: mattermost/templates/config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-mattermost
+  labels:
+    app: mattermost
+    group: mattermost
+data:
+  MM_SQLSETTINGS_DATASOURCE: postgres://mattermost:mattermost@pg-postgresql:5432/postgres?sslmode=disable
+---
+# Source: mattermost/templates/tests/mattermost-config-test.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mm-mattermost-tests
+  labels:
+    app.kubernetes.io/name: mattermost
+    app.kubernetes.io/instance: mm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: mattermost-4.0.0
+data:
+  run.sh: |-
+    #!/usr/bin/env bats
+    @test "Testing Mattermost is accessible" {
+      url="http://mattermost.default.svc.cluster.local:8065"
+      code=$(wget --server-response --spider --timeout 10 --tries 1 ${url} 2>&1 | awk '/^  HTTP/{print $2}')
+      [ "$code" == "200" ]
+    }
+---
+# Source: mattermost/templates/pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mattermost-plugins
+  labels:
+    app: mattermost
+spec:
+  capacity:
+    storage: "1Gi"
+  storageClassName: pv-mattermost-plugins
+  volumeMode: Filesystem
+  accessModes:
+    - "ReadWriteOnce"
+  hostPath:
+    path: /data/plugins
+---
+# Source: mattermost/templates/pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mattermost-data
+  labels:
+    app: mattermost
+spec:
+  capacity:
+    storage: "10Gi"
+  storageClassName: pv-mattermost-data
+  volumeMode: Filesystem
+  accessModes:
+    - "ReadWriteOnce"
+  hostPath:
+    path: /data/data
+---
+# Source: mattermost/templates/pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mattermost-config
+  labels:
+    app: mattermost
+spec:
+  capacity:
+    storage: "50Mi"
+  storageClassName: pv-mattermost-config
+  volumeMode: Filesystem
+  accessModes:
+    - "ReadWriteOnce"
+  hostPath:
+    path: /data/config
+---
+# Source: mattermost/templates/pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-mattermost-plugins
+  labels:
+    app: mattermost
+    group: mattermost
+  annotations:
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "1Gi"
+  storageClassName: pv-mattermost-plugins
+  volumeName: pv-mattermost-plugins
+---
+# Source: mattermost/templates/pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-mattermost-data
+  labels:
+    app: mattermost
+    group: mattermost
+  annotations:
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "10Gi"
+---
+# Source: mattermost/templates/pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-mattermost-config
+  labels:
+    app: mattermost
+    group: mattermost
+  annotations:
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "50Mi"
+---
+# Source: mattermost/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-mattermost
+  labels:
+    app: mattermost
+    group: mattermost
+spec:
+  selector:
+    app: mattermost
+  type: ClusterIP
+  ports:
+  - port: 8065
+    targetPort: http
+    protocol: TCP
+    name: mattermost
+---
+# Source: mattermost/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mattermost
+  labels:
+    app: mattermost
+    group: mattermost
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: null
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: mattermost
+  template:
+    metadata:
+      annotations:
+      labels:
+        app: mattermost
+        group: mattermost
+    spec:
+#      securityContext:
+#        runAsUser: 2000
+#        runAsGroup: 2000
+#        fsGroup: 2000
+      imagePullSecrets:
+        - name: prototype-docker-registry
+      initContainers:
+      containers:
+      - name: mattermost
+        image: "docker.medzdrav.ru/prototype/mattermost:0.1.0"
+        imagePullPolicy: Always
+        envFrom:
+          - configMapRef:
+              name: cm-mattermost
+        ports:
+        - name: http
+          containerPort: 8065
+          protocol: TCP
+        livenessProbe:
+          initialDelaySeconds: 90
+          timeoutSeconds: 5
+          periodSeconds: 15
+          httpGet:
+            path: /api/v4/system/ping
+            port: http
+        readinessProbe:
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+          periodSeconds: 15
+          httpGet:
+            path: /api/v4/system/ping
+            port: http
+        volumeMounts:
+        - mountPath: /mattermost/config
+          name: vm-mattermost-config
+        - mountPath: /mattermost/data
+          name: vm-mattermost-data
+        - mountPath: /mattermost/plugins
+          name: vm-mattermost-plugins
+        resources:
+            null
+      volumes:
+      - name: vm-mattermost-config
+        persistentVolumeClaim:
+          claimName: pvc-mattermost-config
+      - name: vm-mattermost-data
+        persistentVolumeClaim:
+          claimName: pvc-mattermost-data
+      - name: vm-mattermost-plugins
+        persistentVolumeClaim:
+          claimName: pvc-mattermost-plugins
+

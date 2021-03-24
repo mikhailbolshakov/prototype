@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-mattermost
+  labels:
+    app: mattermost
+    group: mattermost
+data:
+  MM_SQLSETTINGS_DATASOURCE: {{ .Values.db.connectionString }}
+

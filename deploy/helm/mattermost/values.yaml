@@ -1,0 +1,150 @@
+# Default values for mattermost-team-edition.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+image:
+  repository: docker.medzdrav.ru/prototype/mattermost
+  tag: 0.1.0
+  imagePullPolicy: Always
+
+initContainerImage:
+  repository: appropriate/curl
+  tag: latest
+  imagePullPolicy: IfNotPresent
+
+## How many old ReplicaSets for Mattermost Deployment you want to retain
+revisionHistoryLimit: 1
+
+## Enable persistence using Persistent Volume Claims
+## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+## ref: https://docs.gitlab.com/ee/install/requirements.html#storage
+##
+volumes:
+  config:
+    size: 50Mi
+    accessMode: ReadWriteOnce
+    hostPath: /data/config
+  data:
+    size: 10Gi
+    accessMode: ReadWriteOnce
+    hostPath: /data/data
+  plugins:
+    size: 1Gi
+    accessMode: ReadWriteOnce
+    hostPath: /data/plugins
+
+security:
+  userId:
+  groupId:
+
+service:
+  type: ClusterIP
+  externalPort: 8065
+  internalPort: 8065
+  annotations: { }
+  # loadBalancerIP:
+  loadBalancerSourceRanges: [ ]
+
+ingress:
+  enabled: false
+  path: /
+  annotations: { }
+    # kubernetes.io/ingress.class: nginx
+    # certmanager.k8s.io/issuer:  your-issuer
+    # nginx.ingress.kubernetes.io/proxy-body-size: 50m
+    # nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    # nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    # nginx.ingress.kubernetes.io/configuration-snippet: |
+    #   proxy_cache mattermost_cache;
+    #   proxy_cache_revalidate on;
+    #   proxy_cache_min_uses 2;
+    #   proxy_cache_use_stale timeout;
+    #   proxy_cache_lock on;
+    #### To use the nginx cache you will need to set an http-snippet in the ingress-nginx configmap
+    #### http-snippet: |
+  ####     proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=mattermost_cache:10m max_size=3g inactive=120m use_temp_path=off;
+  hosts:
+    - mattermost.example.com
+  tls:
+  # - secretName: mattermost.example.com-tls
+  #   hosts:
+  #     - mattermost.example.com
+
+route:
+  enabled: false
+
+
+db:
+  connectionString: "postgres://mattermost:mattermost@pg-postgresql:5432/postgres?sslmode=disable"
+
+## Additional pod annotations
+extraPodAnnotations: { }
+
+  # This is an example of extra env vars when using with the deployment with GitLab Helm Charts
+  # - name: POSTGRES_PASSWORD_GITLAB
+  #   valueFrom:
+  #     secretKeyRef:
+  #       # NOTE: Needs to be manually created
+  #       # kubectl create secret generic gitlab-postgresql-password --namespace <NAMESPACE> --from-literal postgres-password=<PASSWORD>
+  #       name: gitlab-postgresql-password
+  #       key: postgres-password
+  # - name: POSTGRES_USER_GITLAB
+  #   value: gitlab
+  # - name: POSTGRES_HOST_GITLAB
+  #   value: gitlab-postgresql
+  # - name: POSTGRES_PORT_GITLAB
+  #   value: "5432"
+  # - name: POSTGRES_DB_NAME_MATTERMOST
+  #   value: mm5
+  # - name: MM_SQLSETTINGS_DRIVERNAME
+  #   value: "postgres"
+  # - name: MM_SQLSETTINGS_DATASOURCE
+#   value: postgres://$(POSTGRES_USER_GITLAB):$(POSTGRES_PASSWORD_GITLAB)@$(POSTGRES_HOST_GITLAB):$(POSTGRES_PORT_GITLAB)/$(POSTGRES_DB_NAME_MATTERMOST)?sslmode=disable&connect_timeout=10
+
+## Additional init containers
+extraInitContainers: [ ]
+  # This is an example of extra Init Container when using with the deployment with GitLab Helm Charts
+  # - name: bootstrap-database
+  #   image: "postgres:9.6-alpine"
+  #   imagePullPolicy: IfNotPresent
+  #   env:
+  #     - name: POSTGRES_PASSWORD_GITLAB
+  #       valueFrom:
+  #         secretKeyRef:
+  #           name: gitlab-postgresql-password
+  #           key: postgres-password
+  #     - name: POSTGRES_USER_GITLAB
+  #       value: gitlab
+  #     - name: POSTGRES_HOST_GITLAB
+  #       value: gitlab-postgresql
+  #     - name: POSTGRES_PORT_GITLAB
+  #       value: "5432"
+  #     - name: POSTGRES_DB_NAME_MATTERMOST
+  #       value: mm5
+  #   command:
+  #     - sh
+  #     - "-c"
+  #     - |
+  #       if PGPASSWORD=$POSTGRES_PASSWORD_GITLAB psql -h $POSTGRES_HOST_GITLAB -p $POSTGRES_PORT_GITLAB -U $POSTGRES_USER_GITLAB -lqt | cut -d \| -f 1 | grep -qw $POSTGRES_DB_NAME_MATTERMOST; then
+  #       echo "database already exist, exiting initContainer"
+  #       exit 0
+  #       else
+  #       echo "Database does not exist. creating...."
+  #       PGPASSWORD=$POSTGRES_PASSWORD_GITLAB createdb -h $POSTGRES_HOST_GITLAB -p $POSTGRES_PORT_GITLAB -U $POSTGRES_USER_GITLAB $POSTGRES_DB_NAME_MATTERMOST
+  #       echo "Done"
+#       fi
+
+## Node selector
+## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+nodeSelector: { }
+
+## Affinity
+## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+affinity: { }
+
+## Tolerations for pod assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+tolerations: [ ]
+
+imagePullSecrets:
+  - name: prototype-docker-registry

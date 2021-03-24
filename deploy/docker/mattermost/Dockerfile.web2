@@ -1,0 +1,18 @@
+FROM node:10.12.0
+
+ENV NPM_CONFIG_LOGLEVEL warn
+
+COPY ./mattermost-webapp/ssh /root/.ssh
+
+RUN echo StrictHostKeyChecking no >> /etc/ssh/ssh_config \
+    && echo IdentityFile ~/.ssh/id_rsa >> /etc/ssh/ssh_config \
+    && chmod 600 /root/.ssh/id_rsa
+
+ADD ./mattermost-webapp/package.json /tmp/package.json
+ADD ./mattermost-webapp/package-lock.json /tmp/package-lock.json
+RUN cd /tmp && npm ci
+RUN mkdir -p /webapp && cp -a /tmp/node_modules /webapp/
+
+WORKDIR /webapp
+ADD ./mattermost-webapp /webapp
+RUN npm run build

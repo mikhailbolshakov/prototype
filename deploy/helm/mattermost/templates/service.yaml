@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-mattermost
+  labels:
+    app: mattermost
+    group: mattermost
+spec:
+  selector:
+    app: mattermost
+  type: {{ .Values.service.type }}
+  ports:
+  - port: {{ .Values.service.externalPort }}
+    targetPort: http
+    protocol: TCP
+    name: {{  include "mattermost.name" . }}
+{{- if .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+{{- end }}
+{{- if .Values.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+{{ toYaml .Values.service.loadBalancerSourceRanges | indent 4 }}
+{{- end }}

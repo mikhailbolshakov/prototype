@@ -1,0 +1,49 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-mattermost-plugins
+  labels:
+    app: mattermost
+    group: mattermost
+  annotations:
+spec:
+  accessModes:
+    - "{{ .Values.volumes.plugins.accessMode }}"
+  resources:
+    requests:
+      storage: "{{ .Values.volumes.plugins.size }}"
+  storageClassName: pv-mattermost-plugins
+  volumeName: pv-mattermost-plugins
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-mattermost-data
+  labels:
+    app: mattermost
+    group: mattermost
+  annotations:
+spec:
+  accessModes:
+    - "{{ .Values.volumes.data.accessMode }}"
+  resources:
+    requests:
+      storage: "{{ .Values.volumes.data.size }}"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-mattermost-config
+  labels:
+    app: mattermost
+    group: mattermost
+  annotations:
+spec:
+  accessModes:
+    - "{{ .Values.volumes.config.accessMode }}"
+  resources:
+    requests:
+      storage: "{{ .Values.volumes.config.size }}"
+
+

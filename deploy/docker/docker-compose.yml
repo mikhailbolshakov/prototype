@@ -1,0 +1,237 @@
+version: "3"
+
+services:
+
+  db:
+    container_name: mm-db
+    networks:
+      - mm
+    build:
+      context: ./db
+    read_only: true
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    volumes:
+      - ./volumes/db/var/lib/postgresql/data:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - POSTGRES_USER=mmuser
+      - POSTGRES_PASSWORD=mmuser_password
+      - POSTGRES_DB=mattermost
+
+  redis:
+    container_name: mm-redis
+    networks:
+      - mm
+    image: redis:3.2-alpine
+    expose:
+      - 6379
+    ports:
+      - "6379:6379"
+    restart: always
+
+  nats:
+    container_name: mm-stan
+    networks:
+      - mm
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    image: nats-streaming
+    expose:
+      - 4222
+      - 8222
+    restart: always
+    command:
+      - "--debug"
+      - "--store"
+      - file
+      - "--dir"
+      - /data/msg
+      - "--http_port"
+      - "8222"
+      - "--port"
+      - "4222"
+    volumes:
+      - ./volumes/nats/data:/data
+
+  etcd:
+    container_name: mm-etcd
+    networks:
+      - mm
+    image: gcr.io/etcd-development/etcd:v3.4.14
+    entrypoint: "/usr/local/bin/etcd"
+    command: "--listen-client-urls http://0.0.0.0:2379 --advertise-client-urls http://0.0.0.0:2379"
+    ports:
+      - 2379:2379
+
+  zeebe:
+    container_name: mm-zeebe
+    networks:
+      - mm
+    image: camunda/zeebe:0.25.1
+    environment:
+      - ZEEBE_LOG_LEVEL=error
+    ports:
+      - "26500:26500"
+      - "9600:9600"
+      - "5701:5701"
+    volumes:
+      - ./zeebe/lib/zeebe-hazelcast-exporter.jar:/usr/local/zeebe/exporters/zeebe-hazelcast-exporter.jar
+      - ./zeebe/application.yaml:/usr/local/zeebe/config/application.yaml
+      - ./zeebe/data:/usr/local/zeebe/data
+
+  monitor:
+    container_name: mm-zeebe_monitor
+    networks:
+      - mm
+    restart: always
+    image: camunda/zeebe-simple-monitor:0.19.0
+    environment:
+      - zeebe.client.broker.contactPoint=zeebe:26500
+      - zeebe.client.worker.hazelcast.connection=zeebe:5701
+    ports:
+      - "8082:8082"
+    depends_on:
+      - zeebe
+
+  operate:
+    container_name: mm-zeebe-operate
+    networks:
+      - mm
+    image: camunda/operate:0.25.0
+    ports:
+      - "8085:8080"
+    volumes:
+      - ./zeebe/operate-application.yml:/usr/local/operate/config/application.yml
+    depends_on:
+      - zeebe
+      - elasticsearch
+
+  elasticsearch:
+    container_name: mm-es
+    networks:
+      - mm
+    image: elasticsearch:7.10.1
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - cluster.name=elasticsearch
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - ./volumes/es:/usr/share/elasticsearch/data
+
+#   elastic search monitor
+#   available on http://localhost:5000
+  elasticHQ:
+    container_name: mm-eshq
+    #    network_mode: host
+    networks:
+      - mm
+    ports:
+      - "5000:5000"
+    image: elastichq/elasticsearch-hq
+    environment:
+      - HQ_DEFAULT_URL=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+  keycloak:
+    container_name: mm-keycloak
+    networks:
+      - mm
+    ports:
+      - "8086:8080"
+    image: jboss/keycloak
+    environment:
+      - DB_VENDOR=postgres
+      - DB_DATABASE=mattermost
+      - DB_ADDR=db
+      - DB_SCHEMA=keycloak
+      - DB_USER=keycloak
+      - DB_PASSWORD=keycloak
+      - KEYCLOAK_USER=admin
+      - KEYCLOAK_PASSWORD=admin
+    depends_on:
+      - db
+
+#  mattermost:
+#    container_name: mm-server
+#    build:
+#      context: ../mattermost-server
+#      # uncomment following lines for team edition or change UID/GID
+#      args:
+#        - edition=team
+#      #   - PUID=1000
+#      #   - PGID=1000
+#    restart: unless-stopped
+#    ports:
+#      - "8065:8065"
+#    networks:
+#      - mm
+#    depends_on:
+#      - db
+#      - redis
+#      - nats
+#    volumes:
+#      - ./volumes/app/mattermost/config:/go/app/config:rw
+#      - ./volumes/app/mattermost/data:/go/app/data:rw
+#      - ./volumes/app/mattermost/logs:/go/app/logs:rw
+#      - ./volumes/app/mattermost/plugins:/go/app/plugins:rw
+#      - ../mattermost-webapp/dist:/go/app/client:rw
+#      - /etc/localtime:/etc/localtime:ro
+#      # When you want to use SSO with GitLab, you have to add the cert pki chain of GitLab inside Alpine
+#      # to avoid Token request failed: certificate signed by unknown authority (link: https://github.com/mattermost/mattermost-server/issues/13059)
+#      # - <path_to_your_gitlab_pki>/pki_chain.pem:/etc/ssl/certs/pki_chain.pem:ro
+#    environment:
+#      # set same as db credentials and dbname
+#      - MM_USERNAME=mmuser
+#      - MM_PASSWORD=mmuser_password
+#      - MM_DBNAME=mattermost
+#      # use the credentials you've set above, in the format:
+#      # MM_SQLSETTINGS_DATASOURCE=postgres://${MM_USERNAME}:${MM_PASSWORD}@db:5432/${MM_DBNAME}?sslmode=disable&connect_timeout=10
+#      - MM_SQLSETTINGS_DATASOURCE=postgres://mmuser:mmuser_password@db:5432/mattermost?sslmode=disable&connect_timeout=10
+#       in case your config is not in default location
+#      - MM_CONFIG=../mattermost-server/config/config.json
+#
+#  mattermost-web:
+#    container_name: mm-web
+#    build:
+##      context: ./web
+#      context: ../mattermost-webapp
+#    networks:
+#      - mm
+#    depends_on:
+#      - mattermost
+#    ports:
+##      - "9000:9000"
+#      - "8066:8065"
+#    restart: unless-stopped
+#    volumes:
+#      # This directory must have cert files if you want to enable SSL
+##      - ./volumes/web/cert:/cert:ro
+#      - /etc/localtime:/etc/localtime:ro
+#    environment:
+#      - APP_HOST=mattermost
+#      - APP_PORT_NUMBER=8065
+
+#  minio:
+#    container_name: mm-minio
+#    image: "minio/minio:RELEASE.2019-10-11T00-38-09Z"
+#    command: "server /data"
+#    ports:
+#      - "8082:80"
+#    networks:
+#      - mm
+#    environment:
+#      MINIO_ACCESS_KEY: minioaccesskey
+#      MINIO_SECRET_KEY: miniosecretkey
+#      MINIO_SSE_MASTER_KEY: "my-minio-key:6368616e676520746869732070617373776f726420746f206120736563726574"
+
+networks:
+  mm:
+#    driver: bridge
+    external: true
+

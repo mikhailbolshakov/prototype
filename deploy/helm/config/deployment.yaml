@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: config
+    group: config
+  name: config
+spec:
+  selector:
+    matchLabels:
+      app: config
+  strategy:
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: config
+        group: config
+    spec:
+#      nodeSelector:
+#        type: application
+      imagePullSecrets:
+        - name: prototype-docker-registry
+      containers:
+        - image: docker.medzdrav.ru/prototype/config:0.1.0
+          imagePullPolicy: Always
+          name: config
+          ports:
+            - containerPort: 51056
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: config-env
+#            - secretRef:
+#                name: config-secrets
+          resources:
+            requests:
+              memory: 64M
+              cpu: "0.1"

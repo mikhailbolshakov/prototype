@@ -1,0 +1,10 @@
+apiVersion: v2
+description: Mattermost Adacta
+type: application
+name: mattermost
+version: 4.0.0
+appVersion: 6.0.0
+keywords:
+- mattermost
+home: https://mattermost.com
+icon: http://www.mattermost.org/wp-content/uploads/2016/04/icon.png

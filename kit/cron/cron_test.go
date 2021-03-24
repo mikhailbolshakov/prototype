@@ -159,7 +159,10 @@ func Test_SpecificTime_WithIncorrectParams(t *testing.T) {
 	s := gocron.NewScheduler(time.UTC)
 	s.StartAsync()
 
-	j, _ := s.Every(1).Day().StartAt(time.Now().UTC().Add(time.Second * 10)).Do(action, "s1")
+	j, err := s.Every(1).Day().StartAt(time.Now().UTC().Add(time.Second * 10)).Do(action, "s1")
+	if err != nil {
+		t.Fatal()
+	}
 	fmt.Println("next run = ", j.NextRun())
 
 	select {

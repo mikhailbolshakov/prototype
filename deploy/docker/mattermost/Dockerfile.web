@@ -1,0 +1,14 @@
+FROM node:10.19.0
+
+WORKDIR /app
+
+COPY ./mattermost-webapp/ .
+
+RUN npm install
+
+RUN cp -r ./node_modules/mattermost-redux/src/* ./node_modules/mattermost-redux/
+
+RUN ls -l ./node_modules/mattermost-redux
+
+RUN npm run build
+

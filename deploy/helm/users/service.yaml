@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: users
+  labels:
+    app: users
+    group: users
+spec:
+  ports:
+    - port: 51051
+      name: grpc
+      protocol: TCP
+      targetPort: 51051
+  selector:
+    app: users
+  sessionAffinity: None
+  type: ClusterIP
