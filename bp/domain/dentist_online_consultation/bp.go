@@ -170,9 +170,9 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 		return
 	}
 
-	var channelId string
+	var chId string
 	if channels != nil && len(channels) > 0 {
-		channelId = channels[0]
+		chId = channels[0]
 	} else {
 		//create a channel
 		channelId, err := bp.chatService.CreateClientChannel(ctx, &pbChat.CreateClientChannelRequest{
@@ -185,9 +185,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 			bp.utils.FailJob(client, job, err)
 			return
 		}
-		channelId = channelId
-		// ephemeral messages may not be delivered if we send just after a new channel created
-		time.Sleep(time.Second * 1)
+		chId = channelId
 	}
 
 	// create a task
@@ -207,7 +205,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 			UserId: expert.Id,
 			At:     grpc.TimeToPbTS(startTime),
 		},
-		ChannelId: channelId,
+		ChannelId: chId,
 		Reminders: []*taskPb.Reminder{
 			{
 				BeforeDueDate: &taskPb.BeforeDueDate{
@@ -223,7 +221,7 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	}
 
 	dl.Details["tasks"] = []string{task.Num}
-	dl.Details["channels"] = []string{channelId}
+	dl.Details["channels"] = []string{chId}
 	_, err = bp.delivery.UpdateDetails(ctx, dl.Id, dl.Details)
 	if err != nil {
 		bp.utils.FailJob(client, job, err)
@@ -239,6 +237,8 @@ func (bp *bpImpl) createTaskHandler(client worker.JobClient, job entities.Job) {
 	if dueDate != nil {
 		dueDateStr = dueDate.Format("2006-01-02 15:04:05")
 	}
+
+	time.Sleep(time.Second * 5)
 
 	if err := bp.chatService.PredefinedPost(ctx, task.ChannelId, user.MMId, "client.new-expert-consultation", true, map[string]interface{}{
 		"expert.first-name": expert.ExpertDetails.FirstName,
